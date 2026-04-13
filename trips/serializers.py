@@ -30,6 +30,39 @@ def calculate_distance_km(lat1, lon1, lat2, lon2):
     return c * r
 
 
+def estimate_eta_minutes(distance_km, avg_speed_kmph=25):
+    if distance_km is None:
+        return None
+    eta = int((distance_km / avg_speed_kmph) * 60)
+    return max(1, eta)
+
+
+def format_eta_text(minutes):
+    if minutes is None:
+        return None
+
+    if minutes < 60:
+        return f"{minutes} min"
+
+    hours = minutes // 60
+    mins = minutes % 60
+
+    if mins == 0:
+        return f"{hours} hr"
+
+    return f"{hours} hr {mins} min"
+
+
+def format_distance_text(distance_km):
+    if distance_km is None:
+        return None
+
+    if distance_km < 1:
+        return f"{int(distance_km * 1000)} m"
+
+    return f"{round(distance_km, 1)} km"
+
+
 class RouteRunStopSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source="employee.username", read_only=True)
 
@@ -679,3 +712,62 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+class RouteRunLiveStopSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    stop_order = serializers.IntegerField()
+    employee_name = serializers.CharField()
+    pickup_location = serializers.CharField(allow_null=True, required=False)
+    pickup_latitude = serializers.FloatField(allow_null=True, required=False)
+    pickup_longitude = serializers.FloatField(allow_null=True, required=False)
+    is_picked = serializers.BooleanField()
+    status = serializers.CharField()
+    distance_km = serializers.FloatField(allow_null=True)
+    distance_text = serializers.CharField(allow_null=True)
+    eta_minutes = serializers.IntegerField(allow_null=True)
+    eta_text = serializers.CharField(allow_null=True)
+
+
+class RouteRunLiveStatusSerializer(serializers.Serializer):
+    route_run_id = serializers.IntegerField()
+    route_name = serializers.CharField()
+    driver_name = serializers.CharField(allow_null=True)
+    vehicle_number = serializers.CharField(allow_null=True)
+    trip_type = serializers.CharField()
+    current_stop_order = serializers.IntegerField(allow_null=True)
+    remaining_stops = serializers.IntegerField()
+    completed_stops = serializers.IntegerField()
+    total_stops = serializers.IntegerField()
+    status_text = serializers.CharField()
+    driver_latitude = serializers.FloatField(allow_null=True)
+    driver_longitude = serializers.FloatField(allow_null=True)
+    last_updated = serializers.DateTimeField(allow_null=True)
+    current_stop = serializers.DictField(allow_null=True)
+    next_stop = serializers.DictField(allow_null=True)
+    stops = RouteRunLiveStopSerializer(many=True)
+
+
+class EmployeeLivePickupStatusSerializer(serializers.Serializer):
+    route_run_id = serializers.IntegerField(allow_null=True)
+    route_name = serializers.CharField(allow_null=True)
+    vehicle_number = serializers.CharField(allow_null=True)
+    driver_name = serializers.CharField(allow_null=True)
+
+    your_stop_order = serializers.IntegerField(allow_null=True)
+    current_stop_order = serializers.IntegerField(allow_null=True)
+    stops_before_you = serializers.IntegerField(default=0)
+
+    your_status = serializers.CharField()
+    status_text = serializers.CharField()
+
+    your_eta_minutes = serializers.IntegerField(allow_null=True)
+    your_eta_text = serializers.CharField(allow_null=True)
+    your_distance_km = serializers.FloatField(allow_null=True)
+    your_distance_text = serializers.CharField(allow_null=True)
+
+    current_stop_name = serializers.CharField(allow_null=True)
+    next_stop_name = serializers.CharField(allow_null=True)
+
+    driver_latitude = serializers.FloatField(allow_null=True)
+    driver_longitude = serializers.FloatField(allow_null=True)
+    last_updated = serializers.DateTimeField(allow_null=True)
