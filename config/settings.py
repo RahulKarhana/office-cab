@@ -174,8 +174,13 @@ from firebase_admin import credentials
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-FIREBASE_KEY_PATH = os.path.join(BASE_DIR, "config", "firebase_key.json")
+FIREBASE_KEY_PATH = os.environ.get(
+    "FIREBASE_KEY_PATH",
+    os.path.join(BASE_DIR, "config", "firebase_key.json")
+)
 
-if not firebase_admin._apps:
+if os.path.exists(FIREBASE_KEY_PATH) and not firebase_admin._apps:
     cred = credentials.Certificate(FIREBASE_KEY_PATH)
     firebase_admin.initialize_app(cred)
+else:
+    print("Firebase key not found. Skipping Firebase initialization.")
