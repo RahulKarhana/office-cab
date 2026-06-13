@@ -28,7 +28,7 @@ urlpatterns = [
     # JWT AUTH
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
+    path("admin-web/", include("admin_web.urls")),
     # APP APIs
     path("api/accounts/", include("accounts.urls")),
     path("api/trips/", include("trips.urls")),

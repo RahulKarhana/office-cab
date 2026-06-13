@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Assigned Trips</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+    --bg:#f5f7fb;
+    --card:#fff;
+    --dark:#111827;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --red:#dc2626;
+    --green:#059669;
+    --blue:#2563eb;
+    --purple:#7c3aed;
+    --shadow:0 18px 45px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{
+    margin:0;
+    font-family:Inter,Arial,sans-serif;
+    background:linear-gradient(180deg,#eef4ff,#f8fafc 45%,#f5f7fb);
+    color:var(--dark);
+}
+.header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:rgba(255,255,255,.94);
+    backdrop-filter:blur(14px);
+    padding:22px 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+}
+.header h1{
+    margin:0;
+    font-size:34px;
+    font-weight:950;
+}
+.back-btn{
+    background:#111827;
+    color:#fff;
+    padding:12px 18px;
+    border-radius:16px;
+    text-decoration:none;
+    font-weight:900;
+}
+.page{padding:28px 34px}
+.toolbar{
+    background:#fff;
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    display:grid;
+    grid-template-columns:1.4fr .7fr .7fr auto;
+    gap:14px;
+}
+.toolbar input,.toolbar select,.toolbar button{
+    height:52px;
+    border-radius:16px;
+    border:1px solid #dbe3ef;
+    padding:0 16px;
+    font-weight:800;
+}
+.toolbar button{
+    background:#111827;
+    color:#fff;
+    cursor:pointer;
+}
+.stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    margin:22px 0;
+}
+.stat-card{
+    background:#fff;
+    border-radius:24px;
+    padding:22px;
+    box-shadow:var(--shadow);
+}
+.stat-card span{
+    color:var(--muted);
+    font-size:13px;
+    font-weight:800;
+}
+.stat-card strong{
+    display:block;
+    font-size:34px;
+    margin-top:8px;
+}
+.date-section{
+    background:#fff;
+    border-radius:30px;
+    padding:24px;
+    box-shadow:var(--shadow);
+    margin-bottom:26px;
+}
+.date-head{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px;
+}
+.date-head h2{
+    margin:0;
+    font-size:30px;
+    font-weight:950;
+}
+.date-head p{
+    margin:6px 0 0;
+    color:var(--muted);
+    font-weight:700;
+}
+.date-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+}
+.btn{
+    height:46px;
+    border:0;
+    border-radius:16px;
+    padding:0 18px;
+    font-weight:950;
+    cursor:pointer;
+}
+.btn-dark{background:#111827;color:#fff}
+.btn-red{background:#fee2e2;color:#b91c1c}
+.trip-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    background:#eef2f7;
+    padding:6px;
+    border-radius:22px;
+    margin:20px 0;
+}
+.tab-btn{
+    height:56px;
+    border:0;
+    border-radius:18px;
+    font-size:20px;
+    font-weight:950;
+    cursor:pointer;
+    background:transparent;
+    color:#64748b;
+}
+.tab-btn.active{
+    background:#111827;
+    color:#fff;
+}
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:18px;
+}
+.trip-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:20px;
+    box-shadow:0 10px 26px rgba(15,23,42,.06);
+    position:relative;
+    overflow:hidden;
+}
+.trip-card::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;right:0;
+    height:7px;
+}
+.trip-card.pickup::before{background:linear-gradient(90deg,#0d9488,#14b8a6)}
+.trip-card.drop::before{background:linear-gradient(90deg,#7c3aed,#a855f7)}
+.card-top{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+}
+.route-title{
+    font-size:23px;
+    font-weight:950;
+}
+.type-pill{
+    padding:10px 14px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+    height:max-content;
+}
+.type-pill.PICKUP{background:#ccfbf1;color:#0f766e}
+.type-pill.DROP{background:#ede9fe;color:#6d28d9}
+.status{
+    display:inline-block;
+    margin-top:12px;
+    padding:8px 13px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+}
+.status.ASSIGNED{background:#fff7ed;color:#c2410c}
+.status.STARTED{background:#dcfce7;color:#15803d}
+.card-mini{
+    margin-top:14px;
+    color:#64748b;
+    font-weight:800;
+}
+.details{
+    margin-top:16px;
+    display:grid;
+    gap:10px;
+    color:#475569;
+    font-weight:800;
+}
+.trip-card.collapsed{
+    padding:16px 18px;
+    min-height:auto;
+}
+.trip-card.collapsed .status,
+.trip-card.collapsed .card-mini,
+.trip-card.collapsed .details,
+.trip-card.collapsed .employee-toggle,
+.trip-card.collapsed .employee-box,
+.trip-card.collapsed .actions{
+    display:none;
+}
+.trip-card.collapsed .route-progress-wrap,
+.trip-card.collapsed .smart-badges{
+    display:none;
+}
+.card-expand-arrow{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:12px;
+    background:#f1f5f9;
+    color:#111827;
+    font-size:18px;
+    font-weight:950;
+    cursor:pointer;
+}
+.trip-card:not(.collapsed) .card-expand-arrow{
+    background:#111827;
+    color:#fff;
+}
+.employee-toggle{
+    width:100%;
+    margin-top:16px;
+    height:44px;
+    border:0;
+    border-radius:15px;
+    background:#eef2ff;
+    color:#3730a3;
+    font-weight:950;
+}
+.employee-box{
+    display:none;
+    margin-top:14px;
+    background:#f8fafc;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px;
+}
+.employee-row{
+    padding:13px 0;
+    border-bottom:1px solid var(--line);
+    color:#475569;
+    font-weight:700;
+    line-height:1.6;
+}
+.employee-row:last-child{border-bottom:0}
+.employee-row strong{color:#111827}
+.single-cancel{
+    margin-top:10px;
+    border:0;
+    border-radius:12px;
+    padding:9px 12px;
+    background:#fee2e2;
+    color:#dc2626;
+    font-weight:900;
+}
+.actions{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:12px;
+    margin-top:18px;
+}
+.card-btn{
+    height:46px;
+    border:0;
+    border-radius:16px;
+    font-weight:950;
+    cursor:pointer;
+}
+.cancel{background:#fff1f2;color:#e11d48}
+.more{background:#111827;color:#fff}
+.toast-wrap{
+    position:fixed;
+    top:92px;
+    right:28px;
+    z-index:9999;
+    display:grid;
+    gap:12px;
+}
+.toast{
+    min-width:280px;
+    max-width:420px;
+    background:#fff;
+    border-radius:18px;
+    padding:15px 18px;
+    box-shadow:0 18px 45px rgba(15,23,42,.18);
+    border-left:6px solid #2563eb;
+    font-weight:900;
+    animation:slideToast .35s ease, fadeToast .4s ease 4.5s forwards;
+}
+.toast.success{border-left-color:#16a34a;color:#166534}
+.toast.error{border-left-color:#dc2626;color:#991b1b}
+.toast.warning{border-left-color:#f59e0b;color:#92400e}
+.toast.info{border-left-color:#2563eb;color:#1e40af}
+.empty{
+    padding:34px;
+    text-align:center;
+    border-radius:22px;
+    background:#f8fafc;
+    border:1px dashed #cbd5e1;
+    color:#64748b;
+    font-weight:900;
+}
+@keyframes slideToast{
+    from{transform:translateX(30px);opacity:0}
+    to{transform:translateX(0);opacity:1}
+}
+@keyframes fadeToast{
+    to{opacity:0;transform:translateX(30px)}
+}
+@media(max-width:900px){
+    .toolbar,.stats{grid-template-columns:1fr}
+    .header{flex-direction:column;align-items:flex-start;gap:12px}
+}
+
+.premium-card-bg{
+    position:absolute;
+    inset:0;
+    background:
+        radial-gradient(circle at top right, rgba(37,99,235,.10), transparent 35%),
+        radial-gradient(circle at bottom left, rgba(16,185,129,.10), transparent 35%);
+    pointer-events:none;
+}
+.route-index{
+    display:inline-grid;
+    place-items:center;
+    width:34px;
+    height:34px;
+    border-radius:12px;
+    background:#111827;
+    color:#fff;
+    font-size:14px;
+    margin-right:8px;
+}
+.badge-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:10px;
+}
+.route-progress-wrap{
+    margin-top:18px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:20px;
+    padding:14px;
+}
+.route-progress-top,
+.route-progress-meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-weight:900;
+}
+.route-progress-top span,
+.route-progress-meta span{
+    color:#64748b;
+    font-size:13px;
+}
+.route-progress-bar{
+    height:12px;
+    background:#e5e7eb;
+    border-radius:999px;
+    overflow:hidden;
+    margin:10px 0;
+}
+.route-progress-fill{
+    height:100%;
+    border-radius:999px;
+}
+.route-progress-fill.pickup{
+    background:linear-gradient(90deg,#0d9488,#14b8a6);
+}
+.route-progress-fill.drop{
+    background:linear-gradient(90deg,#7c3aed,#a855f7);
+}
+.smart-badges{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+.smart-badge{
+    padding:9px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+}
+.smart-badge.eta{
+    background:#eff6ff;
+    color:#1d4ed8;
+}
+.smart-badge.current{
+    background:#fef3c7;
+    color:#92400e;
+}
+.premium-employee{
+    display:flex;
+    gap:12px;
+    position:relative;
+}
+.timeline-dot{
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    margin-top:7px;
+    flex:0 0 14px;
+    box-shadow:0 0 0 5px #f1f5f9;
+}
+.timeline-dot.done{background:#16a34a}
+.timeline-dot.pending{background:#f59e0b}
+.timeline-dot.no-show{background:#dc2626}
+.employee-main{flex:1}
+.employee-head{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:center;
+}
+.emp-status{
+    padding:5px 9px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:950;
+}
+.emp-status.done{background:#dcfce7;color:#166534}
+.emp-status.pending{background:#fef3c7;color:#92400e}
+.emp-status.no-show{background:#fee2e2;color:#991b1b}
+.emp-location{
+    margin-top:8px;
+    color:#64748b;
+    font-weight:800;
+}
+.employee-completed{
+    background:linear-gradient(90deg,#ecfdf5,#f0fdf4);
+    border-radius:18px;
+    padding:14px;
+}
+
+.employee-pending{
+    opacity:.72;
+}
+
+.employee-current{
+    background:linear-gradient(90deg,#eff6ff,#f8fafc);
+    border:2px solid #3b82f6;
+    border-radius:18px;
+    padding:14px;
+    position:relative;
+    overflow:hidden;
+    animation:pulseBorder 2s infinite;
+}
+
+.employee-current::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+        linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(255,255,255,.65) 50%,
+            transparent 100%
+        );
+    animation:shineMove 2.5s linear infinite;
+}
+
+.employee-no-show{
+    background:#fef2f2;
+    border-radius:18px;
+    padding:14px;
+    opacity:.8;
+}
+
+.live-current-badge{
+    background:#2563eb;
+    color:#fff;
+    font-size:10px;
+    font-weight:950;
+    padding:5px 8px;
+    border-radius:999px;
+    animation:livePulse 1s infinite;
+    box-shadow:0 0 0 0 rgba(37,99,235,.7);
+}
+
+@keyframes pulseBorder{
+    0%{
+        box-shadow:0 0 0 0 rgba(59,130,246,.35);
+    }
+    70%{
+        box-shadow:0 0 0 12px rgba(59,130,246,0);
+    }
+    100%{
+        box-shadow:0 0 0 0 rgba(59,130,246,0);
+    }
+}
+
+@keyframes livePulse{
+    0%{
+        transform:scale(1);
+    }
+    50%{
+        transform:scale(1.08);
+    }
+    100%{
+        transform:scale(1);
+    }
+}
+
+@keyframes shineMove{
+    from{
+        transform:translateX(-100%);
+    }
+    to{
+        transform:translateX(100%);
+    }
+}
+
+.auto-refresh-btn{
+    border:0;
+    cursor:pointer;
+    background:#16a34a;
+}
+.auto-refresh-btn.off{
+    background:#dc2626;
+}
+.refresh-countdown{
+    display:inline-flex;
+    align-items:center;
+    padding:0 14px;
+    border-radius:16px;
+    background:#f1f5f9;
+    color:#475569;
+    font-size:13px;
+    font-weight:950;
+}
+
+.smart-badge.live{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.smart-badge.delayed{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.smart-badge.overspeed{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.smart-badge.pickup-chip{
+    background:#ccfbf1;
+    color:#115e59;
+}
+
+.smart-badge.drop-chip{
+    background:#ede9fe;
+    color:#6d28d9;
+}
+.last-updated-time{
+    display:inline-flex;
+    align-items:center;
+    padding:0 14px;
+    border-radius:16px;
+    background:#ecfdf5;
+    color:#166534;
+    font-size:13px;
+    font-weight:950;
+}
+.route-health{
+    margin-top:16px;
+    padding:12px 14px;
+    border-radius:16px;
+    font-size:13px;
+    font-weight:950;
+}
+
+.route-health.excellent{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.route-health.moderate{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.route-health.critical{
+    background:#fee2e2;
+    color:#991b1b;
+}
+.live-map-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-decoration:none;
+    background:#eff6ff;
+    color:#1d4ed8;
+}
+</style>
+</head>
+
+<body>
+
+{% if messages %}
+<div class="toast-wrap">
+    {% for message in messages %}
+    <div class="toast {{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="header">
+    <h1>🚖 Assigned Trips</h1>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button type="button" id="autoRefreshBtn" class="back-btn auto-refresh-btn" onclick="toggleAutoRefresh()">
+            🔄 Auto Refresh: ON
+        </button>
+
+        <span id="refreshCountdown" class="refresh-countdown">
+            Refresh in 30s
+        </span>
+        <span id="lastUpdatedTime" class="last-updated-time">
+            ● Updated now
+        </span>
+        <a href="{% url 'admin_web:trip_history' %}" class="back-btn" style="background:#2563eb;">
+            🚖 History
+        </a>
+
+        <a href="{% url 'admin_web:dashboard' %}" class="back-btn">
+            ← Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="page">
+
+<form method="get" class="toolbar">
+    <input type="text" name="q" placeholder="Search route / driver / cab / employee" value="{{ query }}">
+    <input type="date" name="date" value="{{ date_filter }}">
+    <select name="trip_type">
+        <option value="">Pickup + Drop</option>
+        <option value="PICKUP" {% if trip_type_filter == "PICKUP" %}selected{% endif %}>Pickup</option>
+        <option value="DROP" {% if trip_type_filter == "DROP" %}selected{% endif %}>Drop</option>
+    </select>
+    <button type="submit">Apply</button>
+</form>
+
+<div class="stats">
+    <div class="stat-card"><span>Assigned</span><strong>{{ total_assigned }}</strong></div>
+    <div class="stat-card"><span>Started</span><strong>{{ total_started }}</strong></div>
+    <div class="stat-card"><span>Total</span><strong>{{ total_active }}</strong></div>
+</div>
+
+{% for date_label, section in date_sections %}
+<div class="date-section">
+    <div class="date-head">
+        <div>
+            <h2>{{ date_label }}</h2>
+            <p>{{ section.pickup_cards|length }} Pickup Route(s), {{ section.drop_cards|length }} Drop Route(s)</p>
+        </div>
+
+        <div class="date-actions">
+            <button type="button" class="btn btn-dark" onclick="toggleDate('{{ forloop.counter }}', this)">Expand All</button>
+
+            <form method="post" action="{% url 'admin_web:cancel_date_trips' section.date_value %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-red" onclick="return confirm('Cancel all trips for this date?')">
+                    Cancel All Trip
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="trip-tabs">
+        <button type="button" class="tab-btn active" onclick="showTripType('{{ forloop.counter }}','pickup',this)">Pickup</button>
+        <button type="button" class="tab-btn" onclick="showTripType('{{ forloop.counter }}','drop',this)">Drop</button>
+    </div>
+
+    <div class="cards trip-panel pickup-panel-{{ forloop.counter }}">
+        {% for run in section.pickup_cards %}
+            {% include "admin_web/assigned_trip_card.html" with run=run card_type="pickup" %}
+        {% empty %}
+            <div class="empty">No pickup route found</div>
+        {% endfor %}
+    </div>
+
+    <div class="cards trip-panel drop-panel-{{ forloop.counter }}" style="display:none;">
+        {% for run in section.drop_cards %}
+            {% include "admin_web/assigned_trip_card.html" with run=run card_type="drop" %}
+        {% empty %}
+            <div class="empty">No drop route found</div>
+        {% endfor %}
+    </div>
+</div>
+{% empty %}
+<div class="empty">No assigned trips found</div>
+{% endfor %}
+
+</div>
+
+<script>
+function showTripType(sectionId,type,btn){
+    const pickup=document.querySelector(".pickup-panel-"+sectionId);
+    const drop=document.querySelector(".drop-panel-"+sectionId);
+
+    pickup.style.display = type === "pickup" ? "grid" : "none";
+    drop.style.display = type === "drop" ? "grid" : "none";
+
+    btn.parentElement.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+}
+
+function toggleCard(id,btn){
+    const card=document.getElementById("card"+id);
+    if(!card)return;
+
+    card.classList.toggle("collapsed");
+    const expanded = !card.classList.contains("collapsed");
+
+    card.querySelectorAll(".more").forEach(b=>{
+        b.innerText = expanded ? "Less" : "More";
+    });
+
+    card.querySelectorAll(".card-expand-arrow").forEach(b=>{
+        b.innerText = expanded ? "▴" : "▾";
+    });
+}
+
+function toggleEmployees(id){
+    const box=document.getElementById("employees"+id);
+    if(!box)return;
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+function toggleDate(sectionId,btn){
+    const cards=document.querySelectorAll(".pickup-panel-"+sectionId+" .trip-card, .drop-panel-"+sectionId+" .trip-card");
+    const shouldExpand=[...cards].some(card=>card.classList.contains("collapsed"));
+
+    cards.forEach(card=>{
+        if(shouldExpand){
+            card.classList.remove("collapsed");
+        }else{
+            card.classList.add("collapsed");
+            const empBox=card.querySelector(".employee-box");
+            if(empBox) empBox.style.display="none";
+        }
+    });
+
+    document.querySelectorAll(".pickup-panel-"+sectionId+" .more, .drop-panel-"+sectionId+" .more")
+        .forEach(b=>b.innerText=shouldExpand ? "Less" : "More");
+
+    document.querySelectorAll(".pickup-panel-"+sectionId+" .card-expand-arrow, .drop-panel-"+sectionId+" .card-expand-arrow")
+        .forEach(b=>b.innerText=shouldExpand ? "▴" : "▾");
+
+    btn.innerText=shouldExpand ? "Collapse All" : "Expand All";
+}
+// =========================
+// AUTO REFRESH PAGE WITH ON/OFF + COUNTDOWN
+// =========================
+
+let autoRefreshEnabled = localStorage.getItem("assignedTripsAutoRefresh") !== "OFF";
+let refreshSeconds = 30;
+
+const autoRefreshBtn = document.getElementById("autoRefreshBtn");
+const refreshCountdown = document.getElementById("refreshCountdown");
+const lastUpdatedTime = document.getElementById("lastUpdatedTime");
+
+function updateLastUpdatedTime(){
+    if(!lastUpdatedTime) return;
+
+    const now = new Date();
+    const timeText = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+    });
+
+    lastUpdatedTime.innerText = "● Updated " + timeText;
+}
+
+updateLastUpdatedTime();
+
+function updateAutoRefreshButton(){
+    if(!autoRefreshBtn) return;
+
+    if(autoRefreshEnabled){
+        autoRefreshBtn.innerText = "🔄 Auto Refresh: ON";
+        autoRefreshBtn.classList.remove("off");
+    }else{
+        autoRefreshBtn.innerText = "⏸ Auto Refresh: OFF";
+        autoRefreshBtn.classList.add("off");
+    }
+}
+
+function updateCountdown(){
+    if(!refreshCountdown) return;
+
+    if(autoRefreshEnabled){
+        refreshCountdown.innerText = "Refresh in " + refreshSeconds + "s";
+    }else{
+        refreshCountdown.innerText = "Auto refresh paused";
+    }
+}
+
+function toggleAutoRefresh(){
+    autoRefreshEnabled = !autoRefreshEnabled;
+    localStorage.setItem(
+        "assignedTripsAutoRefresh",
+        autoRefreshEnabled ? "ON" : "OFF"
+    );
+
+    refreshSeconds = 30;
+    updateAutoRefreshButton();
+    updateCountdown();
+}
+
+updateAutoRefreshButton();
+updateCountdown();
+
+setInterval(() => {
+    if(!autoRefreshEnabled){
+        updateCountdown();
+        return;
+    }
+
+    refreshSeconds -= 1;
+    updateCountdown();
+
+    if(refreshSeconds <= 0){
+        window.location.reload();
+    }
+}, 1000);
+</script>
+
+</body>
+</html>

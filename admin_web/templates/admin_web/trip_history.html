@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Trip History</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+    --bg:#f5f7fb;
+    --card:#fff;
+    --dark:#111827;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --shadow:0 18px 45px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{
+    margin:0;
+    font-family:Inter,Arial,sans-serif;
+    background:linear-gradient(180deg,#eef4ff,#f8fafc 45%,#f5f7fb);
+    color:var(--dark);
+}
+.header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:rgba(255,255,255,.94);
+    backdrop-filter:blur(14px);
+    padding:22px 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+}
+.header h1{
+    margin:0;
+    font-size:34px;
+    font-weight:950;
+}
+.back-btn{
+    background:#111827;
+    color:#fff;
+    padding:12px 18px;
+    border-radius:16px;
+    text-decoration:none;
+    font-weight:900;
+}
+.page{padding:28px 34px}
+.toolbar{
+    background:#fff;
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    padding:18px;
+    display:grid;
+    grid-template-columns:1.2fr .6fr .6fr .6fr auto;
+    gap:14px;
+}
+.toolbar input,.toolbar select,.toolbar button{
+    height:52px;
+    border-radius:16px;
+    border:1px solid #dbe3ef;
+    padding:0 16px;
+    font-weight:800;
+}
+.toolbar button{
+    background:#111827;
+    color:#fff;
+    cursor:pointer;
+}
+.stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    margin:22px 0;
+}
+.stat-card{
+    background:#fff;
+    border-radius:24px;
+    padding:22px;
+    box-shadow:var(--shadow);
+}
+.stat-card span{
+    color:var(--muted);
+    font-size:13px;
+    font-weight:800;
+}
+.stat-card strong{
+    display:block;
+    font-size:34px;
+    margin-top:8px;
+}
+.date-section{
+    background:#fff;
+    border-radius:30px;
+    padding:24px;
+    box-shadow:var(--shadow);
+    margin-bottom:26px;
+}
+.date-head{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px;
+}
+.date-head h2{
+    margin:0;
+    font-size:30px;
+    font-weight:950;
+}
+.date-head p{
+    margin:6px 0 0;
+    color:var(--muted);
+    font-weight:700;
+}
+.btn{
+    height:46px;
+    border:0;
+    border-radius:16px;
+    padding:0 18px;
+    font-weight:950;
+    cursor:pointer;
+}
+.btn-dark{background:#111827;color:#fff}
+.trip-tabs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    background:#eef2f7;
+    padding:6px;
+    border-radius:22px;
+    margin:20px 0;
+}
+.tab-btn{
+    height:56px;
+    border:0;
+    border-radius:18px;
+    font-size:20px;
+    font-weight:950;
+    cursor:pointer;
+    background:transparent;
+    color:#64748b;
+}
+.tab-btn.active{
+    background:#111827;
+    color:#fff;
+}
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:18px;
+}
+.trip-card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:26px;
+    padding:16px 18px;
+    box-shadow:0 10px 26px rgba(15,23,42,.06);
+    position:relative;
+    overflow:hidden;
+}
+.trip-card::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;right:0;
+    height:7px;
+}
+.trip-card.pickup::before{background:linear-gradient(90deg,#0d9488,#14b8a6)}
+.trip-card.drop::before{background:linear-gradient(90deg,#7c3aed,#a855f7)}
+.card-top{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+}
+.route-title{
+    font-size:23px;
+    font-weight:950;
+}
+.type-pill{
+    padding:10px 14px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+    height:max-content;
+}
+.type-pill.PICKUP{background:#ccfbf1;color:#0f766e}
+.type-pill.DROP{background:#ede9fe;color:#6d28d9}
+.status{
+    display:inline-block;
+    margin-top:12px;
+    padding:8px 13px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+}
+.status.COMPLETED{background:#dcfce7;color:#15803d}
+.status.CANCELLED{background:#fee2e2;color:#b91c1c}
+.status.MIXED{background:#fef3c7;color:#92400e}
+.card-mini{
+    margin-top:14px;
+    color:#64748b;
+    font-weight:800;
+}
+.details{
+    margin-top:16px;
+    display:grid;
+    gap:10px;
+    color:#475569;
+    font-weight:800;
+}
+.trip-card.collapsed .status,
+.trip-card.collapsed .card-mini,
+.trip-card.collapsed .details,
+.trip-card.collapsed .employee-toggle,
+.trip-card.collapsed .employee-box{
+    display:none;
+}
+.employee-toggle{
+    width:100%;
+    margin-top:16px;
+    height:44px;
+    border:0;
+    border-radius:15px;
+    background:#eef2ff;
+    color:#3730a3;
+    font-weight:950;
+    cursor:pointer;
+}
+.employee-box{
+    display:none;
+    margin-top:14px;
+    background:#f8fafc;
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:14px;
+}
+.employee-row{
+    padding:13px 0;
+    border-bottom:1px solid var(--line);
+    color:#475569;
+    font-weight:700;
+    line-height:1.6;
+}
+.employee-row:last-child{border-bottom:0}
+.employee-row strong{color:#111827}
+.card-expand-arrow{
+    width:38px;
+    height:38px;
+    border:0;
+    border-radius:12px;
+    background:#f1f5f9;
+    color:#111827;
+    font-size:18px;
+    font-weight:950;
+    cursor:pointer;
+}
+.trip-card:not(.collapsed) .card-expand-arrow{
+    background:#111827;
+    color:#fff;
+}
+.restore-btn{
+    margin-top:10px;
+    border:0;
+    border-radius:12px;
+    padding:9px 12px;
+    background:#dcfce7;
+    color:#15803d;
+    font-weight:900;
+    cursor:pointer;
+}
+.toast-wrap{
+    position:fixed;
+    top:92px;
+    right:28px;
+    z-index:9999;
+    display:grid;
+    gap:12px;
+}
+.toast{
+    min-width:280px;
+    max-width:420px;
+    background:#fff;
+    border-radius:18px;
+    padding:15px 18px;
+    box-shadow:0 18px 45px rgba(15,23,42,.18);
+    border-left:6px solid #2563eb;
+    font-weight:900;
+    animation:slideToast .35s ease, fadeToast .4s ease 4.5s forwards;
+}
+.toast.success{border-left-color:#16a34a;color:#166534}
+.toast.error{border-left-color:#dc2626;color:#991b1b}
+.toast.warning{border-left-color:#f59e0b;color:#92400e}
+.toast.info{border-left-color:#2563eb;color:#1e40af}
+.empty{
+    padding:34px;
+    text-align:center;
+    border-radius:22px;
+    background:#f8fafc;
+    border:1px dashed #cbd5e1;
+    color:#64748b;
+    font-weight:900;
+}
+@keyframes slideToast{
+    from{transform:translateX(30px);opacity:0}
+    to{transform:translateX(0);opacity:1}
+}
+@keyframes fadeToast{
+    to{opacity:0;transform:translateX(30px)}
+}
+@media(max-width:900px){
+    .toolbar,.stats{grid-template-columns:1fr}
+    .header{flex-direction:column;align-items:flex-start;gap:12px}
+}
+</style>
+</head>
+
+<body>
+
+{% if messages %}
+<div class="toast-wrap">
+    {% for message in messages %}
+    <div class="toast {{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="header">
+    <h1>🕘 Trip History</h1>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="{% url 'admin_web:assigned_trips' %}" class="back-btn" style="background:#2563eb;">
+            🚖 Assigned Trips
+        </a>
+
+        <a href="{% url 'admin_web:dashboard' %}" class="back-btn">
+            ← Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="page">
+
+<form method="get" class="toolbar">
+    <input type="text" name="q" placeholder="Search route / driver / cab / employee" value="{{ query }}">
+    <input type="date" name="date" value="{{ date_filter }}">
+
+    <select name="trip_type">
+        <option value="">Pickup + Drop</option>
+        <option value="PICKUP" {% if trip_type_filter == "PICKUP" %}selected{% endif %}>Pickup</option>
+        <option value="DROP" {% if trip_type_filter == "DROP" %}selected{% endif %}>Drop</option>
+    </select>
+
+    <select name="status">
+        <option value="">All Status</option>
+        <option value="COMPLETED" {% if status_filter == "COMPLETED" %}selected{% endif %}>Completed</option>
+        <option value="CANCELLED" {% if status_filter == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+    </select>
+
+    <button type="submit">Apply</button>
+</form>
+
+<div class="stats">
+    <div class="stat-card"><span>Completed</span><strong>{{ total_completed }}</strong></div>
+    <div class="stat-card"><span>Cancelled</span><strong>{{ total_cancelled }}</strong></div>
+    <div class="stat-card"><span>Total History</span><strong>{{ total_history }}</strong></div>
+</div>
+
+{% for date_label, section in date_sections %}
+<div class="date-section">
+    <div class="date-head">
+        <div>
+            <h2>{{ date_label }}</h2>
+            <p>{{ section.pickup_cards|length }} Pickup Route(s), {{ section.drop_cards|length }} Drop Route(s)</p>
+        </div>
+
+        <button type="button" class="btn btn-dark" onclick="toggleDate('{{ forloop.counter }}', this)">
+            Expand All
+        </button>
+    </div>
+
+    <div class="trip-tabs">
+        <button type="button" class="tab-btn active" onclick="showTripType('{{ forloop.counter }}','pickup',this)">Pickup</button>
+        <button type="button" class="tab-btn" onclick="showTripType('{{ forloop.counter }}','drop',this)">Drop</button>
+    </div>
+
+    <div class="cards trip-panel pickup-panel-{{ forloop.counter }}">
+        {% for run in section.pickup_cards %}
+        <div class="trip-card pickup collapsed" id="historyCard{{ run.id }}">
+            <div class="card-top">
+                <div>
+                    <div class="route-title">{{ forloop.counter }}. {{ run.route_name }}</div>
+                    <span class="status {{ run.status }}">{{ run.status }}</span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="type-pill {{ run.trip_type }}">{{ run.trip_type }}</span>
+                    <button type="button" class="card-expand-arrow" onclick="toggleCard('{{ run.id }}', this)">▾</button>
+                </div>
+            </div>
+
+            <div class="card-mini">👥 Employees: {{ run.total_employees }}</div>
+
+            <div class="details">
+                <div>🚗 Driver: {{ run.driver_name }}</div>
+                <div>🚖 Vehicle: {{ run.vehicle_number }}</div>
+                <div>📅 Date: {{ run.run_date }}</div>
+                <div>⏰ Time: {% if run.pickup_time %}{{ run.pickup_time|time:"h:i A" }}{% else %}--{% endif %}</div>
+                <div>✅ Completed: {{ run.completed_count }}</div>
+                <div>❌ Cancelled: {{ run.cancelled_count }}</div>
+            </div>
+
+            <button type="button" class="employee-toggle" onclick="toggleEmployees('{{ run.id }}')">
+                Check All Employees
+            </button>
+
+            <div class="employee-box" id="historyEmployees{{ run.id }}">
+                {% for emp in run.employees %}
+                <div class="employee-row">
+                    <strong>{{ forloop.counter }}. {{ emp.employee_name }}</strong>
+                    <span class="status {{ emp.status }}">{{ emp.status }}</span><br>
+                    📍 From: {{ emp.pickup_location }}<br>
+                    To: {{ emp.drop_location|default:"Office" }}<br>
+                    ▶ Started: {% if emp.start_time %}{{ emp.start_time|date:"d M Y, h:i A" }}{% else %}--{% endif %}<br>
+                    ✅ End Time: {% if emp.end_time %}{{ emp.end_time|date:"d M Y, h:i A" }}{% else %}--{% endif %}
+
+                    {% if emp.status == "CANCELLED" and emp.trip_id %}
+                    <form method="post" action="{% url 'admin_web:restore_trip' emp.trip_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="restore-btn" onclick="return confirm('Restore this cancelled trip?')">
+                            ↩ Restore Trip
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="employee-row">No employees found</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty">No pickup history found</div>
+        {% endfor %}
+    </div>
+
+    <div class="cards trip-panel drop-panel-{{ forloop.counter }}" style="display:none;">
+        {% for run in section.drop_cards %}
+        <div class="trip-card drop collapsed" id="historyCard{{ run.id }}">
+            <div class="card-top">
+                <div>
+                    <div class="route-title">{{ forloop.counter }}. {{ run.route_name }}</div>
+                    <span class="status {{ run.status }}">{{ run.status }}</span>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="type-pill {{ run.trip_type }}">{{ run.trip_type }}</span>
+                    <button type="button" class="card-expand-arrow" onclick="toggleCard('{{ run.id }}', this)">▾</button>
+                </div>
+            </div>
+
+            <div class="card-mini">👥 Employees: {{ run.total_employees }}</div>
+
+            <div class="details">
+                <div>🚗 Driver: {{ run.driver_name }}</div>
+                <div>🚖 Vehicle: {{ run.vehicle_number }}</div>
+                <div>📅 Date: {{ run.run_date }}</div>
+                <div>⏰ Time: {% if run.pickup_time %}{{ run.pickup_time|time:"h:i A" }}{% else %}--{% endif %}</div>
+                <div>✅ Completed: {{ run.completed_count }}</div>
+                <div>❌ Cancelled: {{ run.cancelled_count }}</div>
+            </div>
+
+            <button type="button" class="employee-toggle" onclick="toggleEmployees('{{ run.id }}')">
+                Check All Employees
+            </button>
+
+            <div class="employee-box" id="historyEmployees{{ run.id }}">
+                {% for emp in run.employees %}
+                <div class="employee-row">
+                    <strong>{{ forloop.counter }}. {{ emp.employee_name }}</strong>
+                    <span class="status {{ emp.status }}">{{ emp.status }}</span><br>
+                    📍 From: {{ emp.pickup_location }}<br>
+                    To: {{ emp.drop_location|default:"Office" }}<br>
+                    ▶ Started: {% if emp.start_time %}{{ emp.start_time|date:"d M Y, h:i A" }}{% else %}--{% endif %}<br>
+                    ✅ End Time: {% if emp.end_time %}{{ emp.end_time|date:"d M Y, h:i A" }}{% else %}--{% endif %}
+
+                    {% if emp.status == "CANCELLED" and emp.trip_id %}
+                    <form method="post" action="{% url 'admin_web:restore_trip' emp.trip_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="restore-btn" onclick="return confirm('Restore this cancelled trip?')">
+                            ↩ Restore Trip
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="employee-row">No employees found</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty">No drop history found</div>
+        {% endfor %}
+    </div>
+</div>
+{% empty %}
+<div class="empty">No trip history found</div>
+{% endfor %}
+
+</div>
+
+<script>
+function showTripType(sectionId,type,btn){
+    const pickup=document.querySelector(".pickup-panel-"+sectionId);
+    const drop=document.querySelector(".drop-panel-"+sectionId);
+
+    pickup.style.display = type === "pickup" ? "grid" : "none";
+    drop.style.display = type === "drop" ? "grid" : "none";
+
+    btn.parentElement.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+}
+
+function toggleCard(id,btn){
+    const card=document.getElementById("historyCard"+id);
+    if(!card)return;
+
+    card.classList.toggle("collapsed");
+    const expanded = !card.classList.contains("collapsed");
+
+    card.querySelectorAll(".card-expand-arrow").forEach(b=>{
+        b.innerText = expanded ? "▴" : "▾";
+    });
+}
+
+function toggleEmployees(id){
+    const box=document.getElementById("historyEmployees"+id);
+    if(!box)return;
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+function toggleDate(sectionId,btn){
+    const cards=document.querySelectorAll(".pickup-panel-"+sectionId+" .trip-card, .drop-panel-"+sectionId+" .trip-card");
+    const shouldExpand=[...cards].some(card=>card.classList.contains("collapsed"));
+
+    cards.forEach(card=>{
+        if(shouldExpand){
+            card.classList.remove("collapsed");
+        }else{
+            card.classList.add("collapsed");
+            const empBox=card.querySelector(".employee-box");
+            if(empBox) empBox.style.display="none";
+        }
+    });
+
+    document.querySelectorAll(".pickup-panel-"+sectionId+" .card-expand-arrow, .drop-panel-"+sectionId+" .card-expand-arrow")
+        .forEach(b=>b.innerText=shouldExpand ? "▴" : "▾");
+
+    btn.innerText=shouldExpand ? "Collapse All" : "Expand All";
+}
+</script>
+
+</body>
+</html>

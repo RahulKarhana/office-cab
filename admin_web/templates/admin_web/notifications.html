@@ -1,0 +1,214 @@
+{% extends "admin_web/base.html" %}
+
+{% block title %}Notifications | CabMate Admin{% endblock %}
+{% block nav_notifications %}active{% endblock %}
+{% block page_heading %}Notifications Center{% endblock %}
+{% block page_subheading %}Smart alerts, trip updates, route delays and safety notifications{% endblock %}
+
+{% block content %}
+
+<style>
+.notification-header{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    margin-bottom:22px;
+}
+.notification-stat{
+    background:#fff;
+    border-radius:24px;
+    padding:22px;
+    box-shadow:0 12px 30px rgba(15,23,42,.08);
+}
+.notification-stat span{
+    color:#64748b;
+    font-size:12px;
+    font-weight:900;
+    text-transform:uppercase;
+}
+.notification-stat strong{
+    display:block;
+    font-size:34px;
+    margin-top:8px;
+}
+.notification-list{
+    display:grid;
+    gap:14px;
+}
+.notification-card{
+    background:#fff;
+    border-radius:22px;
+    padding:18px;
+    box-shadow:0 10px 26px rgba(15,23,42,.06);
+    border-left:7px solid #2563eb;
+}
+.notification-card.unread{
+    background:#f8fbff;
+}
+.notification-card.CRITICAL{
+    border-left-color:#dc2626;
+}
+.notification-card.HIGH{
+    border-left-color:#f97316;
+}
+.notification-card.MEDIUM{
+    border-left-color:#f59e0b;
+}
+.notification-card.LOW{
+    border-left-color:#2563eb;
+}
+.notification-top{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    align-items:flex-start;
+}
+.notification-title{
+    font-size:17px;
+    font-weight:950;
+}
+.notification-message{
+    margin-top:8px;
+    color:#475569;
+    font-weight:700;
+    line-height:1.5;
+}
+.notification-meta{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+.notify-pill{
+    padding:7px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:950;
+    background:#eef2ff;
+    color:#3730a3;
+}
+.notify-pill.type{
+    background:#ecfeff;
+    color:#0f766e;
+}
+.notify-pill.priority{
+    background:#fff7ed;
+    color:#c2410c;
+}
+.notify-pill.unread{
+    background:#fee2e2;
+    color:#991b1b;
+}
+.notify-pill.read{
+    background:#dcfce7;
+    color:#166534;
+}
+.notification-time{
+    color:#94a3b8;
+    font-size:12px;
+    font-weight:900;
+    white-space:nowrap;
+}
+.empty-box{
+    background:#fff;
+    padding:36px;
+    border-radius:24px;
+    text-align:center;
+    color:#64748b;
+    font-weight:900;
+    box-shadow:0 12px 30px rgba(15,23,42,.06);
+}
+@media(max-width:900px){
+    .notification-header{
+        grid-template-columns:1fr;
+    }
+    .notification-top{
+        flex-direction:column;
+    }
+}
+</style>
+
+<div class="notification-header">
+    <div class="notification-stat">
+        <span>Total Notifications</span>
+        <strong>{{ notifications|length }}</strong>
+    </div>
+
+    <div class="notification-stat">
+        <span>Unread</span>
+        <strong>{{ unread_count }}</strong>
+    </div>
+
+    <div class="notification-stat">
+        <span>Status</span>
+        <strong>Live</strong>
+    </div>
+</div>
+
+<div class="notification-list">
+    {% for notification in notifications %}
+        <div class="notification-card {{ notification.priority }} {% if not notification.is_read %}unread{% endif %}">
+            <div class="notification-top">
+                <div>
+                    <div class="notification-title">
+                        {{ notification.title }}
+                    </div>
+
+                    <div class="notification-message">
+                        {{ notification.message }}
+                    </div>
+                </div>
+
+                <div class="notification-time">
+                    {{ notification.created_at|date:"d M Y, h:i A" }}
+                </div>
+            </div>
+
+            <div class="notification-meta">
+                <span class="notify-pill type">
+                    {{ notification.notification_type|default:"INFO" }}
+                </span>
+
+                <span class="notify-pill priority">
+                    {{ notification.priority|default:"LOW" }}
+                </span>
+
+                {% if notification.driver %}
+                    <span class="notify-pill">
+                        🚗 {{ notification.driver.username }}
+                    </span>
+                {% endif %}
+
+                {% if notification.employee %}
+                    <span class="notify-pill">
+                        👤 {{ notification.employee.username }}
+                    </span>
+                {% endif %}
+
+                {% if notification.route_run %}
+                    <span class="notify-pill">
+                        Route #{{ notification.route_run.id }}
+                    </span>
+                {% endif %}
+
+                {% if notification.trip %}
+                    <span class="notify-pill">
+                        Trip #{{ notification.trip.id }}
+                    </span>
+                {% endif %}
+
+                {% if notification.is_read %}
+                    <span class="notify-pill read">Read</span>
+                {% else %}
+                    <span class="notify-pill unread">Unread</span>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="empty-box">
+            No notifications found yet.
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

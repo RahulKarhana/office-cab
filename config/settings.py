@@ -25,30 +25,29 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = "True"
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    ".onrender.com",
-]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'corsheaders',
-    'django_filters',
-    'rest_framework',
-    'drf_yasg',
-    'accounts',
-    'trips',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'corsheaders',
+    'django_filters',
+    'rest_framework',
+    'drf_yasg',
+
+    'accounts',
+    'trips',
+    'admin_web',
 ]
 
 MIDDLEWARE = [
@@ -82,7 +81,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
+LOGIN_URL = '/admin/login/'
 # Database
 DATABASES = {
     "default": dj_database_url.config(
@@ -168,3 +167,15 @@ CSRF_TRUSTED_ORIGINS = [
 
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "YOUR_GOOGLE_MAPS_API_KEY")
 
+
+import os
+import firebase_admin
+from firebase_admin import credentials
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+FIREBASE_KEY_PATH = os.path.join(BASE_DIR, "config", "firebase_key.json")
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(FIREBASE_KEY_PATH)
+    firebase_admin.initialize_app(cred)

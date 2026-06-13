@@ -1,0 +1,2419 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Manage Routes{% endblock %}
+{% block nav_routes %}active{% endblock %}
+
+{% block page_heading %}Manage Routes{% endblock %}
+{% block page_subheading %}Create, control, and monitor daily route assignments{% endblock %}
+
+{% block content %}
+<style>
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.route-page-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.route-top-panel {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(238, 247, 255, 0.96) 0%, rgba(240, 255, 251, 0.96) 100%);
+    border: 1px solid rgba(216, 231, 234, 0.95);
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+}
+
+.route-top-form {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+    margin-bottom: 18px;
+}
+
+.route-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.route-field label,
+.route-modal-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.02em;
+}
+
+.route-input {
+    width: 100%;
+    height: 54px;
+    border-radius: 16px;
+    border: 1px solid #dbe2ea;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2937;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.route-input:focus,
+.route-select:focus,
+.route-text:focus,
+.route-readonly-box:focus-within {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.10);
+}
+
+.route-top-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.route-btn-small {
+    min-width: 58px;
+    height: 54px;
+    border-radius: 16px;
+    border: 1px solid #d7d9de;
+    background: #fff;
+    font-size: 22px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.route-btn-small:hover,
+.route-action-btn:hover,
+.route-repeat-all-btn:hover,
+.route-cancel-btn:hover,
+.route-save-btn:hover,
+.route-modal-close:hover,
+.route-add-employee-btn:hover,
+.route-remove-employee-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+}
+
+.route-btn-small.dark {
+    min-width: 104px;
+    font-size: 15px;
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #fff;
+    border-color: #111827;
+}
+
+.route-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.route-summary-card {
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(217, 220, 228, 0.9);
+    border-radius: 20px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+
+.route-summary-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.route-summary-card p {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+.route-summary-card h3 {
+    margin: 4px 0 0;
+    font-size: 32px;
+    line-height: 1;
+    color: #111827;
+    font-weight: 900;
+}
+
+.route-repeat-all-btn {
+    width: 100%;
+    height: 58px;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.route-wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+
+.route-card {
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 24px;
+    border: 1px solid #e6e7ec;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255,255,255,0.75);
+    width: 100%;
+    height: fit-content;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.route-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.route-card.pickup {
+    border-color: #ecd47b;
+    background: linear-gradient(180deg, #fffef9 0%, #ffffff 100%);
+}
+
+.route-card.drop {
+    border-color: #d7b3f0;
+    background: linear-gradient(180deg, #fcf8ff 0%, #ffffff 100%);
+}
+
+.route-card.both {
+    border-color: #9bdcf2;
+    background: linear-gradient(180deg, #f7fdff 0%, #ffffff 100%);
+}
+
+.route-card.none {
+    border-color: #e5e7eb;
+    background: #fff;
+}
+
+.route-card-head {
+    padding: 18px 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+}
+.route-card-status-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.route-seat-header-alert {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.08);
+}
+.route-card-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
+}
+
+.route-number {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%);
+    color: #4f46e5;
+    font-weight: 900;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+.route-name {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.3;
+    font-weight: 850;
+    color: #1f2937;
+    word-break: normal;
+    overflow-wrap: break-word;
+    white-space: normal;
+    max-width: 100%;
+}
+
+.route-card-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.route-status-pill {
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.route-status-pill.pickup {
+    background: #fbf3d7;
+    color: #a16207;
+}
+
+.route-status-pill.drop {
+    background: #f3e8ff;
+    color: #7e22ce;
+}
+
+.route-status-pill.both {
+    background: #dff6ff;
+    color: #0369a1;
+}
+
+.route-status-pill.none {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.route-arrow {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    font-weight: 900;
+    color: #666;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.route-card-body {
+    display: none;
+    padding: 0 20px 20px;
+}
+
+.route-card-body.open {
+    display: block;
+}
+
+.route-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.route-small-pill {
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+    border: 1px solid #d9d9d9;
+}
+
+.route-small-pill.success {
+    background: #ecfdf3;
+    color: #15803d;
+    border-color: #ccefd6;
+}
+
+.route-small-pill.purple {
+    background: #f4ebff;
+    color: #7e22ce;
+    border-color: #e7d4ff;
+}
+
+.route-small-pill.muted {
+    background: #f5f5f4;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+
+.route-banner {
+    background: #fafafa;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 750;
+    color: #6b7280;
+    margin-bottom: 14px;
+    word-break: break-word;
+}
+
+.route-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.route-meta-pill {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 750;
+    color: #6b7280;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.03);
+}
+
+.route-seat-card {
+    background: linear-gradient(135deg, #eef6ff 0%, #f8fbff 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+}
+
+.route-seat-card strong {
+    display: block;
+    font-size: 14px;
+    color: #1e3a8a;
+    margin-bottom: 4px;
+    font-weight: 900;
+}
+
+.route-seat-card span {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 700;
+}
+
+.route-employee-wrap {
+    margin-bottom: 18px;
+}
+
+.route-employee-head {
+    background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font-size: 14px;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    font-weight: 800;
+}
+
+.route-employee-list {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.route-employee-list.open {
+    display: flex;
+}
+
+.route-employee-card {
+    background: linear-gradient(180deg, #fbfbfb 0%, #ffffff 100%);
+    border: 1px solid #ececec;
+    border-radius: 18px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.route-employee-index {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eef2ff 0%, #ede9fe 100%);
+    color: #4f46e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.route-employee-card strong {
+    display: block;
+    font-size: 15px;
+    color: #374151;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+
+.route-employee-card p {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+    word-break: break-word;
+}
+
+.route-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.route-action-btn {
+    height: 52px;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+}
+
+.route-action-btn.pickup {
+    background: linear-gradient(135deg, #6fd8cc 0%, #4ecdc4 100%);
+    color: #fff;
+    border: none;
+}
+
+.route-action-btn.drop {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: #fff;
+    border: none;
+}
+
+.route-action-btn.delete {
+    color: #dc2626;
+}
+
+.route-action-btn.full {
+    grid-column: 1 / -1;
+}
+
+.route-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.route-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.route-modal-overlay.show {
+    display: flex;
+}
+
+.route-modal-card {
+    width: 100%;
+    max-width: 920px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: rgba(255,255,255,0.98);
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.18);
+    border: 1px solid rgba(229, 231, 235, 0.8);
+}
+
+.route-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.route-modal-head h3 {
+    font-size: 24px;
+    font-weight: 900;
+    color: #111827;
+    margin: 0;
+}
+
+.route-modal-close {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.route-modal-hero {
+    width: 100%;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff;
+    margin-bottom: 18px;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.20);
+}
+
+.route-modal-hero.edit {
+    background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+    box-shadow: 0 12px 24px rgba(13, 148, 136, 0.20);
+}
+
+.route-modal-hero small {
+    display: block;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.route-modal-hero h4 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.3;
+    font-weight: 900;
+}
+
+.route-modal-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 16px;
+}
+
+.route-modal-grid .full {
+    grid-column: 1 / -1;
+}
+
+.route-select,
+.route-text {
+    width: 100%;
+    border: 1px solid #d7d9de;
+    border-radius: 16px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 650;
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.route-select {
+    height: 54px;
+}
+
+.route-text {
+    height: 54px;
+}
+
+.route-readonly-box {
+    width: 100%;
+    min-height: 54px;
+    border: 1px solid #d7d9de;
+    border-radius: 16px;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    background: #f8fafc;
+    color: #334155;
+    display: flex;
+    align-items: center;
+}
+
+.route-form-card {
+    background: #fff;
+    border: 1px solid #edf0f4;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.03);
+}
+
+.route-seat-info {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.route-seat-info strong {
+    font-size: 16px;
+    color: #111827;
+}
+
+.route-seat-badge {
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.route-seat-badge.ok {
+    background: rgba(22, 163, 74, 0.12);
+    color: #15803d;
+}
+
+.route-seat-badge.full {
+    background: rgba(249, 115, 22, 0.12);
+    color: #c2410c;
+}
+
+.route-info-card {
+    width: 100%;
+    padding: 16px;
+    border-radius: 18px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.route-info-card.teal {
+    background: #ecfeff;
+    border-color: rgba(13, 148, 136, 0.18);
+}
+
+.route-info-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+}
+
+.route-info-card.teal .route-info-icon {
+    background: rgba(13, 148, 136, 0.10);
+    color: #0f766e;
+}
+
+.route-info-card p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #334155;
+}
+
+.route-section-title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 900;
+    color: #111827;
+}
+
+.route-section-subtitle {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.route-add-employee-btn {
+    width: 100%;
+    height: 52px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 14px;
+}
+
+.route-add-employee-btn.teal {
+    background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+}
+
+.route-empty-box {
+    width: 100%;
+    padding: 18px;
+    border-radius: 18px;
+    background: #fff;
+    border: 1px solid #edf0f4;
+    text-align: center;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.route-stop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.route-stop-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.03);
+}
+
+.route-stop-card.duplicate {
+    border-color: #fecaca;
+    box-shadow: 0 6px 12px rgba(239, 68, 68, 0.05);
+}
+
+.route-stop-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.route-stop-index {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 50%;
+    background: #dbeafe;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.route-stop-index.teal {
+    background: rgba(13, 148, 136, 0.10);
+    color: #0f766e;
+}
+
+.route-stop-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.route-stop-title strong {
+    display: block;
+    font-size: 18px;
+    font-weight: 900;
+    color: #111827;
+}
+
+.route-stop-title span {
+    display: block;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.route-remove-employee-btn {
+    min-width: 92px;
+    height: 40px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(239, 68, 68, 0.10);
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 0 14px;
+}
+
+.route-stop-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.route-duplicate-warning {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.route-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.route-cancel-btn,
+.route-save-btn {
+    min-width: 116px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.route-cancel-btn {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.route-save-btn {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    color: #fff;
+}
+
+.route-action-note {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: -4px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.route-warning-box {
+    display: none;
+    padding: 14px 16px;
+    border-radius: 16px;
+    margin-bottom: 14px;
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.route-warning-box.show {
+    display: block;
+}
+
+.route-warning-box strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.route-warning-box ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.route-warning-box li {
+    margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.route-flash {
+    padding: 14px 18px;
+    border-radius: 16px;
+    margin-bottom: 0;
+    font-weight: 800;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 1400px) {
+    .route-wrap {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    .route-card-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .route-card-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .route-name {
+        font-size: 19px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .route-top-form {
+        grid-template-columns: 1fr;
+    }
+
+    .route-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .route-wrap {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+
+    .route-actions,
+    .route-modal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .route-modal-grid .full {
+        grid-column: auto;
+    }
+}
+@media (max-width: 1400px) {
+    .route-card-status-wrap {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 768px) {
+    .route-seat-header-alert {
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+}
+@media (max-width: 768px) {
+    .route-top-panel,
+    .route-card,
+    .route-modal-card {
+        border-radius: 20px;
+    }
+
+    .route-wrap {
+        grid-template-columns: 1fr;
+    }
+
+    .route-card-head,
+    .route-card-body,
+    .route-top-panel,
+    .route-modal-card {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .route-name {
+        font-size: 18px;
+    }
+
+    .route-summary-card h3 {
+        font-size: 28px;
+    }
+
+    .route-status-pill,
+    .route-meta-pill,
+    .route-banner,
+    .route-employee-head,
+    .route-action-btn {
+        font-size: 13px;
+    }
+
+    .route-top-actions {
+        width: 100%;
+    }
+
+    .route-btn-small,
+    .route-btn-small.dark {
+        flex: 1 1 auto;
+    }
+
+    .route-modal-actions {
+        flex-direction: column;
+    }
+
+    .route-cancel-btn,
+    .route-save-btn,
+    .route-remove-employee-btn {
+        width: 100%;
+    }
+
+    .route-stop-top {
+        flex-wrap: wrap;
+    }
+}
+</style>
+
+<script id="routeFormData" type="application/json">
+{
+  "employees": [
+    {% for employee in employees %}
+    {
+      "id": {{ employee.id }},
+      "username": "{{ employee.username|escapejs }}",
+      "pickup_location": "{{ employee.pickup_location|default:''|escapejs }}",
+      "pickup_latitude": {% if employee.pickup_latitude is not None %}{{ employee.pickup_latitude }}{% else %}null{% endif %},
+      "pickup_longitude": {% if employee.pickup_longitude is not None %}{{ employee.pickup_longitude }}{% else %}null{% endif %},
+      "is_selectable": {% if employee.is_selectable == False %}false{% else %}true{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "drivers": [
+    {% for driver in drivers %}
+    {
+      "id": {{ driver.id }},
+      "username": "{{ driver.username|escapejs }}",
+      "is_selectable": {% if driver.is_selectable == False %}false{% else %}true{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "vehicles": [
+    {% for vehicle in vehicles %}
+    {
+      "id": {{ vehicle.id }},
+      "driver": {% if vehicle.driver_id %}{{ vehicle.driver_id }}{% else %}null{% endif %},
+      "vehicle_number": "{{ vehicle.vehicle_number|escapejs }}",
+      "vehicle_model": "{{ vehicle.vehicle_model|default:''|escapejs }}",
+      "seat_count": {% if vehicle.seat_count %}{{ vehicle.seat_count }}{% else %}0{% endif %}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+
+<script id="routeHolidayData" type="application/json">
+[
+    {% for holiday in holiday_dates %}
+    "{{ holiday|escapejs }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
+<div class="route-page-shell">
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="route-flash" style="
+            {% if message.tags == 'error' %}
+                background:#fef2f2; color:#991b1b; border:1px solid #fecaca;
+            {% elif message.tags == 'warning' %}
+                background:#fffbeb; color:#92400e; border:1px solid #fde68a;
+            {% else %}
+                background:#ecfdf5; color:#065f46; border:1px solid #d1fae5;
+            {% endif %}
+        ">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="route-top-panel">
+        <form method="get" class="route-top-form">
+            <div class="route-field">
+                <label for="routeDateFilter">Date</label>
+                <input type="date" id="routeDateFilter" name="date" value="{{ selected_date }}" class="route-input">
+            </div>
+
+            <div class="route-field">
+                <label for="routeSearchFilter">Search</label>
+                <input type="text" id="routeSearchFilter" name="q" value="{{ query }}" placeholder="Search route / driver / cab" class="route-input">
+            </div>
+
+            <div class="route-top-actions">
+                <button type="submit" class="route-btn-small dark">Apply</button>
+                <button type="button" class="route-btn-small" onclick="openCreateRouteModal()" aria-label="Create Route">+</button>
+            </div>
+        </form>
+
+        <div class="route-summary-grid">
+            <div class="route-summary-card">
+                <div class="route-summary-icon">🛣️</div>
+                <div>
+                    <p>Saved Routes</p>
+                    <h3>{{ total_routes }}</h3>
+                </div>
+            </div>
+
+            <div class="route-summary-card">
+                <div class="route-summary-icon">📅</div>
+                <div>
+                    <p>Selected Day</p>
+                    <h3>{{ selected_day }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="route-repeat-all-btn" onclick="openRepeatAllModal()">
+            🔁 Repeat All Routes
+        </button>
+    </div>
+
+    <div class="route-wrap">
+        {% for route in route_cards %}
+            <div class="route-card {{ route.ui_state }}">
+                <div
+                    class="route-card-head"
+                    onclick="toggleRouteBody('routeBody{{ route.id }}', 'routeArrow{{ route.id }}')"
+                    role="button"
+                    tabindex="0"
+                    onkeydown="handleCardKeyToggle(event, 'routeBody{{ route.id }}', 'routeArrow{{ route.id }}')"
+                >
+                    <div class="route-card-left">
+                        <div class="route-number">{{ route.index }}</div>
+                        <h3 class="route-name">{{ route.name }}</h3>
+                    </div>
+
+                    <div class="route-card-right">
+                        <div class="route-card-status-wrap">
+                            <span class="route-status-pill {{ route.ui_state }}">{{ route.ui_label }}</span>
+                            <div class="route-seat-header-alert">
+                                Remaining Seats: {{ route.remaining_seats }}
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="route-arrow"
+                            id="routeArrow{{ route.id }}"
+                            onclick="event.stopPropagation(); toggleRouteBody('routeBody{{ route.id }}', 'routeArrow{{ route.id }}')"
+                        >
+                            ▾
+                        </button>
+                    </div>
+                </div>
+
+                <div class="route-card-body" id="routeBody{{ route.id }}">
+                    <div class="route-chip-row">
+                        <span class="route-small-pill {% if route.pickup_assigned %}success{% else %}muted{% endif %}">
+                            {% if route.pickup_assigned %}Pickup Assigned{% else %}Pickup Pending{% endif %}
+                        </span>
+
+                        <span class="route-small-pill {% if route.drop_assigned %}purple{% else %}muted{% endif %}">
+                            {% if route.drop_assigned %}Drop Assigned{% else %}Drop Pending{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="route-banner">⏱️ Pending assignments for selected date</div>
+
+                    <div class="route-meta-grid">
+                        <div class="route-meta-pill">👤 Driver: {{ route.driver_name }}</div>
+                        <div class="route-meta-pill">🚖 Cab: {{ route.vehicle_number }}</div>
+                        <div class="route-meta-pill">🔁 Same driver for both</div>
+                    </div>
+
+                    <div class="route-seat-card">
+                        <strong>💺 Remaining Seats: {{ route.remaining_seats }}</strong>
+                        <span>{{ route.assigned_employees_count }} assigned / {{ route.seat_count }} total seats</span>
+                    </div>
+
+                    <div class="route-employee-wrap">
+                        <div
+                            class="route-employee-head"
+                            onclick="toggleEmployeeList(event, 'employeeList{{ route.id }}', 'employeeArrow{{ route.id }}')"
+                        >
+                            <strong>Total Employees: {{ route.total_employees }}</strong>
+                            <span id="employeeArrow{{ route.id }}">▾</span>
+                        </div>
+
+                        <div class="route-employee-list" id="employeeList{{ route.id }}">
+                            {% for emp in route.employee_rows %}
+                                <div class="route-employee-card">
+                                    <div class="route-employee-index">{{ emp.index }}</div>
+                                    <div>
+                                        <strong>{{ emp.employee_name }}</strong>
+                                        <p>{{ emp.pickup_location }}</p>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="route-banner">No employees added in this route</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="route-actions">
+                        <button
+                            type="button"
+                            class="route-action-btn pickup {% if route.pickup_assigned %}route-disabled{% endif %}"
+                            onclick="openActionModal(event, 'assign', '{{ route.id }}', '{{ route.name|escapejs }}', 'PICKUP')"
+                            {% if route.pickup_assigned %}disabled{% endif %}
+                        >
+                            {% if route.pickup_assigned %}Pickup Assigned{% else %}Assign Pickup{% endif %}
+                        </button>
+
+                        <button
+                            type="button"
+                            class="route-action-btn drop {% if route.drop_assigned %}route-disabled{% endif %}"
+                            onclick="openActionModal(event, 'assign', '{{ route.id }}', '{{ route.name|escapejs }}', 'DROP')"
+                            {% if route.drop_assigned %}disabled{% endif %}
+                        >
+                            {% if route.drop_assigned %}Drop Assigned{% else %}Assign Drop{% endif %}
+                        </button>
+
+                        <button
+                            type="button"
+                            class="route-action-btn"
+                            onclick="openActionModal(event, 'repeat', '{{ route.id }}', '{{ route.name|escapejs }}', '')"
+                        >
+                            🔁 Repeat Route
+                        </button>
+
+                        <button
+                            type="button"
+                            class="route-action-btn edit-route-btn"
+                            data-edit-route-id="{{ route.id }}"
+                            data-route-id="{{ route.id }}"
+                            data-route-name="{{ route.name|escapejs }}"
+                            data-driver-id="{{ route.driver_id }}"
+                            data-route-employees='[
+                                {% for emp in route.employee_rows %}
+                                {
+                                    "employee_id": {% if emp.employee_id %}{{ emp.employee_id }}{% else %}null{% endif %},
+                                    "employee_name": "{{ emp.employee_name|default:''|escapejs }}",
+                                    "pickup_location": "{{ emp.pickup_location|default:''|escapejs }}",
+                                    "pickup_latitude": {% if emp.pickup_latitude is not None %}{{ emp.pickup_latitude }}{% else %}null{% endif %},
+                                    "pickup_longitude": {% if emp.pickup_longitude is not None %}{{ emp.pickup_longitude }}{% else %}null{% endif %}
+                                }{% if not forloop.last %},{% endif %}
+                                {% endfor %}
+                            ]'
+                            onclick="openEditRouteModal(event, this)"
+                        >
+                            ✏️ Edit Route
+                        </button>
+
+                        <form method="post" action="{% url 'admin_web:delete_route' route.id %}" style="grid-column: 1 / -1;" onsubmit="return confirm('Delete this route?')">
+                            {% csrf_token %}
+                            <button type="submit" class="route-action-btn delete full">🗑️ Delete Route</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="auto-edit-route-trigger"
+                style="display:none;"
+                data-edit-route-id="{{ route.id }}"
+                data-route-id="{{ route.id }}"
+                data-route-name="{{ route.name|escapejs }}"
+                data-driver-id="{{ route.driver_id }}"
+                data-route-employees='[
+                    {% for emp in route.employee_rows %}
+                    {
+                        "employee_id": {% if emp.employee_id %}{{ emp.employee_id }}{% else %}null{% endif %},
+                        "employee_name": "{{ emp.employee_name|default:''|escapejs }}",
+                        "pickup_location": "{{ emp.pickup_location|default:''|escapejs }}",
+                        "pickup_latitude": {% if emp.pickup_latitude is not None %}{{ emp.pickup_latitude }}{% else %}null{% endif %},
+                        "pickup_longitude": {% if emp.pickup_longitude is not None %}{{ emp.pickup_longitude }}{% else %}null{% endif %}
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]'
+            ></button>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- EDIT ROUTE MODAL -->
+<div class="route-modal-overlay" id="editRouteModal">
+    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="editRouteTitle">
+        <div class="route-modal-head">
+            <h3 id="editRouteTitle">Edit Route</h3>
+            <button type="button" class="route-modal-close" onclick="closeEditRouteModal()" aria-label="Close Edit Route Modal">✕</button>
+        </div>
+
+        <div class="route-modal-hero edit">
+            <small>Edit Route</small>
+            <h4>Update your saved route and employees</h4>
+        </div>
+
+        <form method="post" id="editRouteForm">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle" id="editRouteVehicleHidden">
+            <input type="hidden" name="stops_json" id="editRouteStopsJson">
+
+            <div class="route-info-card teal">
+                <div class="route-info-icon">i</div>
+                <p>This is a neutral route template. After updating it, you can assign the same route as pickup or drop later from Manage Routes.</p>
+            </div>
+
+            <div class="route-form-card">
+                <div class="route-modal-grid">
+                    <div class="full">
+                        <label class="route-modal-label" for="editRouteName">Route Name</label>
+                        <input type="text" name="name" id="editRouteName" class="route-text" required>
+                    </div>
+
+                    <div>
+                        <label class="route-modal-label" for="editRouteDriver">Driver</label>
+                        <select name="driver" id="editRouteDriver" class="route-select"></select>
+                    </div>
+
+                    <div>
+                        <label class="route-modal-label">Vehicle (auto selected)</label>
+                        <div class="route-readonly-box" id="editRouteVehicleDisplay">No vehicle selected</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-seat-info">
+                <strong id="editSeatInfoText">Added Employees: 0 / 0</strong>
+                <span class="route-seat-badge ok" id="editSeatInfoBadge">Seats available</span>
+            </div>
+
+            <h4 class="route-section-title">Assigned Employees</h4>
+
+            <!-- 🚀 SMART ROUTE CONTROLS -->
+            <div style="margin-bottom:16px;">
+                <div style="font-weight:800; margin-bottom:8px;">Optimize Order</div>
+
+                <button type="button" onclick="previewRoute('MANUAL')" class="route-btn-small">Keep Order</button>
+                <button type="button" onclick="previewRoute('DISTANCE')" class="route-btn-small">Shortest Distance</button>
+                <button type="button" onclick="previewRoute('SAFE')" class="route-btn-small">Safety Mode</button>
+            </div>
+
+            <div id="editRoutePreviewBox" style="margin-bottom:12px;"></div>
+            <p class="route-section-subtitle">The same route can later be used for both pickup and drop.</p>
+
+            <button type="button" class="route-add-employee-btn teal" id="editAddEmployeeBtn">+ Add Employee</button>
+
+            <div class="route-stop-list" id="editStopList"></div>
+            <div class="route-empty-box" id="editEmptyState">No employees added yet. Tap “Add Employee” to assign route priority.</div>
+
+            <div class="route-modal-actions">
+                <button type="button" class="route-cancel-btn" onclick="closeEditRouteModal()">Cancel</button>
+                <button type="submit" class="route-save-btn">Update Route</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- CREATE ROUTE MODAL -->
+<div class="route-modal-overlay" id="createRouteModal">
+    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="createRouteTitle">
+        <div class="route-modal-head">
+            <h3 id="createRouteTitle">Create Route</h3>
+            <button type="button" class="route-modal-close" onclick="closeCreateRouteModal()" aria-label="Close Create Route Modal">✕</button>
+        </div>
+
+        <div class="route-modal-hero">
+            <small>Route Template</small>
+            <h4>Create one reusable route for both pickup and drop</h4>
+        </div>
+
+        <form method="post" action="{% url 'admin_web:create_route' %}" id="createRouteForm">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle" id="createRouteVehicleHidden">
+            <input type="hidden" name="stops_json" id="createRouteStopsJson">
+
+            <div class="route-info-card">
+                <div class="route-info-icon">i</div>
+                <p>Create one route with employee order. Later from Manage Routes, admin can assign pickup or drop using this same route.</p>
+            </div>
+
+            <div class="route-form-card">
+                <div class="route-modal-grid">
+                    <div class="full">
+                        <label class="route-modal-label" for="createRouteName">Route Name</label>
+                        <input type="text" name="name" id="createRouteName" class="route-text" required>
+                    </div>
+
+                    <div>
+                        <label class="route-modal-label" for="createRouteDriver">Driver</label>
+                        <select name="driver" id="createRouteDriver" class="route-select"></select>
+                    </div>
+
+                    <div>
+                        <label class="route-modal-label">Vehicle (auto selected)</label>
+                        <div class="route-readonly-box" id="createRouteVehicleDisplay">No vehicle selected</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-seat-info">
+                <strong id="createSeatInfoText">Added Employees: 0 / 0</strong>
+                <span class="route-seat-badge ok" id="createSeatInfoBadge">Seats available</span>
+            </div>
+
+            <h4 class="route-section-title">Assigned Employees</h4>
+            <!-- 🚀 SMART ROUTE CONTROLS -->
+            <div style="margin-bottom:16px;">
+                <div style="font-weight:800; margin-bottom:8px;">Optimize Order</div>
+
+                <button type="button" onclick="previewRoute('MANUAL')" class="route-btn-small">Keep Order</button>
+                <button type="button" onclick="previewRoute('DISTANCE')" class="route-btn-small">Shortest Distance</button>
+                <button type="button" onclick="previewRoute('SAFE')" class="route-btn-small">Safety Mode</button>
+            </div>
+
+            <div id="createRoutePreviewBox" style="margin-bottom:12px;"></div>
+
+            <p class="route-section-subtitle">The same route can later be used for both pickup and drop.</p>
+
+            <button type="button" class="route-add-employee-btn" id="createAddEmployeeBtn">+ Add Employee</button>
+
+            <div class="route-stop-list" id="createStopList"></div>
+            <div class="route-empty-box" id="createEmptyState">No employees added yet. Tap “Add Employee” to define employee order for this route.</div>
+
+            <div class="route-modal-actions">
+                <button type="button" class="route-cancel-btn" onclick="closeCreateRouteModal()">Cancel</button>
+                <button type="submit" class="route-save-btn">Create Route</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ASSIGN / REPEAT SINGLE MODAL -->
+<div class="route-modal-overlay" id="routeActionModal">
+    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="routeActionTitle">
+        <div class="route-modal-head">
+            <h3 id="routeActionTitle">Route Action</h3>
+            <button type="button" class="route-modal-close" onclick="closeActionModal()" aria-label="Close Route Action Modal">✕</button>
+        </div>
+
+        <form method="post" id="routeActionForm">
+            {% csrf_token %}
+
+            <div class="route-action-note" id="routeActionNote">Selected route action</div>
+
+            <div class="route-modal-grid">
+                <div id="tripTypeWrap">
+                    <label class="route-modal-label" for="routeActionTripType">Trip Type</label>
+                    <select name="trip_type" id="routeActionTripType" class="route-select">
+                        <option value="PICKUP">Pickup</option>
+                        <option value="DROP">Drop</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="route-modal-label" for="routeActionDate">Date</label>
+                    <input type="date" name="date" id="routeActionDate" class="route-text" value="{{ selected_date }}" required>
+                </div>
+
+                <div class="full">
+                    <label class="route-modal-label" for="routeActionTime">Time (HH:MM)</label>
+                    <input type="time" name="time" id="routeActionTime" class="route-text" required>
+                </div>
+            </div>
+
+            <div class="route-modal-actions">
+                <button type="button" class="route-cancel-btn" onclick="closeActionModal()">Cancel</button>
+                <button type="submit" class="route-save-btn">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- REPEAT ALL MODAL -->
+<div class="route-modal-overlay" id="repeatAllModal">
+    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="repeatAllTitle">
+        <div class="route-modal-head">
+            <h3 id="repeatAllTitle">Repeat All Routes</h3>
+            <button type="button" class="route-modal-close" onclick="closeRepeatAllModal()" aria-label="Close Repeat All Modal">✕</button>
+        </div>
+
+        <form method="post" action="{% url 'admin_web:repeat_all_routes_action' %}" id="repeatAllForm">
+            {% csrf_token %}
+
+            <div class="route-action-note">
+                Select the date range for which you want to repeat all saved routes.
+            </div>
+
+            <div class="route-modal-grid">
+                <div>
+                    <label class="route-modal-label" for="repeatAllTripType">Trip Type</label>
+                    <select name="trip_type" id="repeatAllTripType" class="route-select">
+                        <option value="PICKUP">Pickup</option>
+                        <option value="DROP">Drop</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="route-modal-label" for="repeatAllTime">Time (HH:MM)</label>
+                    <input type="time" name="time" id="repeatAllTime" class="route-text" required>
+                </div>
+
+                <div>
+                    <label class="route-modal-label" for="repeatAllStartDate">Start Date</label>
+                    <input type="date" name="start_date" id="repeatAllStartDate" class="route-text" required>
+                </div>
+
+                <div>
+                    <label class="route-modal-label" for="repeatAllEndDate">End Date</label>
+                    <input type="date" name="end_date" id="repeatAllEndDate" class="route-text" required>
+                </div>
+            </div>
+
+            <div class="route-warning-box" id="repeatAllWarningBox">
+                <strong>Holiday / weekend alert</strong>
+                <ul id="repeatAllWarningList"></ul>
+            </div>
+
+            <div class="route-modal-actions">
+                <button type="button" class="route-cancel-btn" onclick="closeRepeatAllModal()">Cancel</button>
+                <button type="submit" class="route-save-btn">Repeat All</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let ROUTE_FORM_DATA = {
+    employees: [],
+    drivers: [],
+    vehicles: []
+};
+
+let ROUTE_HOLIDAY_DATES = [];
+
+try {
+    const routeFormDataEl = document.getElementById("routeFormData");
+    if (routeFormDataEl) {
+        ROUTE_FORM_DATA = JSON.parse(routeFormDataEl.textContent);
+    }
+} catch (error) {
+    console.error("routeFormData JSON parse error:", error);
+    ROUTE_FORM_DATA = {
+        employees: [],
+        drivers: [],
+        vehicles: []
+    };
+}
+
+try {
+    const holidayDataEl = document.getElementById("routeHolidayData");
+    if (holidayDataEl) {
+        ROUTE_HOLIDAY_DATES = JSON.parse(holidayDataEl.textContent);
+    }
+} catch (error) {
+    console.error("routeHolidayData JSON parse error:", error);
+    ROUTE_HOLIDAY_DATES = [];
+}
+
+function parseRouteEmployees(rawValue) {
+    try {
+        return JSON.parse(rawValue || "[]");
+    } catch (e) {
+        console.error("route employee parse error:", e);
+        return [];
+    }
+}
+
+function getSelectableDrivers() {
+    return (ROUTE_FORM_DATA.drivers || []).filter(driver => driver.is_selectable !== false);
+}
+
+function findVehicleByDriver(driverId) {
+    return (ROUTE_FORM_DATA.vehicles || []).find(v => Number(v.driver) === Number(driverId)) || null;
+}
+
+function findEmployeeById(employeeId) {
+    return (ROUTE_FORM_DATA.employees || []).find(emp => Number(emp.id) === Number(employeeId)) || null;
+}
+
+function getAvailableEmployeesForIndex(state, index) {
+    const currentSelectedId = state.stops[index]?.employee_id;
+    return (ROUTE_FORM_DATA.employees || []).filter(emp => {
+        const selectableFromBackend = emp.is_selectable !== false;
+        return selectableFromBackend || Number(currentSelectedId) === Number(emp.id);
+    });
+}
+
+function isEmployeeAlreadySelected(state, employeeId, currentIndex) {
+    return state.stops.some((stop, idx) => idx !== currentIndex && Number(stop.employee_id) === Number(employeeId));
+}
+
+function createModalState(prefix) {
+    return {
+        prefix,
+        driverId: null,
+        vehicle: null,
+        stops: []
+    };
+}
+
+const createState = createModalState("create");
+const editState = createModalState("edit");
+
+function fillDriverOptions(selectEl, selectedId) {
+    if (!selectEl) return;
+    const drivers = getSelectableDrivers();
+    selectEl.innerHTML = '<option value="">Select Driver</option>' + drivers.map(driver => {
+        const selected = Number(selectedId) === Number(driver.id) ? "selected" : "";
+        return `<option value="${driver.id}" ${selected}>${driver.username}</option>`;
+    }).join("");
+}
+
+function getModalElements(prefix) {
+    return {
+        form: document.getElementById(`${prefix}RouteForm`),
+        driver: document.getElementById(`${prefix}RouteDriver`),
+        vehicleDisplay: document.getElementById(`${prefix}RouteVehicleDisplay`),
+        vehicleHidden: document.getElementById(`${prefix}RouteVehicleHidden`),
+        stopsJson: document.getElementById(`${prefix}RouteStopsJson`),
+        stopList: document.getElementById(`${prefix}StopList`),
+        emptyState: document.getElementById(`${prefix}EmptyState`),
+        addBtn: document.getElementById(`${prefix}AddEmployeeBtn`),
+        seatText: document.getElementById(`${prefix}SeatInfoText`),
+        seatBadge: document.getElementById(`${prefix}SeatInfoBadge`)
+    };
+}
+
+function resetStops(state) {
+    state.stops = [];
+}
+
+function syncVehicle(prefix, state) {
+    const els = getModalElements(prefix);
+    state.vehicle = state.driverId ? findVehicleByDriver(state.driverId) : null;
+
+    if (els.vehicleDisplay && els.vehicleHidden) {
+        if (state.vehicle) {
+            const label = `${state.vehicle.vehicle_number}${state.vehicle.vehicle_model ? " (" + state.vehicle.vehicle_model + ")" : ""}`;
+            els.vehicleDisplay.textContent = label;
+            els.vehicleHidden.value = state.vehicle.id;
+        } else {
+            els.vehicleDisplay.textContent = "No vehicle selected";
+            els.vehicleHidden.value = "";
+        }
+    }
+
+    renderSeatInfo(prefix, state);
+    renderStopList(prefix, state);
+}
+
+function renderSeatInfo(prefix, state) {
+    const els = getModalElements(prefix);
+    const seatCount = state.vehicle?.seat_count || 0;
+    const count = state.stops.length;
+
+    if (!els.seatText || !els.seatBadge) return;
+
+    els.seatText.textContent = `Added Employees: ${count} / ${seatCount}`;
+    if (seatCount > 0 && count >= seatCount) {
+        els.seatBadge.className = "route-seat-badge full";
+        els.seatBadge.textContent = "Seat limit reached";
+    } else {
+        els.seatBadge.className = "route-seat-badge ok";
+        els.seatBadge.textContent = state.vehicle ? "Seats available" : "Select driver first";
+    }
+}
+
+function addEmployee(prefix, state) {
+    if (!state.vehicle) {
+        alert("Please select driver first.");
+        return;
+    }
+
+    const seatCount = state.vehicle.seat_count || 0;
+    if (state.stops.length >= seatCount) {
+        alert(`Maximum ${seatCount} employees allowed.`);
+        return;
+    }
+
+    state.stops.push({
+        employee_id: null,
+        pickup_location: "",
+        pickup_latitude: "",
+        pickup_longitude: ""
+    });
+
+    renderStopList(prefix, state);
+    renderSeatInfo(prefix, state);
+}
+
+function removeEmployee(prefix, state, index) {
+    state.stops.splice(index, 1);
+    renderStopList(prefix, state);
+    renderSeatInfo(prefix, state);
+}
+
+function onEmployeeChanged(prefix, state, index, value) {
+    const employeeId = value ? Number(value) : null;
+    if (!employeeId) return;
+
+    if (isEmployeeAlreadySelected(state, employeeId, index)) {
+        alert("This employee is already added in the route.");
+        renderStopList(prefix, state);
+        return;
+    }
+
+    const employee = findEmployeeById(employeeId);
+    state.stops[index].employee_id = employeeId;
+    state.stops[index].pickup_location = employee?.pickup_location || "";
+    state.stops[index].pickup_latitude = employee?.pickup_latitude ?? "";
+    state.stops[index].pickup_longitude = employee?.pickup_longitude ?? "";
+
+    renderStopList(prefix, state);
+}
+
+function renderStopList(prefix, state) {
+    const els = getModalElements(prefix);
+    const seatCount = state.vehicle?.seat_count || 0;
+
+    if (!els.stopList || !els.emptyState || !els.addBtn) return;
+
+    els.stopList.innerHTML = "";
+
+    if (!state.stops.length) {
+        els.emptyState.style.display = "block";
+        els.addBtn.disabled = !state.vehicle;
+        return;
+    }
+
+    els.emptyState.style.display = "none";
+
+    state.stops.forEach((stop, index) => {
+        const availableEmployees = getAvailableEmployeesForIndex(state, index);
+        const employee = findEmployeeById(stop.employee_id);
+        const employeeName = employee?.username || "Not selected";
+        const duplicate = stop.employee_id && isEmployeeAlreadySelected(state, stop.employee_id, index);
+
+        const options = ['<option value="">Select Employee</option>'].concat(
+            availableEmployees.map(emp => {
+                const alreadyUsed = isEmployeeAlreadySelected(state, emp.id, index);
+                const selected = Number(stop.employee_id) === Number(emp.id) ? "selected" : "";
+                const disabled = alreadyUsed ? "disabled" : "";
+                const suffix = alreadyUsed ? " (Already added)" : "";
+                return `<option value="${emp.id}" ${selected} ${disabled}>${emp.username}${suffix}</option>`;
+            })
+        ).join("");
+
+        const themeClass = prefix === "edit" ? "teal" : "";
+
+        const card = document.createElement("div");
+        card.className = `route-stop-card ${duplicate ? "duplicate" : ""}`;
+        card.innerHTML = `
+            <div class="route-stop-top">
+                <div class="route-stop-index ${themeClass}">${index + 1}</div>
+                <div class="route-stop-title">
+                    <strong>Employee ${index + 1} - ${employeeName}</strong>
+                    <span>Define employee order for this route</span>
+                </div>
+                <button type="button" class="route-remove-employee-btn" data-index="${index}">Delete</button>
+            </div>
+
+            <div class="route-stop-grid">
+                <div>
+                    <label class="route-modal-label">Select Employee</label>
+                    <select class="route-select route-stop-employee" data-index="${index}">
+                        ${options}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="route-modal-label">Pickup Location</label>
+                    <div class="route-readonly-box">${stop.pickup_location || "No pickup location"}</div>
+                </div>
+            </div>
+
+            ${duplicate ? '<div class="route-duplicate-warning">⚠ Employee already selected</div>' : ''}
+        `;
+        els.stopList.appendChild(card);
+    });
+
+    els.stopList.querySelectorAll(".route-stop-employee").forEach(select => {
+        select.addEventListener("change", function() {
+            onEmployeeChanged(prefix, state, Number(this.dataset.index), this.value);
+        });
+    });
+
+    els.stopList.querySelectorAll(".route-remove-employee-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+            removeEmployee(prefix, state, Number(this.dataset.index));
+        });
+    });
+
+    els.addBtn.disabled = !state.vehicle || (seatCount > 0 && state.stops.length >= seatCount);
+}
+
+function prepareStopsJson(state) {
+    return state.stops.map((stop, index) => ({
+        employee: stop.employee_id,
+        pickup_location: stop.pickup_location || "",
+        pickup_latitude: stop.pickup_latitude === "" ? null : stop.pickup_latitude,
+        pickup_longitude: stop.pickup_longitude === "" ? null : stop.pickup_longitude,
+        stop_order: index + 1
+    }));
+}
+
+function validateRouteForm(state) {
+    if (!state.driverId || !state.vehicle) {
+        alert("Please select driver first.");
+        return false;
+    }
+
+    if (!state.stops.length) {
+        alert("Please add at least one employee.");
+        return false;
+    }
+
+    const seatCount = state.vehicle.seat_count || 0;
+    if (state.stops.length > seatCount) {
+        alert(`Vehicle seat count is ${seatCount}, but you added ${state.stops.length} employees.`);
+        return false;
+    }
+
+    for (let i = 0; i < state.stops.length; i++) {
+        const stop = state.stops[i];
+        if (!stop.employee_id || !stop.pickup_location) {
+            alert(`Please complete employee ${i + 1} details.`);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function populateCreateModal() {
+    const els = getModalElements("create");
+    if (!els.form) return;
+
+    els.form.reset();
+    fillDriverOptions(els.driver, null);
+    createState.driverId = null;
+    createState.vehicle = null;
+    resetStops(createState);
+
+    if (els.vehicleDisplay) els.vehicleDisplay.textContent = "No vehicle selected";
+    if (els.vehicleHidden) els.vehicleHidden.value = "";
+    if (els.stopsJson) els.stopsJson.value = "";
+
+    renderSeatInfo("create", createState);
+    renderStopList("create", createState);
+}
+
+function populateEditModal(buttonEl) {
+    const els = getModalElements("edit");
+    if (!els.form) return;
+
+    const routeId = buttonEl.dataset.routeId;
+    const routeName = buttonEl.dataset.routeName || "";
+    const driverId = buttonEl.dataset.driverId ? Number(buttonEl.dataset.driverId) : null;
+    const employees = parseRouteEmployees(buttonEl.dataset.routeEmployees);
+
+    els.form.action = `/admin-web/routes/${routeId}/edit/`;
+    const nameInput = document.getElementById("editRouteName");
+    if (nameInput) nameInput.value = routeName;
+
+    fillDriverOptions(els.driver, driverId);
+    editState.driverId = driverId;
+    editState.vehicle = driverId ? findVehicleByDriver(driverId) : null;
+    editState.stops = employees.map(item => ({
+        employee_id: item.employee_id ? Number(item.employee_id) : null,
+        pickup_location: item.pickup_location || "",
+        pickup_latitude: item.pickup_latitude ?? "",
+        pickup_longitude: item.pickup_longitude ?? ""
+    }));
+
+    syncVehicle("edit", editState);
+}
+
+function openEditRouteModal(event, buttonEl) {
+    if (event) event.stopPropagation();
+    populateEditModal(buttonEl);
+    const modal = document.getElementById("editRouteModal");
+    if (modal) modal.classList.add("show");
+}
+
+function closeEditRouteModal() {
+    const modal = document.getElementById("editRouteModal");
+    if (modal) modal.classList.remove("show");
+}
+
+function openCreateRouteModal() {
+    populateCreateModal();
+    const modal = document.getElementById("createRouteModal");
+    if (modal) modal.classList.add("show");
+}
+
+function closeCreateRouteModal() {
+    const modal = document.getElementById("createRouteModal");
+    if (modal) modal.classList.remove("show");
+}
+
+function toggleRouteBody(bodyId, arrowId) {
+    const body = document.getElementById(bodyId);
+    const arrow = document.getElementById(arrowId);
+    if (!body) return;
+    body.classList.toggle("open");
+    if (arrow) {
+        arrow.innerText = body.classList.contains("open") ? "▴" : "▾";
+    }
+}
+
+function handleCardKeyToggle(event, bodyId, arrowId) {
+    if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleRouteBody(bodyId, arrowId);
+    }
+}
+
+function toggleEmployeeList(event, listId, arrowId) {
+    if (event) event.stopPropagation();
+    const list = document.getElementById(listId);
+    const arrow = document.getElementById(arrowId);
+    if (!list) return;
+    list.classList.toggle("open");
+    if (arrow) {
+        arrow.innerText = list.classList.contains("open") ? "▴" : "▾";
+    }
+}
+
+function handleEmployeeKeyToggle(event, listId, arrowId) {
+    if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleEmployeeList(event, listId, arrowId);
+    }
+}
+
+function openActionModal(event, mode, routeId, routeName, fixedType) {
+    if (event) event.stopPropagation();
+
+    const modal = document.getElementById("routeActionModal");
+    const form = document.getElementById("routeActionForm");
+    const title = document.getElementById("routeActionTitle");
+    const note = document.getElementById("routeActionNote");
+    const tripTypeWrap = document.getElementById("tripTypeWrap");
+    const tripTypeSelect = document.getElementById("routeActionTripType");
+    const dateInput = document.getElementById("routeActionDate");
+    const timeInput = document.getElementById("routeActionTime");
+
+    if (!modal || !form || !title || !note || !tripTypeWrap || !tripTypeSelect || !dateInput || !timeInput) return;
+
+    dateInput.value = "{{ selected_date }}";
+    timeInput.value = "";
+
+    if (mode === "assign") {
+        title.innerText = fixedType === "DROP" ? "Assign Drop" : "Assign Pickup";
+        note.innerText = `Route: ${routeName}`;
+        form.action = `/admin-web/routes/${routeId}/assign/${fixedType}/`;
+        tripTypeWrap.style.display = "none";
+        tripTypeSelect.value = fixedType;
+        tripTypeSelect.disabled = true;
+    } else {
+        title.innerText = "Repeat Route";
+        note.innerText = `Route: ${routeName}`;
+        form.action = `/admin-web/routes/${routeId}/repeat/`;
+        tripTypeWrap.style.display = "block";
+        tripTypeSelect.disabled = false;
+        tripTypeSelect.value = "PICKUP";
+    }
+
+    modal.classList.add("show");
+}
+
+function closeActionModal() {
+    const modal = document.getElementById("routeActionModal");
+    const tripTypeSelect = document.getElementById("routeActionTripType");
+    const tripTypeWrap = document.getElementById("tripTypeWrap");
+    if (modal) modal.classList.remove("show");
+    if (tripTypeSelect) tripTypeSelect.disabled = false;
+    if (tripTypeWrap) tripTypeWrap.style.display = "block";
+}
+
+function normalizeDateString(dateStr) {
+    return dateStr;
+}
+
+function enumerateDates(startStr, endStr) {
+    const dates = [];
+    if (!startStr || !endStr) return dates;
+
+    const start = new Date(startStr + "T00:00:00");
+    const end = new Date(endStr + "T00:00:00");
+
+    if (isNaN(start) || isNaN(end) || start > end) return dates;
+
+    let current = new Date(start);
+    while (current <= end) {
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, "0");
+        const d = String(current.getDate()).padStart(2, "0");
+        dates.push({
+            value: `${y}-${m}-${d}`,
+            day: current.getDay()
+        });
+        current.setDate(current.getDate() + 1);
+    }
+    return dates;
+}
+
+let previewData = [];
+
+function getSelectedEmployeeIdsFromState(state) {
+    return state.stops
+        .map(s => s.employee_id)
+        .filter(Boolean);
+}
+
+async function previewRoute(mode) {
+    // detect which modal is open
+    let state = document.getElementById("createRouteModal").classList.contains("show")
+        ? createState
+        : editState;
+
+    const employeeIds = getSelectedEmployeeIdsFromState(state);
+
+    if (employeeIds.length < 2) {
+        alert("Select at least 2 employees.");
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/trips/routes/preview-route-order/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                employee_ids: employeeIds,
+                mode: mode
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(data.error || "Preview failed");
+            return;
+        }
+
+        previewData = data;
+        renderPreview(data, mode);
+
+    } catch (e) {
+        console.error(e);
+        alert("Preview error");
+    }
+}
+
+function renderPreview(data, mode) {
+    const isCreateOpen = document.getElementById("createRouteModal").classList.contains("show");
+    const box = document.getElementById(isCreateOpen ? "createRoutePreviewBox" : "editRoutePreviewBox");
+
+    if (!box) return;
+
+    box.innerHTML = `<strong>Preview (${mode})</strong>`;
+
+    data.forEach((emp, i) => {
+        box.innerHTML += `
+            <div style="padding:4px 0;">
+                ${i + 1}. ${emp.username} - ${emp.pickup_location || ""}
+            </div>
+        `;
+    });
+
+    box.innerHTML += `
+        <br>
+        <button type="button" onclick="applyPreview()" class="route-save-btn">
+            Apply This Order
+        </button>
+    `;
+}
+
+function applyPreview() {
+    if (!previewData.length) {
+        alert("Preview first");
+        return;
+    }
+
+    let state = document.getElementById("createRouteModal").classList.contains("show")
+        ? createState
+        : editState;
+
+    // reorder stops
+    state.stops = previewData.map(emp => ({
+        employee_id: emp.id,
+        pickup_location: emp.pickup_location || "",
+        pickup_latitude: emp.pickup_latitude ?? "",
+        pickup_longitude: emp.pickup_longitude ?? ""
+    }));
+
+    if (state.prefix === "create") {
+        renderStopList("create", state);
+        renderSeatInfo("create", state);
+    } else {
+        renderStopList("edit", state);
+        renderSeatInfo("edit", state);
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+
+            if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+function updateRepeatAllWarningBox() {
+    const startInput = document.getElementById("repeatAllStartDate");
+    const endInput = document.getElementById("repeatAllEndDate");
+    const warningBox = document.getElementById("repeatAllWarningBox");
+    const warningList = document.getElementById("repeatAllWarningList");
+
+    if (!startInput || !endInput || !warningBox || !warningList) return;
+
+    const startDate = startInput.value;
+    const endDate = endInput.value;
+
+    warningList.innerHTML = "";
+    warningBox.classList.remove("show");
+
+    if (!startDate || !endDate) return;
+
+    if (startDate > endDate) {
+        warningBox.classList.add("show");
+        warningList.innerHTML = `<li>End date cannot be earlier than start date.</li>`;
+        return;
+    }
+
+    const dates = enumerateDates(startDate, endDate);
+    const weekendDates = [];
+    const holidayDates = [];
+
+    dates.forEach(item => {
+        if (item.day === 0 || item.day === 6) {
+            weekendDates.push(item.value);
+        }
+        if ((ROUTE_HOLIDAY_DATES || []).includes(item.value)) {
+            holidayDates.push(item.value);
+        }
+    });
+
+    if (!weekendDates.length && !holidayDates.length) return;
+
+    if (weekendDates.length) {
+        const uniqueWeekendDates = [...new Set(weekendDates)];
+        const li = document.createElement("li");
+        li.textContent = `Weekend dates in selected range: ${uniqueWeekendDates.join(", ")}`;
+        warningList.appendChild(li);
+    }
+
+    if (holidayDates.length) {
+        const uniqueHolidayDates = [...new Set(holidayDates)];
+        const li = document.createElement("li");
+        li.textContent = `Holiday dates in selected range: ${uniqueHolidayDates.join(", ")}`;
+        warningList.appendChild(li);
+    }
+
+    warningBox.classList.add("show");
+}
+
+function openRepeatAllModal() {
+    const modal = document.getElementById("repeatAllModal");
+    const startInput = document.getElementById("repeatAllStartDate");
+    const endInput = document.getElementById("repeatAllEndDate");
+    const timeInput = document.getElementById("repeatAllTime");
+    const warningBox = document.getElementById("repeatAllWarningBox");
+    const warningList = document.getElementById("repeatAllWarningList");
+
+    if (startInput) startInput.value = "{{ selected_date }}";
+    if (endInput) endInput.value = "{{ selected_date }}";
+    if (timeInput) timeInput.value = "";
+    if (warningBox) warningBox.classList.remove("show");
+    if (warningList) warningList.innerHTML = "";
+
+    updateRepeatAllWarningBox();
+
+    if (modal) modal.classList.add("show");
+}
+
+function closeRepeatAllModal() {
+    const modal = document.getElementById("repeatAllModal");
+    if (modal) modal.classList.remove("show");
+}
+
+function bindOverlayClose(modalId, closeFn) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.addEventListener("click", function(e) {
+        if (e.target === modal) {
+            closeFn();
+        }
+    });
+}
+
+
+document.addEventListener("DOMContentLoaded", function() {
+    try {
+        const createEls = getModalElements("create");
+        const editEls = getModalElements("edit");
+
+        if (createEls.driver) fillDriverOptions(createEls.driver, null);
+        if (editEls.driver) fillDriverOptions(editEls.driver, null);
+
+        if (createEls.driver) {
+            createEls.driver.addEventListener("change", function() {
+                createState.driverId = this.value ? Number(this.value) : null;
+                createState.stops = [];
+                syncVehicle("create", createState);
+            });
+        }
+
+        if (editEls.driver) {
+            editEls.driver.addEventListener("change", function() {
+                editState.driverId = this.value ? Number(this.value) : null;
+                editState.stops = [];
+                syncVehicle("edit", editState);
+            });
+        }
+
+        if (createEls.addBtn) {
+            createEls.addBtn.addEventListener("click", function() {
+                addEmployee("create", createState);
+            });
+        }
+
+        if (editEls.addBtn) {
+            editEls.addBtn.addEventListener("click", function() {
+                addEmployee("edit", editState);
+            });
+        }
+
+        if (createEls.form) {
+            createEls.form.addEventListener("submit", function(e) {
+                if (!validateRouteForm(createState)) {
+                    e.preventDefault();
+                    return;
+                }
+                if (createEls.stopsJson) {
+                    createEls.stopsJson.value = JSON.stringify(prepareStopsJson(createState));
+                }
+            });
+        }
+
+        if (editEls.form) {
+            editEls.form.addEventListener("submit", function(e) {
+                if (!validateRouteForm(editState)) {
+                    e.preventDefault();
+                    return;
+                }
+                if (editEls.stopsJson) {
+                    editEls.stopsJson.value = JSON.stringify(prepareStopsJson(editState));
+                }
+            });
+        }
+
+        const repeatAllStart = document.getElementById("repeatAllStartDate");
+        const repeatAllEnd = document.getElementById("repeatAllEndDate");
+        const repeatAllForm = document.getElementById("repeatAllForm");
+
+        if (repeatAllStart) {
+            repeatAllStart.addEventListener("change", updateRepeatAllWarningBox);
+        }
+
+        if (repeatAllEnd) {
+            repeatAllEnd.addEventListener("change", updateRepeatAllWarningBox);
+        }
+
+        if (repeatAllForm) {
+            repeatAllForm.addEventListener("submit", function(e) {
+                const startDate = document.getElementById("repeatAllStartDate")?.value;
+                const endDate = document.getElementById("repeatAllEndDate")?.value;
+                const warningBox = document.getElementById("repeatAllWarningBox");
+                const warningList = document.getElementById("repeatAllWarningList");
+
+                if (!startDate || !endDate) {
+                    e.preventDefault();
+                    alert("Please select both start date and end date.");
+                    return;
+                }
+
+                if (startDate > endDate) {
+                    e.preventDefault();
+                    alert("End date cannot be earlier than start date.");
+                    return;
+                }
+
+                updateRepeatAllWarningBox();
+
+                if (warningBox && warningBox.classList.contains("show") && warningList) {
+                    const warningText = warningList.innerText.trim();
+                    const proceed = confirm(`Selected range includes weekend / holiday dates.\n\n${warningText}\n\nDo you want to continue?`);
+                    if (!proceed) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        }
+
+        renderSeatInfo("create", createState);
+        renderStopList("create", createState);
+        renderSeatInfo("edit", editState);
+        renderStopList("edit", editState);
+        if (typeof hydrateSeatCards === "function") {
+            hydrateSeatCards();
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const editRouteId = params.get("edit_route_id");
+
+        if (editRouteId) {
+            setTimeout(function () {
+                const editTrigger = document.querySelector(
+                    `.auto-edit-route-trigger[data-route-id="${editRouteId}"]`
+                );
+
+                if (editTrigger) {
+                    openEditRouteModal(null, editTrigger);
+
+                    // remove edit_route_id from URL so modal does not reopen after update/close
+                    const cleanUrl = window.location.pathname;
+                    window.history.replaceState({}, document.title, cleanUrl);
+                } else {
+                    console.warn("Auto edit trigger not found for route ID:", editRouteId);
+                }
+            }, 800);
+        }
+        bindOverlayClose("editRouteModal", closeEditRouteModal);
+        bindOverlayClose("createRouteModal", closeCreateRouteModal);
+        bindOverlayClose("routeActionModal", closeActionModal);
+        bindOverlayClose("repeatAllModal", closeRepeatAllModal);
+    } catch (error) {
+        console.error("Routes page init error:", error);
+    }
+});
+</script>
+
+{% endblock %}

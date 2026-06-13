@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from trips.models import EmergencyAlert, Notification, Trip
 from trips.serializers import EmergencyAlertSerializer
+from trips.utils.notification import send_push_notification
 
 User = get_user_model()
 
@@ -95,13 +96,31 @@ class EmergencyAlertViewSet(viewsets.ModelViewSet):
         )
 
         admins = User.objects.filter(role="ADMIN", is_active=True)
+
         for admin in admins:
             Notification.objects.create(
                 user=admin,
-                title="🚨 Emergency Alert",
+                title="🚨 Emergency SOS Alert",
                 message=message,
                 is_read=False,
             )
+
+            try:
+                send_push_notification(
+                    user=admin,
+                    title="🚨 Emergency SOS Alert",
+                    body=f"{user.username} needs urgent help. Open emergency alerts now.",
+                    data={
+                        "type": "SOS_ALERT",
+                        "alert_id": str(alert.id),
+                        "employee_id": str(user.id),
+                        "trip_id": str(active_trip.id) if active_trip else "",
+                        "route_run_id": str(route_run.id) if route_run else "",
+                        "screen": "emergency_alerts",
+                    },
+                )
+            except Exception as e:
+                print("SOS ADMIN FCM ERROR:", e)
 
         return Response(
             EmergencyAlertSerializer(alert).data,

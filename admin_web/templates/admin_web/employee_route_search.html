@@ -1,0 +1,710 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Smart Route Search{% endblock %}
+{% block nav_employees %}active{% endblock %}
+{% block page_heading %}Smart Route Search{% endblock %}
+{% block page_subheading %}AI-like route matching for employee pickup location{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+<style>
+.smart-search-page{
+    padding: 24px;
+}
+
+.smart-hero{
+    position: relative;
+    overflow: hidden;
+    border-radius: 32px;
+    padding: 45px;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg,#0f172a,#111827,#1e293b);
+    color: white;
+}
+
+.smart-hero::before{
+    content:"";
+    position:absolute;
+    width:500px;
+    height:500px;
+    border-radius:50%;
+    background:rgba(255,255,255,.04);
+    top:-220px;
+    right:-120px;
+}
+
+.smart-hero h1{
+    font-size:42px;
+    font-weight:800;
+    margin:0 0 10px;
+}
+
+.smart-hero p{
+    color:#cbd5e1;
+    font-size:16px;
+    margin: 0;
+}
+
+.radar-wrap{
+    margin-top:40px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+    height:420px;
+}
+
+.radar-circle{
+    position:absolute;
+    border-radius:50%;
+    border:2px solid rgba(255,165,0,.18);
+    animation:pulse 3s infinite;
+}
+
+.circle-1{ width:140px; height:140px; }
+.circle-2{ width:260px; height:260px; }
+.circle-3{ width:390px; height:390px; }
+
+.employee-core{
+    width:110px;
+    height:110px;
+    border-radius:50%;
+    background:white;
+    border:6px solid #ff8c00;
+    z-index:10;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:
+        0 0 0 10px rgba(255,140,0,.12),
+        0 20px 50px rgba(0,0,0,.25);
+    overflow:hidden;
+    font-size: 42px;
+}
+
+@keyframes pulse{
+    0%{ transform:scale(.92); opacity:.6; }
+    50%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(.92); opacity:.6; }
+}
+
+.employee-card{
+    background:white;
+    border-radius:24px;
+    padding:24px;
+    margin-top:30px;
+    box-shadow:0 15px 40px rgba(15,23,42,.08);
+}
+
+.employee-card h3{
+    margin:0 0 10px;
+    font-size:26px;
+}
+
+.employee-meta{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px;
+    margin-top:20px;
+}
+
+.meta-box{
+    padding:18px;
+    border-radius:18px;
+    background:#f8fafc;
+}
+
+.meta-box p{
+    color:#64748b;
+    margin:0 0 6px;
+    font-weight: 700;
+}
+
+.meta-box h4{
+    margin:0;
+    font-size:18px;
+    color:#0f172a;
+}
+
+.routes-grid{
+    margin-top:35px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+    gap:24px;
+}
+
+.route-card{
+    position:relative;
+    overflow:hidden;
+    background:white;
+    border-radius:28px;
+    padding:26px;
+    box-shadow:0 20px 50px rgba(15,23,42,.08);
+    transition:.25s;
+    border: 1px solid #e5e7eb;
+}
+
+.route-card:hover{
+    transform:translateY(-6px);
+}
+
+.route-card::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:7px;
+}
+
+.route-card.best::before{
+    background:linear-gradient(90deg,#22c55e,#16a34a);
+}
+
+.route-card.medium::before{
+    background:linear-gradient(90deg,#3b82f6,#2563eb);
+}
+
+.route-card.far::before{
+    background:linear-gradient(90deg,#f59e0b,#ea580c);
+}
+
+.route-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:18px;
+    gap: 14px;
+}
+
+.route-name{
+    font-size:24px;
+    font-weight:800;
+    color:#0f172a;
+}
+
+.route-sub{
+    margin-top:6px;
+    color:#64748b;
+    font-weight: 700;
+}
+
+.match-badge{
+    padding:8px 14px;
+    border-radius:999px;
+    font-weight:800;
+    font-size:13px;
+    white-space: nowrap;
+}
+
+.match-best{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.match-medium{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+.match-far{
+    background:#ffedd5;
+    color:#c2410c;
+}
+
+.route-details{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-top:20px;
+}
+
+.detail-box{
+    background:#f8fafc;
+    border-radius:16px;
+    padding:14px;
+}
+
+.detail-box span{
+    display:block;
+    font-size:13px;
+    color:#64748b;
+    margin-bottom:4px;
+    font-weight: 700;
+}
+
+.detail-box strong{
+    color:#0f172a;
+    font-size:16px;
+}
+
+.route-actions{
+    margin-top:24px;
+    display:flex;
+    gap:12px;
+    align-items: stretch;
+}
+
+.route-actions form{
+    flex:1;
+    display:flex;
+}
+
+.route-actions form .route-btn{
+    width:100%;
+}
+
+.route-btn{
+    flex:1;
+    border:none;
+    border-radius:16px;
+    padding:14px;
+    font-size:15px;
+    font-weight:800;
+    cursor:pointer;
+    text-align:center;
+    text-decoration:none;
+}
+
+.assign-btn{
+    background:linear-gradient(135deg,#ff8c00,#ff5e00);
+    color:white;
+}
+
+.preview-btn{
+    background:#f1f5f9;
+    color:#0f172a;
+}
+
+.route-stops-box{
+    margin-top:18px;
+    padding:16px;
+    border-radius:18px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+}
+
+.route-stops-box h4{
+    margin:0 0 12px;
+    font-size:16px;
+    color:#0f172a;
+}
+
+.stop-row{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    padding:10px 0;
+    border-bottom:1px solid #e5e7eb;
+}
+
+.stop-row:last-child{
+    border-bottom:none;
+}
+
+.stop-row span{
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:#111827;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:800;
+    flex-shrink: 0;
+}
+
+.stop-row strong{
+    display:block;
+    color:#0f172a;
+    font-size:14px;
+}
+
+.stop-row small{
+    display:block;
+    color:#64748b;
+    margin-top:3px;
+    font-weight:600;
+}
+
+.no-stops{
+    color:#64748b;
+    font-weight:700;
+}
+
+.route-map-box{
+    margin-top:18px;
+    height:280px;
+    border-radius:20px;
+    overflow:hidden;
+    border:1px solid #e5e7eb;
+    display:none;
+}
+
+.no-route-card{
+    background:white;
+    border-radius:24px;
+    padding:35px;
+    text-align:center;
+    color:#64748b;
+    font-weight:800;
+    box-shadow:0 15px 40px rgba(15,23,42,.08);
+}
+
+.back-link{
+    display:inline-flex;
+    margin-bottom:18px;
+    text-decoration:none;
+    color:#111827;
+    background:#ffffff;
+    padding:12px 16px;
+    border-radius:14px;
+    font-weight:800;
+    box-shadow:0 10px 25px rgba(15,23,42,.08);
+}
+
+@media(max-width:700px){
+    .smart-search-page{
+        padding: 14px;
+    }
+
+    .smart-hero{
+        padding: 28px;
+    }
+
+    .smart-hero h1{
+        font-size:30px;
+    }
+
+    .radar-wrap{
+        height:300px;
+    }
+
+    .circle-1{ width:110px; height:110px; }
+    .circle-2{ width:200px; height:200px; }
+    .circle-3{ width:290px; height:290px; }
+
+    .routes-grid{
+        grid-template-columns:1fr;
+    }
+
+    .route-details{
+        grid-template-columns:1fr;
+    }
+
+    .route-actions{
+        flex-direction:column;
+    }
+}
+</style>
+
+<div class="smart-search-page">
+
+    <a href="{% url 'admin_web:employees' %}" class="back-link">
+        ← Back to Employees
+    </a>
+
+    <div class="smart-hero">
+        <h1>AI Smart Route Search</h1>
+        <p>
+            Intelligent route suggestions based on nearby route stops,
+            seat availability, pickup distance and saved cab routes.
+        </p>
+
+        <div class="radar-wrap">
+            <div class="radar-circle circle-3"></div>
+            <div class="radar-circle circle-2"></div>
+            <div class="radar-circle circle-1"></div>
+
+            <div class="employee-core">
+                👤
+            </div>
+        </div>
+    </div>
+
+    <div class="employee-card">
+        <h3>{{ employee.username }}</h3>
+
+        <div class="employee-meta">
+            <div class="meta-box">
+                <p>Pickup Location</p>
+                <h4>{{ employee.pickup_location|default:"Not Saved" }}</h4>
+            </div>
+
+            <div class="meta-box">
+                <p>Latitude</p>
+                <h4>{{ employee.pickup_latitude|default:"--" }}</h4>
+            </div>
+
+            <div class="meta-box">
+                <p>Longitude</p>
+                <h4>{{ employee.pickup_longitude|default:"--" }}</h4>
+            </div>
+
+            <div class="meta-box">
+                <p>Suggested Routes</p>
+                <h4>{{ route_suggestions|length }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="routes-grid">
+        {% for item in route_suggestions %}
+            <div class="route-card 
+                {% if item.nearest_distance <= 2 %}
+                    best
+                {% elif item.nearest_distance <= 5 %}
+                    medium
+                {% else %}
+                    far
+                {% endif %}
+            ">
+                <div class="route-top">
+                    <div>
+                        <div class="route-name">
+                            {{ item.route.name }}
+                        </div>
+
+                        <div class="route-sub">
+                            Driver: {{ item.driver.username|default:"--" }}
+                        </div>
+                    </div>
+
+                    <div class="match-badge 
+                        {% if item.nearest_distance <= 2 %}
+                            match-best
+                        {% elif item.nearest_distance <= 5 %}
+                            match-medium
+                        {% else %}
+                            match-far
+                        {% endif %}
+                    ">
+                        {% if item.nearest_distance <= 2 %}
+                            Best Match
+                        {% elif item.nearest_distance <= 5 %}
+                            Good Match
+                        {% else %}
+                            Far Route
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="route-details">
+                    <div class="detail-box">
+                        <span>Nearest Distance</span>
+                        <strong>
+                            {% if item.nearest_distance == 9999 %}
+                                Location Missing
+                            {% else %}
+                                {{ item.nearest_distance }} KM
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="detail-box">
+                        <span>Seats Left</span>
+                        <strong>{{ item.seats_left }}</strong>
+                    </div>
+
+                    <div class="detail-box">
+                        <span>Vehicle</span>
+                        <strong>{{ item.vehicle.vehicle_number|default:"--" }}</strong>
+                    </div>
+
+                    <div class="detail-box">
+                        <span>Total Stops</span>
+                        <strong>{{ item.used_seats }}</strong>
+                    </div>
+
+                    <div class="detail-box">
+                        <span>Nearest Stop</span>
+                        <strong>
+                            {% if item.nearest_stop %}
+                                {{ item.nearest_stop.pickup_location }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="detail-box">
+                        <span>Seat Status</span>
+                        <strong>
+                            {% if item.seats_left > 0 %}
+                                Available
+                            {% else %}
+                                Full
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="route-actions">
+                    {% if item.seats_left > 0 %}
+                        <form
+                            method="post"
+                            action="{% url 'admin_web:assign_employee_to_route' employee.id item.route.id %}"
+                            style="flex:1;"
+                            onsubmit="return confirm('Assign {{ employee.username }} to {{ item.route.name }}?');"
+                        >
+                            {% csrf_token %}
+                            <button class="route-btn assign-btn" type="submit">
+                                Assign Route
+                            </button>
+                        </form>
+                    {% else %}
+                        <button class="route-btn assign-btn" type="button" disabled style="opacity:.45; cursor:not-allowed;">
+                            Route Full
+                        </button>
+                    {% endif %}
+
+                    <button
+                        class="route-btn preview-btn"
+                        type="button"
+                        onclick="toggleRoutePreview('{{ item.route.id }}')"
+                    >
+                        View Route Map
+                    </button>
+                </div>
+
+                <div id="route-stops-{{ item.route.id }}" class="route-stops-box" style="display:none;">
+                    <h4>Route Stops</h4>
+
+                    {% for stop in item.route.stops.all %}
+                        <div class="stop-row">
+                            <span>{{ stop.stop_order }}</span>
+                            <div>
+                                <strong>{{ stop.employee.username }}</strong>
+                                <small>{{ stop.pickup_location }}</small>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="no-stops">No stops added in this route.</p>
+                    {% endfor %}
+                </div>
+
+                <div id="route-map-{{ item.route.id }}" class="route-map-box"></div>
+            </div>
+        {% empty %}
+            <div class="no-route-card">
+                No saved routes found for matching.
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+const employeePoint = {
+    lat: {{ employee.pickup_latitude|default:"null" }},
+    lng: {{ employee.pickup_longitude|default:"null" }},
+    name: "{{ employee.username|escapejs }}"
+};
+
+const routeData = {
+    {% for item in route_suggestions %}
+    "{{ item.route.id }}": {
+        name: "{{ item.route.name|escapejs }}",
+        stops: [
+            {% for stop in item.route.stops.all %}
+                {% if stop.pickup_latitude and stop.pickup_longitude %}
+                {
+                    lat: {{ stop.pickup_latitude }},
+                    lng: {{ stop.pickup_longitude }},
+                    name: "{{ stop.employee.username|escapejs }}",
+                    location: "{{ stop.pickup_location|escapejs }}",
+                    order: "{{ stop.stop_order }}"
+                },
+                {% endif %}
+            {% endfor %}
+        ]
+    },
+    {% endfor %}
+};
+
+const openedMaps = {};
+
+function toggleRoutePreview(routeId) {
+    const mapBox = document.getElementById("route-map-" + routeId);
+    const stopsBox = document.getElementById("route-stops-" + routeId);
+
+    if (!mapBox) return;
+
+    if (mapBox.style.display === "none" || mapBox.style.display === "") {
+        mapBox.style.display = "block";
+        if (stopsBox) stopsBox.style.display = "block";
+
+        setTimeout(function () {
+            if (!openedMaps[routeId]) {
+                initRouteMap(routeId);
+            } else {
+                openedMaps[routeId].invalidateSize();
+            }
+        }, 120);
+    } else {
+        mapBox.style.display = "none";
+        if (stopsBox) stopsBox.style.display = "none";
+    }
+}
+
+function initRouteMap(routeId) {
+    const mapBoxId = "route-map-" + routeId;
+    const data = routeData[routeId];
+
+    const map = L.map(mapBoxId);
+    openedMaps[routeId] = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap"
+    }).addTo(map);
+
+    const routePoints = [];
+
+    data.stops.forEach(function (stop) {
+        const point = [stop.lat, stop.lng];
+        routePoints.push(point);
+
+        L.marker(point).addTo(map).bindPopup(
+            "<b>Stop " + stop.order + ": " + stop.name + "</b><br>" + stop.location
+        );
+    });
+
+    if (routePoints.length > 1) {
+        L.polyline(routePoints, {
+            weight: 5,
+            opacity: 0.85
+        }).addTo(map);
+    }
+
+    if (employeePoint.lat && employeePoint.lng) {
+        const employeeMarker = [employeePoint.lat, employeePoint.lng];
+
+        L.circleMarker(employeeMarker, {
+            radius: 9,
+            weight: 3,
+            fillOpacity: 0.9
+        }).addTo(map).bindPopup(
+            "<b>New Employee: " + employeePoint.name + "</b><br>Pickup location"
+        );
+
+        routePoints.push(employeeMarker);
+    }
+
+    if (routePoints.length > 0) {
+        map.fitBounds(routePoints, { padding: [30, 30] });
+    } else if (employeePoint.lat && employeePoint.lng) {
+        map.setView([employeePoint.lat, employeePoint.lng], 14);
+    } else {
+        map.setView([28.4595, 77.0266], 12);
+    }
+}
+</script>
+
+{% endblock %}

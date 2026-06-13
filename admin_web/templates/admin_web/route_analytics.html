@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Analytics | CabMate Admin</title>
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        body{
+            background:#f4f7fb;
+            font-family:Inter, Arial, sans-serif;
+            color:#0f172a;
+            padding:24px;
+        }
+
+        .topbar{
+            background:linear-gradient(135deg,#0f172a,#1e293b);
+            color:white;
+            padding:28px;
+            border-radius:26px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:24px;
+            box-shadow:0 18px 40px rgba(0,0,0,.12);
+        }
+
+        .topbar h1{
+            font-size:34px;
+            font-weight:900;
+            margin-bottom:6px;
+        }
+
+        .topbar p{
+            opacity:.8;
+            font-size:14px;
+        }
+
+        .back-btn{
+            background:white;
+            color:#111827;
+            text-decoration:none;
+            padding:14px 18px;
+            border-radius:14px;
+            font-weight:800;
+        }
+
+        .filter-card{
+            background:white;
+            padding:22px;
+            border-radius:22px;
+            margin-bottom:24px;
+            box-shadow:0 10px 25px rgba(0,0,0,.05);
+        }
+
+        .filter-form{
+            display:flex;
+            gap:14px;
+            flex-wrap:wrap;
+        }
+
+        .filter-form input{
+            height:50px;
+            border-radius:14px;
+            border:1px solid #dbe3ee;
+            padding:0 16px;
+            font-weight:700;
+            min-width:220px;
+        }
+
+        .filter-form button{
+            border:none;
+            background:#111827;
+            color:white;
+            border-radius:14px;
+            padding:0 24px;
+            font-weight:800;
+            cursor:pointer;
+        }
+
+        .stats-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+            gap:18px;
+            margin-bottom:26px;
+        }
+
+        .stat-card{
+            position:relative;
+            overflow:hidden;
+            color:white;
+            border-radius:24px;
+            padding:24px;
+            min-height:130px;
+            box-shadow:0 15px 35px rgba(0,0,0,.12);
+        }
+
+        .stat-card::after{
+            content:"";
+            position:absolute;
+            width:90px;
+            height:90px;
+            border-radius:50%;
+            background:rgba(255,255,255,.16);
+            right:-15px;
+            top:-15px;
+        }
+
+        .stat-card h2{
+            font-size:42px;
+            font-weight:900;
+            margin-top:10px;
+        }
+
+        .blue{
+            background:linear-gradient(135deg,#2563eb,#1e3a8a);
+        }
+
+        .green{
+            background:linear-gradient(135deg,#16a34a,#166534);
+        }
+
+        .orange{
+            background:linear-gradient(135deg,#f59e0b,#c2410c);
+        }
+
+        .red{
+            background:linear-gradient(135deg,#ef4444,#991b1b);
+        }
+
+        .section{
+            background:white;
+            border-radius:24px;
+            padding:24px;
+            margin-bottom:24px;
+            box-shadow:0 10px 28px rgba(0,0,0,.06);
+        }
+
+        .section-title{
+            font-size:24px;
+            font-weight:900;
+            margin-bottom:18px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        th{
+            text-align:left;
+            padding:14px;
+            font-size:12px;
+            text-transform:uppercase;
+            color:#64748b;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        td{
+            padding:16px 14px;
+            border-bottom:1px solid #eef2f7;
+            font-weight:700;
+        }
+
+        tr:hover{
+            background:#f8fafc;
+        }
+
+        .pill{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            padding:8px 14px;
+            border-radius:999px;
+            font-size:12px;
+            font-weight:900;
+        }
+
+        .excellent{
+            background:#dcfce7;
+            color:#166534;
+        }
+
+        .moderate{
+            background:#fef3c7;
+            color:#92400e;
+        }
+
+        .critical{
+            background:#fee2e2;
+            color:#991b1b;
+        }
+
+        .pickup{
+            background:#dbeafe;
+            color:#1d4ed8;
+        }
+
+        .drop{
+            background:#ede9fe;
+            color:#6d28d9;
+        }
+
+        .progress{
+            width:100%;
+            height:10px;
+            border-radius:999px;
+            background:#e5e7eb;
+            overflow:hidden;
+            margin-top:6px;
+        }
+
+        .progress-fill{
+            height:100%;
+            border-radius:999px;
+            background:linear-gradient(90deg,#22c55e,#15803d);
+        }
+
+        .danger-fill{
+            background:linear-gradient(90deg,#ef4444,#991b1b);
+        }
+
+        .delay-box{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:18px;
+        }
+
+        .delay-card{
+            background:#fff7ed;
+            border:1px solid #fed7aa;
+            border-radius:20px;
+            padding:18px;
+        }
+
+        .delay-card h3{
+            font-size:18px;
+            margin-bottom:10px;
+        }
+
+        .delay-card p{
+            margin-bottom:6px;
+            font-weight:700;
+            color:#475569;
+        }
+
+        @media(max-width:768px){
+
+            .topbar{
+                flex-direction:column;
+                align-items:flex-start;
+                gap:16px;
+            }
+
+            table{
+                display:block;
+                overflow-x:auto;
+            }
+
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="topbar">
+
+    <div>
+        <h1>🛣 Route Analytics</h1>
+        <p>Route efficiency, delays, no-show tracking and operational health monitoring</p>
+    </div>
+
+    <a href="{% url 'admin_web:reports' %}" class="back-btn">
+        ← Back to Reports
+    </a>
+
+</div>
+
+<div class="filter-card">
+
+    <form method="get" class="filter-form">
+
+        <input
+            type="date"
+            name="date"
+            value="{{ date_filter }}"
+        >
+
+        <button type="submit">
+            Apply
+        </button>
+
+    </form>
+
+</div>
+
+<div class="stats-grid">
+
+    <div class="stat-card blue">
+        <div>Total Routes</div>
+        <h2>{{ total_routes }}</h2>
+    </div>
+
+    <div class="stat-card green">
+        <div>Excellent Routes</div>
+        <h2>{{ excellent_routes }}</h2>
+    </div>
+
+    <div class="stat-card orange">
+        <div>Moderate Routes</div>
+        <h2>{{ moderate_routes }}</h2>
+    </div>
+
+    <div class="stat-card red">
+        <div>Critical Routes</div>
+        <h2>{{ critical_routes_count }}</h2>
+    </div>
+
+</div>
+
+<div class="section">
+
+    <div class="section-title">
+        📊 Route Performance Table
+    </div>
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>Route</th>
+                <th>Type</th>
+                <th>Driver</th>
+                <th>Stops</th>
+                <th>Trips</th>
+                <th>No-show</th>
+                <th>Duration</th>
+                <th>Efficiency</th>
+                <th>Health</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for route in routes %}
+
+            <tr>
+
+                <td>
+                    <strong>{{ route.route_name }}</strong><br>
+                    <span style="font-size:12px;color:#64748b;">
+                        {{ route.vehicle_number }}
+                    </span>
+                </td>
+
+                <td>
+                    <span class="pill {% if route.trip_type == 'PICKUP' %}pickup{% else %}drop{% endif %}">
+                        {{ route.trip_type }}
+                    </span>
+                </td>
+
+                <td>{{ route.driver_name }}</td>
+
+                <td>
+                    {{ route.completed_stops }}/{{ route.total_stops }}
+
+                    <div class="progress">
+                        <div
+                            class="progress-fill"
+                            style="width:{{ route.completion_percent }}%;"
+                        ></div>
+                    </div>
+                </td>
+
+                <td>
+                    {{ route.completed_trips }}/{{ route.total_trips }}
+                </td>
+
+                <td>
+
+                    {% if route.no_show_count > 0 %}
+                        <span style="color:#dc2626;font-weight:900;">
+                            {{ route.no_show_count }}
+                        </span>
+                    {% else %}
+                        0
+                    {% endif %}
+
+                </td>
+
+                <td>
+                    {{ route.duration_minutes }} mins
+                </td>
+
+                <td>
+
+                    <strong>
+                        {{ route.efficiency_score }}%
+                    </strong>
+
+                    <div class="progress">
+                        <div
+                            class="{% if route.efficiency_score < 60 %}danger-fill{% else %}progress-fill{% endif %}"
+                            style="width:{{ route.efficiency_score }}%; height:100%; border-radius:999px;"
+                        ></div>
+                    </div>
+
+                </td>
+
+                <td>
+
+                    <span class="pill
+                        {% if route.health == 'EXCELLENT' %}
+                            excellent
+                        {% elif route.health == 'MODERATE' %}
+                            moderate
+                        {% else %}
+                            critical
+                        {% endif %}
+                    ">
+                        {{ route.health_label }}
+                    </span>
+
+                </td>
+
+            </tr>
+
+            {% empty %}
+
+            <tr>
+                <td colspan="9">
+                    No route analytics found
+                </td>
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<div class="section">
+
+    <div class="section-title">
+        ⏱ Most Delayed Routes
+    </div>
+
+    <div class="delay-box">
+
+        {% for route in most_delayed_routes %}
+
+        <div class="delay-card">
+
+            <h3>{{ route.route_name }}</h3>
+
+            <p>🚗 Driver: {{ route.driver_name }}</p>
+
+            <p>🕒 Duration: {{ route.duration_minutes }} mins</p>
+
+            <p>📍 Stops: {{ route.completed_stops }}/{{ route.total_stops }}</p>
+
+            <p>⚠ No-show: {{ route.no_show_count }}</p>
+
+        </div>
+
+        {% empty %}
+
+        <div>No delayed routes found</div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+<div class="section">
+
+    <div class="section-title">
+        🚨 Critical Routes
+    </div>
+
+    <div class="delay-box">
+
+        {% for route in critical_routes %}
+
+        <div class="delay-card" style="background:#fef2f2;border-color:#fecaca;">
+
+            <h3>{{ route.route_name }}</h3>
+
+            <p>🚗 Driver: {{ route.driver_name }}</p>
+
+            <p>❌ Cancelled Trips: {{ route.cancelled_trips }}</p>
+
+            <p>⚠ No-show Stops: {{ route.no_show_count }}</p>
+
+            <p>📊 Efficiency: {{ route.efficiency_score }}%</p>
+
+        </div>
+
+        {% empty %}
+
+        <div>No critical routes found</div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+</body>
+</html>

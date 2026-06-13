@@ -1,0 +1,1186 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Live Tracking{% endblock %}
+{% block nav_tracking %}active{% endblock %}
+{% block nav_live_tracking %}active{% endblock %}
+{% block page_heading %}Live Tracking{% endblock %}
+{% block page_subheading %}Track all drivers in real-time{% endblock %}
+
+{% block content %}
+
+<style>
+    .live-cab-section {
+        grid-column: 1 / -1;
+    }
+
+    .live-cab-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 16px;
+        margin-top: 14px;
+    }
+
+    .cab-filter-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        margin-top: 12px;
+    }
+
+    .cab-filter-btn {
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        color: #334155;
+        border-radius: 999px;
+        padding: 9px 14px;
+        font-size: 12px;
+        font-weight: 950;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(15,23,42,0.06);
+        transition: 0.2s ease;
+    }
+
+    .cab-filter-btn:hover {
+        transform: translateY(-1px);
+        background: #f8fafc;
+    }
+
+    .cab-filter-btn.active {
+        background: #111827;
+        color: #ffffff;
+        border-color: #111827;
+    }
+
+    .eta-highlight-box {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #eef2ff, #ecfeff);
+        border: 1px solid #c7d2fe;
+        border-radius: 16px;
+        padding: 12px;
+    }
+
+    .eta-highlight-box span {
+        display: block;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 950;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+    }
+
+    .eta-highlight-box strong {
+        display: block;
+        color: #1e1b4b;
+        font-size: 15px;
+        font-weight: 950;
+    }
+
+    .live-cab-card {
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 16px 36px rgba(15,23,42,0.08);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .live-cab-card.online {
+        border-top: 5px solid #22c55e;
+    }
+
+    .live-cab-card.offline {
+        border-top: 5px solid #94a3b8;
+        opacity: 0.82;
+    }
+
+    .live-cab-card.overspeed {
+        border-top: 5px solid #dc2626;
+        box-shadow: 0 18px 45px rgba(220,38,38,0.18);
+    }
+
+    .live-cab-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .live-cab-card.moving {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .live-cab-card.moving::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(
+                120deg,
+                transparent 0%,
+                rgba(255,255,255,0.18) 45%,
+                transparent 100%
+            );
+        transform: translateX(-100%);
+        animation: movingGlow 2.2s linear infinite;
+    }
+
+    @keyframes movingGlow {
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    .route-live-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 rgba(34,197,94,0.4);
+        animation: pulseLiveDot 1.5s infinite;
+    }
+
+    @keyframes pulseLiveDot {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+        }
+
+        70% {
+            transform: scale(1.12);
+            box-shadow: 0 0 0 10px rgba(34,197,94,0);
+        }
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(34,197,94,0);
+        }
+    }
+    .live-cab-head h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 900;
+        color: #111827;
+    }
+
+    .live-cab-head p {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+
+    .driver-status-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-end;
+    }
+
+    .freshness-live {
+        color: #166534;
+    }
+
+    .freshness-idle {
+        color: #92400e;
+    }
+
+    .freshness-offline {
+        color: #991b1b;
+    }
+
+    .speed-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 13px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        margin-bottom: 12px;
+    }
+
+    .speed-safe {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .speed-medium {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+
+    .speed-danger {
+        background: #fee2e2;
+        color: #991b1b;
+        animation: speedPulse 1.4s infinite;
+    }
+
+    @keyframes speedPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.04); }
+        100% { transform: scale(1); }
+    }
+
+    .cab-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .cab-info-box {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 10px;
+    }
+
+    .cab-info-box span {
+        display: block;
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 900;
+        margin-bottom: 3px;
+    }
+
+    .cab-info-box strong {
+        color: #111827;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .route-progress-wrap {
+        margin-top: 13px;
+    }
+
+    .route-progress-text {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 900;
+        margin-bottom: 6px;
+    }
+
+    .route-progress-bar {
+        height: 9px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .route-progress-fill {
+        height: 100%;
+        background: linear-gradient(135deg, #2563eb, #22c55e);
+        border-radius: 999px;
+    }
+
+    .empty-live-cab {
+        grid-column: 1 / -1;
+        padding: 24px;
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        border-radius: 20px;
+        text-align: center;
+        color: #64748b;
+        font-weight: 900;
+    }
+
+    .cab-detail-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+        backdrop-filter: blur(4px);
+    }
+
+    .cab-detail-overlay.show {
+        display: flex;
+    }
+
+    .cab-detail-card {
+        width: 100%;
+        max-width: 780px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        background: #ffffff;
+        border-radius: 26px;
+        padding: 22px;
+        box-shadow: 0 30px 70px rgba(0,0,0,0.18);
+        border: 1px solid rgba(229,231,235,0.9);
+    }
+
+    .cab-detail-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .cab-detail-head h3 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 900;
+        color: #111827;
+    }
+
+    .cab-detail-close {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        border: none;
+        background: #f3f4f6;
+        color: #111827;
+        font-size: 18px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .cab-detail-close:hover {
+        background: #e5e7eb;
+    }
+
+    .cab-detail-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+    }
+
+    .cab-detail-btn {
+        flex: 1;
+        min-width: 160px;
+        border: none;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+        background: #f1f5f9;
+        color: #111827;
+    }
+
+    .cab-detail-btn.primary {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+    }
+
+    @media (max-width: 700px) {
+        .cab-info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-grid">
+
+    <section class="stats-row">
+        <div class="mini-stat-card">
+            <p>Live Drivers</p>
+            <h3 id="liveDriverCount">0</h3>
+            <span>Drivers sending location</span>
+        </div>
+
+        <div class="mini-stat-card">
+            <p>Online Drivers</p>
+            <h3 id="onlineDriverCount">0</h3>
+            <span>Updated within 2 minutes</span>
+        </div>
+
+        <div class="mini-stat-card">
+            <p>Offline Drivers</p>
+            <h3 id="offlineDriverCount">0</h3>
+            <span>No recent location update</span>
+        </div>
+
+        <div class="mini-stat-card">
+            <p>Active SOS</p>
+            <h3 id="activeSosCount" style="color:#dc2626;">0</h3>
+            <span>Urgent alerts on map</span>
+        </div>
+    </section>
+
+    <section class="panel-card live-cab-section">
+        <div class="panel-head">
+            <div>
+                <h3>🚖 Live Cab Monitoring Cards</h3>
+                <p>Moving cab cards, online/offline status, route progress, ETA and speed monitoring</p>
+            </div>
+
+            <div class="cab-filter-row">
+                <button type="button" class="cab-filter-btn active" data-filter="ALL" onclick="setCabFilter('ALL')">All Cabs</button>
+                <button type="button" class="cab-filter-btn" data-filter="ONLINE" onclick="setCabFilter('ONLINE')">Online</button>
+                <button type="button" class="cab-filter-btn" data-filter="OFFLINE" onclick="setCabFilter('OFFLINE')">Offline</button>
+                <button type="button" class="cab-filter-btn" data-filter="MOVING" onclick="setCabFilter('MOVING')">Moving</button>
+                <button type="button" class="cab-filter-btn" data-filter="OVERSPEED" onclick="setCabFilter('OVERSPEED')">Overspeed</button>
+            </div>
+        </div>
+
+        <div id="liveCabGrid" class="live-cab-grid">
+            <div class="empty-live-cab">Loading live cab cards...</div>
+        </div>
+    </section>
+
+    <section class="panel-card" style="grid-column: 1 / -1; padding: 0; overflow: hidden;">
+        <div style="padding: 18px 18px 10px 18px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div>
+                <h3 style="margin-bottom: 4px;">Driver Live Map</h3>
+                <p style="color:#6b7280;">Real-time driver positions, SOS alerts, and auto refresh</p>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <span id="lastUpdatedBadge" class="status-pill completed">Live</span>
+                <button type="button" class="action-btn secondary" onclick="loadAllLiveData()">Refresh Now</button>
+            </div>
+        </div>
+
+        <div id="map" style="height: 560px; width: 100%;"></div>
+    </section>
+
+    <section class="panel-card" style="grid-column: 1 / -1;">
+        <div class="panel-head">
+            <div>
+                <h3>Live Driver Summary</h3>
+                <p>Driver status with latest tracking details</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Driver</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Last Update</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="driverTableBody">
+                    <tr>
+                        <td colspan="5">Loading live tracking...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel-card" style="grid-column: 1 / -1;">
+        <div class="panel-head">
+            <div>
+                <h3>SOS Alert Summary</h3>
+                <p>Active emergency markers and latest alert details</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Title</th>
+                        <th>Pickup</th>
+                        <th>Drop</th>
+                        <th>Created</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="sosTableBody">
+                    <tr>
+                        <td colspan="6">Loading SOS alerts...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_API_KEY"></script>
+
+<div class="cab-modal-overlay" id="cabDetailModal">
+    <div class="cab-detail-card">
+        <div class="cab-detail-head">
+            <h3>Cab Live Details</h3>
+            <button type="button" class="cab-detail-close" onclick="closeCabDetailModal()">✕</button>
+        </div>
+
+        <div id="cabDetailContent"></div>
+    </div>
+</div>
+
+<script>
+    let map;
+    let driverMarkers = {};
+    let driverInfoWindows = {};
+    let sosMarkers = {};
+    let sosInfoWindows = {};
+    let firstLoad = true;
+    let liveCabCache = {};
+    let currentCabFilter = "ALL";
+
+    const defaultCenter = { lat: 28.6139, lng: 77.2090 };
+
+    function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+            zoom: 11,
+            center: defaultCenter,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+        });
+
+        loadAllLiveData();
+        setInterval(loadAllLiveData, 5000);
+    }
+
+    function formatNowTime() {
+        const now = new Date();
+        return now.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    function updateLastUpdatedBadge() {
+        const badge = document.getElementById("lastUpdatedBadge");
+        if (badge) {
+            badge.textContent = "Updated " + formatNowTime();
+        }
+    }
+
+    function animateMarker(marker, newPosition) {
+        const start = marker.getPosition();
+        const startLat = start.lat();
+        const startLng = start.lng();
+        const deltaLat = (newPosition.lat - startLat) / 30;
+        const deltaLng = (newPosition.lng - startLng) / 30;
+
+        let i = 0;
+        const animation = setInterval(() => {
+            i++;
+            marker.setPosition({
+                lat: startLat + (deltaLat * i),
+                lng: startLng + (deltaLng * i),
+            });
+
+            if (i >= 30) {
+                clearInterval(animation);
+                marker.setPosition(newPosition);
+            }
+        }, 35);
+    }
+
+    function parseDateSafe(dateString) {
+        if (!dateString) return null;
+        const d = new Date(dateString);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function isDriverOnline(updatedAt) {
+        const updated = parseDateSafe(updatedAt);
+        if (!updated) return false;
+
+        const diffMs = new Date() - updated;
+        const diffMinutes = diffMs / 1000 / 60;
+        return diffMinutes <= 2;
+    }
+
+    function getSpeedClass(speed) {
+        const value = Number(speed || 0);
+        if (value >= 80) return "speed-danger";
+        if (value >= 60) return "speed-medium";
+        return "speed-safe";
+    }
+
+    function getCabCardClass(cab) {
+        const speed = Number(cab.speed_kmph || 0);
+
+        if (speed >= 80)
+            return "live-cab-card overspeed moving";
+
+        if (
+            cab.online_status === "ONLINE" &&
+            cab.moving_status === "MOVING"
+        ) {
+            return "live-cab-card online moving";
+        }
+
+        if (cab.online_status === "ONLINE") {
+            return "live-cab-card online";
+        }
+
+        return "live-cab-card offline";
+    }
+
+    function getCabStatusBadge(cab) {
+        return cab.online_status === "ONLINE" ? "completed" : "warning";
+    }
+
+    function setCabFilter(filterValue) {
+        currentCabFilter = filterValue;
+
+        document.querySelectorAll(".cab-filter-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.filter === filterValue);
+        });
+
+        loadLiveCabCards();
+    }
+
+    function filterCabResults(results) {
+        if (currentCabFilter === "ONLINE") {
+            return results.filter(cab => cab.online_status === "ONLINE");
+        }
+
+        if (currentCabFilter === "OFFLINE") {
+            return results.filter(cab => cab.online_status === "OFFLINE");
+        }
+
+        if (currentCabFilter === "MOVING") {
+            return results.filter(cab => cab.moving_status === "MOVING");
+        }
+
+        if (currentCabFilter === "OVERSPEED") {
+            return results.filter(cab => Number(cab.speed_kmph || 0) >= 80);
+        }
+
+        return results;
+    }
+
+    function getCabByDriverId(driverId) {
+        const id = String(driverId);
+        return Object.values(liveCabCache).find(cab => String(cab.driver_id) === id) || null;
+    }
+
+    async function loadLiveCabCards() {
+        const grid = document.getElementById("liveCabGrid");
+        if (!grid) return;
+
+        try {
+            const response = await fetch("/admin-web/live-cab-cards/");
+            const data = await response.json();
+            const results = data.results || [];
+
+            liveCabCache = {};
+            results.forEach(cab => {
+                liveCabCache[String(cab.route_run_id)] = cab;
+            });
+
+            if (!results.length) {
+                grid.innerHTML = '<div class="empty-live-cab">No live cab card data found.</div>';
+                return results;
+            }
+
+            const filteredResults = filterCabResults(results);
+
+            if (!filteredResults.length) {
+                grid.innerHTML = '<div class="empty-live-cab">No cab found for selected filter.</div>';
+                return results;
+            }
+
+            grid.innerHTML = filteredResults.map(cab => {
+                const speed = Number(cab.speed_kmph || 0);
+                const progress = Number(cab.progress_percent || 0);
+                const routeRunId = String(cab.route_run_id);
+
+                return `
+                    <div class="${getCabCardClass(cab)}">
+                        <div class="live-cab-head">
+                            <div>
+                                <h3>${cab.driver_name || "--"}</h3>
+                                <p>${cab.vehicle_number || "--"} ${cab.vehicle_model ? "• " + cab.vehicle_model : ""}</p>
+                            </div>
+
+                            <div class="driver-status-stack">
+                                <span class="status-pill ${getCabStatusBadge(cab)}">
+                                    ${cab.online_status || "OFFLINE"}
+                                </span>
+
+                                <span class="status-pill ${cab.moving_status === "MOVING" ? "completed" : "warning"}">
+                                    ${cab.moving_status || "STOPPED"}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="speed-badge ${getSpeedClass(speed)}">
+                            ${speed >= 80 ? "🚨" : "🚗"} ${speed} km/h
+                        </div>
+
+                        ${speed >= 80 ? `
+                            <div class="speed-badge speed-danger">
+                                🚨 OVERSPEED DETECTED
+                            </div>
+                        ` : ""}
+
+                        <div class="cab-info-grid">
+                            <div class="cab-info-box">
+                                <span>Route</span>
+                                <strong>${cab.route_name || "--"}</strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Trip Type</span>
+                                <strong>${cab.trip_type || "--"}</strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Moving</span>
+                                <strong>${cab.moving_status || "--"}</strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Updated</span>
+                                <strong class="${cab.minutes_ago <= 2 ? "freshness-live" : cab.minutes_ago <= 5 ? "freshness-idle" : "freshness-offline"}">
+                                    ${
+                                        cab.minutes_ago <= 2
+                                        ? "🟢 Live"
+                                        : cab.minutes_ago <= 5
+                                            ? "🟡 Idle"
+                                            : "🔴 Offline"
+                                    }
+                                </strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Total Stops</span>
+                                <strong>${cab.total_stops || 0}</strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Completed</span>
+                                <strong>${cab.completed_stops || 0}</strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Pending</span>
+                                <strong>${cab.pending_stops || 0}</strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Expected Complete</span>
+                                <strong>${cab.estimated_completion_time || "--"}</strong>
+                            </div>
+
+                            <div class="eta-highlight-box">
+                                <span>Next Stop / Office Reach ETA</span>
+                                <strong>${cab.eta_label || "Location unavailable"}</strong>
+                                <div style="margin-top:6px;color:#475569;font-size:12px;font-weight:800;">
+                                    ${cab.next_stop_name && cab.next_stop_name !== "--" ? cab.next_stop_name + " • " : ""}${cab.next_stop_location || "--"}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="route-progress-wrap">
+                            <div class="route-progress-text">
+                                <span>Route Progress</span>
+                                <span>${progress}%</span>
+                            </div>
+                            <div class="route-progress-bar">
+                                <div class="route-progress-fill" style="width:${progress}%"></div>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="action-btn secondary"
+                            style="width:100%; margin-top:14px;"
+                            onclick="openCabDetailModalById('${routeRunId}')"
+                        >
+                            View Details
+                        </button>
+                    </div>
+                `;
+            }).join("");
+
+            return results;
+
+        } catch (error) {
+            console.error("Failed to load live cab cards:", error);
+            grid.innerHTML = '<div class="empty-live-cab">Unable to load live cab cards.</div>';
+            return [];
+        }
+    }
+
+    function openCabDetailModalById(routeRunId) {
+        const cab = liveCabCache[String(routeRunId)];
+        if (!cab) {
+            alert("Cab details not found. Please refresh.");
+            return;
+        }
+        openCabDetailModal(cab);
+    }
+
+    function openCabDetailModal(cab) {
+        const modal = document.getElementById("cabDetailModal");
+        const content = document.getElementById("cabDetailContent");
+
+        if (!modal || !content) return;
+
+        const speed = Number(cab.speed_kmph || 0);
+        const progress = Number(cab.progress_percent || 0);
+
+        content.innerHTML = `
+            <div class="${getCabCardClass(cab)}">
+                <div class="live-cab-head">
+                    <div>
+                        <h3>${cab.driver_name || "--"}</h3>
+                        <p style="display:flex; align-items:center; gap:8px;">
+                            ${
+                                cab.moving_status === "MOVING"
+                                ? '<span class="route-live-dot"></span>'
+                                : ''
+                            }
+
+                            ${cab.vehicle_number || "--"}
+
+                            ${cab.vehicle_model ? "• " + cab.vehicle_model : ""}
+                        </p>
+                    </div>
+
+                    <div class="driver-status-stack">
+                        <span class="status-pill ${getCabStatusBadge(cab)}">
+                            ${cab.online_status || "OFFLINE"}
+                        </span>
+
+                        <span class="status-pill ${cab.moving_status === "MOVING" ? "completed" : "warning"}">
+                            ${cab.moving_status || "STOPPED"}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="speed-badge ${getSpeedClass(speed)}">
+                    ${speed >= 80 ? "🚨 Overspeed" : "🚗 Speed"}: ${speed} km/h
+                </div>
+
+                ${speed >= 80 ? `
+                    <div class="speed-badge speed-danger">
+                        🚨 OVERSPEED DETECTED
+                    </div>
+                ` : ""}
+
+                <div class="cab-info-grid">
+                    <div class="cab-info-box"><span>Route</span><strong>${cab.route_name || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Trip Type</span><strong>${cab.trip_type || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Moving Status</span><strong>${cab.moving_status || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Run Date</span><strong>${cab.run_date || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Total Stops</span><strong>${cab.total_stops || 0}</strong></div>
+                    <div class="cab-info-box"><span>Completed Stops</span><strong>${cab.completed_stops || 0}</strong></div>
+                    <div class="cab-info-box"><span>Pending Stops</span><strong>${cab.pending_stops || 0}</strong></div>
+                    <div class="cab-info-box"><span>Last Updated</span><strong>${cab.last_updated || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Latitude</span><strong>${cab.latitude ?? "--"}</strong></div>
+                    <div class="cab-info-box"><span>Longitude</span><strong>${cab.longitude ?? "--"}</strong></div>
+                    <div class="cab-info-box"><span>Next Stop</span><strong>${cab.next_stop_name || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Next Location</span><strong>${cab.next_stop_location || "--"}</strong></div>
+                    <div class="cab-info-box"><span>ETA</span><strong>${cab.eta_label || "--"}</strong></div>
+                    <div class="cab-info-box"><span>Expected Complete</span><strong>${cab.estimated_completion_time || "--"}</strong></div>
+                </div>
+
+                <div class="route-progress-wrap">
+                    <div class="route-progress-text">
+                        <span>Route Progress</span>
+                        <span>${progress}%</span>
+                    </div>
+                    <div class="route-progress-bar">
+                        <div class="route-progress-fill" style="width:${progress}%"></div>
+                    </div>
+                </div>
+
+                <div class="cab-detail-actions">
+                    <button type="button" class="cab-detail-btn primary" onclick="focusCabOnMap(${cab.latitude || 0}, ${cab.longitude || 0})">
+                        Focus on Map
+                    </button>
+                    <button type="button" class="cab-detail-btn" onclick="closeCabDetailModal()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.classList.add("show");
+    }
+
+    function closeCabDetailModal() {
+        const modal = document.getElementById("cabDetailModal");
+        if (modal) {
+            modal.classList.remove("show");
+        }
+    }
+
+    function focusCabOnMap(lat, lng) {
+        const latitude = Number(lat);
+        const longitude = Number(lng);
+
+        if (!map || !latitude || !longitude) {
+            alert("Cab location not available.");
+            return;
+        }
+
+        map.setCenter({ lat: latitude, lng: longitude });
+        map.setZoom(15);
+        closeCabDetailModal();
+    }
+
+    async function loadAllLiveData() {
+        try {
+            const [locationsResponse, alertsResponse] = await Promise.all([
+                fetch("/api/trips/locations/"),
+                fetch("/api/trips/emergency-alerts/")
+            ]);
+
+            const locationsData = await locationsResponse.json();
+            const alertsData = await alertsResponse.json();
+
+            let locations = [];
+            let alerts = [];
+
+            if (Array.isArray(locationsData)) {
+                locations = locationsData;
+            } else if (locationsData.results && Array.isArray(locationsData.results)) {
+                locations = locationsData.results;
+            }
+
+            if (Array.isArray(alertsData)) {
+                alerts = alertsData;
+            } else if (alertsData.results && Array.isArray(alertsData.results)) {
+                alerts = alertsData.results;
+            }
+
+            await loadLiveCabCards();
+
+            updateMap(locations, alerts);
+            updateDriverTable(locations);
+            updateSosTable(alerts);
+            updateSummaryCards(locations, alerts);
+            updateLastUpdatedBadge();
+
+        } catch (error) {
+            console.error("Failed to load live data:", error);
+        }
+    }
+
+    function updateSummaryCards(locations, alerts) {
+        const liveDrivers = locations.length;
+        const onlineDrivers = locations.filter(loc => isDriverOnline(loc.updated_at)).length;
+        const offlineDrivers = liveDrivers - onlineDrivers;
+        const activeSos = alerts.filter(alert => (alert.status || "").toUpperCase() === "ACTIVE").length;
+
+        document.getElementById("liveDriverCount").textContent = liveDrivers;
+        document.getElementById("onlineDriverCount").textContent = onlineDrivers;
+        document.getElementById("offlineDriverCount").textContent = offlineDrivers;
+        document.getElementById("activeSosCount").textContent = activeSos;
+    }
+
+    function updateMap(locations, alerts) {
+        const bounds = new google.maps.LatLngBounds();
+        let hasValidPoint = false;
+
+        locations.forEach(loc => {
+            if (loc.latitude == null || loc.longitude == null) return;
+
+            const driverId = String(loc.driver);
+            const newPosition = {
+                lat: parseFloat(loc.latitude),
+                lng: parseFloat(loc.longitude),
+            };
+
+            if (isNaN(newPosition.lat) || isNaN(newPosition.lng)) return;
+
+            hasValidPoint = true;
+            bounds.extend(newPosition);
+
+            const online = isDriverOnline(loc.updated_at);
+            const cab = getCabByDriverId(driverId);
+            const statusText = cab ? (cab.online_status || "OFFLINE") : (online ? "Online" : "Offline");
+            const speedText = cab ? `${cab.speed_kmph || 0} km/h` : "--";
+            const movingText = cab ? (cab.moving_status || "--") : "--";
+            const etaText = cab ? (cab.eta_label || "Location unavailable") : "Location unavailable";
+            const expectedText = cab ? (cab.estimated_completion_time || "--") : "--";
+            const routeText = cab ? (cab.route_name || "--") : "--";
+            const progressText = cab ? `${cab.progress_percent || 0}%` : "--";
+
+            const infoHtml = `
+                <div style="min-width:240px;">
+                    <h4 style="margin:0 0 8px 0;">${loc.driver_name || "Driver"}</h4>
+                    <p style="margin:0 0 4px 0;"><strong>Status:</strong> ${statusText}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Moving:</strong> ${movingText}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Speed:</strong> ${speedText}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Route:</strong> ${routeText}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Progress:</strong> ${progressText}</p>
+                    <p style="margin:0 0 4px 0;"><strong>ETA:</strong> ${etaText}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Expected Complete:</strong> ${expectedText}</p>
+                    <p style="margin:0;"><strong>Updated:</strong> ${loc.updated_at || "--"}</p>
+                </div>
+            `;
+
+            if (driverMarkers[driverId]) {
+                animateMarker(driverMarkers[driverId], newPosition);
+                driverInfoWindows[driverId].setContent(infoHtml);
+            } else {
+                const marker = new google.maps.Marker({
+                    position: newPosition,
+                    map: map,
+                    title: loc.driver_name || "Driver",
+                    animation: google.maps.Animation.DROP,
+                    icon: {
+                        url: cab && Number(cab.speed_kmph || 0) >= 80
+                            ? "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                            : online
+                                ? "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                                : "https://maps.google.com/mapfiles/ms/icons/grey-dot.png"
+                    }
+                });
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: infoHtml
+                });
+
+                marker.addListener("click", () => {
+                    infoWindow.open(map, marker);
+                });
+
+                driverMarkers[driverId] = marker;
+                driverInfoWindows[driverId] = infoWindow;
+            }
+
+            driverMarkers[driverId].setIcon({
+                url: online
+                    ? "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                    : "https://maps.google.com/mapfiles/ms/icons/grey-dot.png"
+            });
+        });
+
+        Object.keys(sosMarkers).forEach(key => {
+            sosMarkers[key].setMap(null);
+        });
+        sosMarkers = {};
+        sosInfoWindows = {};
+
+        alerts.forEach(alert => {
+            if ((alert.status || "").toUpperCase() !== "ACTIVE") return;
+            if (alert.latitude == null || alert.longitude == null) return;
+
+            const lat = parseFloat(alert.latitude);
+            const lng = parseFloat(alert.longitude);
+
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const sosId = String(alert.id);
+            const position = { lat, lng };
+
+            hasValidPoint = true;
+            bounds.extend(position);
+
+            const infoHtml = `
+                <div style="min-width:220px;">
+                    <h4 style="margin:0 0 6px 0; color:#dc2626;">${alert.title || "Emergency SOS"}</h4>
+                    <p style="margin:0 0 4px 0;"><strong>Employee:</strong> ${alert.employee_name || "--"}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Pickup:</strong> ${alert.pickup_location || "--"}</p>
+                    <p style="margin:0 0 4px 0;"><strong>Drop:</strong> ${alert.drop_location || "--"}</p>
+                    <p style="margin:0;"><strong>Status:</strong> ${alert.status || "--"}</p>
+                </div>
+            `;
+
+            const marker = new google.maps.Marker({
+                position,
+                map: map,
+                title: alert.title || "Emergency SOS",
+                animation: google.maps.Animation.BOUNCE,
+                icon: {
+                    url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
+                }
+            });
+
+            const infoWindow = new google.maps.InfoWindow({
+                content: infoHtml
+            });
+
+            marker.addListener("click", () => {
+                infoWindow.open(map, marker);
+            });
+
+            sosMarkers[sosId] = marker;
+            sosInfoWindows[sosId] = infoWindow;
+        });
+
+        if (firstLoad && hasValidPoint) {
+            map.fitBounds(bounds);
+
+            google.maps.event.addListenerOnce(map, "bounds_changed", function () {
+                if (map.getZoom() > 13) {
+                    map.setZoom(13);
+                }
+            });
+
+            firstLoad = false;
+        }
+    }
+
+    function updateDriverTable(locations) {
+        const tbody = document.getElementById("driverTableBody");
+        if (!tbody) return;
+
+        if (!locations.length) {
+            tbody.innerHTML = '<tr><td colspan="5">No live driver location found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = locations.map(loc => {
+            const online = isDriverOnline(loc.updated_at);
+            const badge = online
+                ? '<span class="status-pill completed">Online</span>'
+                : '<span class="status-pill warning">Offline</span>';
+
+            return `
+                <tr>
+                    <td>${loc.driver_name || "--"}</td>
+                    <td>${loc.latitude ?? "--"}</td>
+                    <td>${loc.longitude ?? "--"}</td>
+                    <td>${loc.updated_at || "--"}</td>
+                    <td>${badge}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function updateSosTable(alerts) {
+        const tbody = document.getElementById("sosTableBody");
+        if (!tbody) return;
+
+        if (!alerts.length) {
+            tbody.innerHTML = '<tr><td colspan="6">No SOS alerts found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = alerts.map(alert => {
+            const active = (alert.status || "").toUpperCase() === "ACTIVE";
+            const badge = active
+                ? '<span class="status-pill live">ACTIVE</span>'
+                : '<span class="status-pill completed">RESOLVED</span>';
+
+            return `
+                <tr>
+                    <td>${alert.employee_name || "--"}</td>
+                    <td>${alert.title || "--"}</td>
+                    <td>${alert.pickup_location || "--"}</td>
+                    <td>${alert.drop_location || "--"}</td>
+                    <td>${alert.created_at || "--"}</td>
+                    <td>${badge}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    window.onload = initMap;
+</script>
+
+{% endblock %}

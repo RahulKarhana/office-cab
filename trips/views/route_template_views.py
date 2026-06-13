@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import datetime, time
 import traceback
+
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -20,6 +22,15 @@ from trips.serializers import (
     RouteStopSerializer,
     VehicleOptionSerializer,
 )
+from trips.utils.notification import send_push_notification
+
+
+def is_admin_user(user):
+    return bool(
+        user.is_authenticated and (
+            getattr(user, "role", "") == "ADMIN" or user.is_superuser
+        )
+    )
 
 
 class RouteTemplateViewSet(viewsets.ModelViewSet):
@@ -29,7 +40,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        if user.role != "ADMIN":
+        if not is_admin_user(user):
             return RouteTemplate.objects.none()
 
         return (
@@ -39,7 +50,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can create routes"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -47,7 +58,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can delete routes."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -68,12 +79,9 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
         return super().destroy(request, *args, **kwargs)
 
-    # =========================
-    # FORM DATA
-    # =========================
     @action(detail=False, methods=["get"], url_path="create_form_data")
     def create_form_data(self, request):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can access route form data."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -127,9 +135,8 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    # =========================
-    # COMMON HELPERS
-    # =========================
+    
+
     def _parse_pickup_datetime(self, date_str, time_str):
         if not date_str or not time_str:
             return None, Response(
@@ -138,10 +145,17 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            pickup_datetime = datetime.strptime(
+            naive_datetime = datetime.strptime(
                 f"{date_str} {time_str}",
                 "%Y-%m-%d %H:%M",
             )
+
+            # ✅ CONVERT TO TIMEZONE AWARE
+            pickup_datetime = timezone.make_aware(
+                naive_datetime,
+                timezone.get_current_timezone(),
+            )
+
             return pickup_datetime, None
 
         except ValueError:
@@ -231,12 +245,53 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
             return route_run, created_count
 
-    # =========================
-    # GENERATE TRIPS
-    # =========================
+    def _should_send_assignment_notification_now(self, route_run):
+        now = timezone.localtime()
+        today = timezone.localdate()
+
+        ten_am_today = timezone.localtime().replace(
+        hour=10, minute=0, second=0, microsecond=0
+    )
+        return route_run.run_date == today and now >= ten_am_today
+
+    def _send_assignment_notifications(self, route, route_run, trip_type):
+        send_push_notification(
+            route.driver,
+            "New Trip Assigned 🚖",
+            f"You have a new {trip_type.lower()} route assigned.",
+            {
+                "type": "TRIP_ASSIGNED",
+                "trip_type": trip_type,
+                "route_id": str(route.id),
+                "route_run_id": str(route_run.id),
+            },
+        )
+
+        for stop in route.stops.all():
+            send_push_notification(
+                stop.employee,
+                "Cab Assigned 🚖",
+                f"Your cab for {trip_type.lower()} has been assigned.",
+                {
+                    "type": "TRIP_ASSIGNED",
+                    "trip_type": trip_type,
+                    "route_id": str(route.id),
+                    "route_run_id": str(route_run.id),
+                },
+            )
+
+        Trip.objects.filter(route_run=route_run).update(notification_sent=True)
+
+    def _handle_assignment_notification(self, route, route_run, trip_type):
+        if self._should_send_assignment_notification_now(route_run):
+            self._send_assignment_notifications(route, route_run, trip_type)
+            return True
+
+        return False
+
     @action(detail=True, methods=["post"], url_path="generate_trips")
     def generate_trips(self, request, pk=None):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can generate trips"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -244,7 +299,6 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
         try:
             route = self.get_object()
-
             trip_type = request.data.get("trip_type")
 
             if trip_type not in ["PICKUP", "DROP"]:
@@ -273,6 +327,12 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             route_run, created_count = self._create_route_run_and_trips(
                 route,
                 pickup_datetime,
+                trip_type,
+            )
+
+            notification_sent = self._handle_assignment_notification(
+                route,
+                route_run,
                 trip_type,
             )
 
@@ -280,6 +340,12 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 {
                     "message": f"{created_count} trip(s) created successfully.",
                     "route_run_id": route_run.id,
+                    "notification_sent": notification_sent,
+                    "notification_note": (
+                        "Notification sent instantly."
+                        if notification_sent
+                        else "Notification will be sent by 10 AM scheduler."
+                    ),
                 },
                 status=status.HTTP_201_CREATED,
             )
@@ -293,12 +359,91 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    # =========================
-    # REPEAT ROUTE
-    # =========================
+    @action(detail=False, methods=["post"], url_path="preview-route-order")
+    def preview_route_order(self, request):
+        employee_ids = request.data.get("employee_ids", [])
+        mode = request.data.get("mode", "MANUAL")
+
+        employees = list(User.objects.filter(id__in=employee_ids))
+
+        if len(employees) < 2:
+            return Response({"error": "Minimum 2 employees required"}, status=400)
+
+        # 🟢 MANUAL
+        if mode == "MANUAL":
+            ordered = employees
+
+        # 🔵 DISTANCE (simple optimization)
+        elif mode == "DISTANCE":
+            base = employees[0]
+
+            def distance(emp):
+                if not emp.pickup_latitude or not emp.pickup_longitude:
+                    return 999999
+                return (
+                    (emp.pickup_latitude - base.pickup_latitude) ** 2 +
+                    (emp.pickup_longitude - base.pickup_longitude) ** 2
+                )
+
+            ordered = sorted(employees, key=distance)
+
+        # 🟣 FEMALE SAFETY
+        elif mode == "SAFE":
+            males = [e for e in employees if not e.is_female]
+            females = [e for e in employees if e.is_female]
+
+            ordered = []
+
+            # ❌ Female should NOT be first pickup
+            if males:
+                ordered.append(males.pop(0))
+
+            # females in middle
+            ordered.extend(females)
+
+            # remaining males
+            ordered.extend(males)
+
+        else:
+            ordered = employees
+
+        return Response([
+            {
+                "id": emp.id,
+                "username": emp.username,
+                "pickup_location": emp.pickup_location,
+            }
+            for emp in ordered
+        ])
+    
+    @action(detail=True, methods=["post"], url_path="save-route-order")
+    def save_route_order(self, request, pk=None):
+        route = self.get_object()
+        ordered_ids = request.data.get("employee_ids", [])
+
+        if not ordered_ids:
+            return Response({"error": "employee_ids required"}, status=400)
+
+        RouteStop.objects.filter(route=route).delete()
+
+        for index, emp_id in enumerate(ordered_ids, start=1):
+            emp = User.objects.get(id=emp_id)
+
+            RouteStop.objects.create(
+                route=route,
+                employee=emp,
+                stop_order=index,
+                pickup_location=emp.pickup_location,
+                pickup_latitude=emp.pickup_latitude,
+                pickup_longitude=emp.pickup_longitude,
+            )
+
+        return Response({"message": "Route saved successfully"})
+
+        
     @action(detail=True, methods=["post"], url_path="repeat_route")
     def repeat_route(self, request, pk=None):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can repeat routes."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -306,7 +451,6 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
         try:
             route = self.get_object()
-
             trip_type = request.data.get("trip_type")
 
             if trip_type not in ["PICKUP", "DROP"]:
@@ -338,10 +482,22 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 trip_type,
             )
 
+            notification_sent = self._handle_assignment_notification(
+                route,
+                route_run,
+                trip_type,
+            )
+
             return Response(
                 {
                     "message": f"{created_count} trip(s) created.",
                     "route_run_id": route_run.id,
+                    "notification_sent": notification_sent,
+                    "notification_note": (
+                        "Notification sent instantly."
+                        if notification_sent
+                        else "Notification will be sent by 10 AM scheduler."
+                    ),
                 },
                 status=status.HTTP_201_CREATED,
             )
@@ -356,9 +512,6 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             )
 
 
-# =========================
-# ROUTE STOP VIEWSET
-# =========================
 class RouteStopViewSet(viewsets.ModelViewSet):
     serializer_class = RouteStopSerializer
     permission_classes = [IsAuthenticated]
@@ -366,7 +519,7 @@ class RouteStopViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        if user.role != "ADMIN":
+        if not is_admin_user(user):
             return RouteStop.objects.none()
 
         return RouteStop.objects.select_related(
@@ -375,7 +528,7 @@ class RouteStopViewSet(viewsets.ModelViewSet):
         ).order_by("route_id", "stop_order")
 
     def create(self, request, *args, **kwargs):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can create route stops."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -383,7 +536,7 @@ class RouteStopViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can update route stops."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -391,7 +544,7 @@ class RouteStopViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        if request.user.role != "ADMIN":
+        if not is_admin_user(request.user):
             return Response(
                 {"error": "Only admin can delete route stops."},
                 status=status.HTTP_403_FORBIDDEN,

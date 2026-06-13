@@ -1,0 +1,208 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Drivers - CabMate Admin{% endblock %}
+{% block nav_drivers %}active{% endblock %}
+{% block page_heading %}Drivers{% endblock %}
+{% block page_subheading %}Manage drivers, vehicles, and seating capacity{% endblock %}
+
+{% block content %}
+
+<style>
+.driver-search-form{margin-top:20px;}
+.driver-search-box{
+    display:flex;align-items:center;gap:12px;background:#fff;
+    border:1px solid #e5e7eb;border-radius:18px;padding:10px 14px;
+    box-shadow:0 10px 30px rgba(15,23,42,.06);
+}
+.search-icon{font-size:18px;}
+.driver-search-box input{
+    flex:1;border:none;outline:none;font-size:15px;background:transparent;
+    font-weight:700;color:#111827;
+}
+.driver-search-btn{
+    border:none;padding:12px 24px;border-radius:12px;font-weight:900;
+    cursor:pointer;color:white;background:linear-gradient(135deg,#2563eb,#3b82f6);
+}
+.driver-profile{display:flex;align-items:center;gap:12px;}
+.driver-avatar{
+    width:42px;height:42px;border-radius:50%;
+    background:linear-gradient(135deg,#2563eb,#60a5fa);
+    color:white;display:flex;align-items:center;justify-content:center;
+    font-weight:950;
+}
+.driver-sub{font-size:12px;color:#64748b;font-weight:800;margin-top:3px;}
+.vehicle-badge{
+    display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;
+    padding:8px 12px;border-radius:999px;font-weight:900;
+}
+.vehicle-missing{
+    display:inline-flex;background:#fee2e2;color:#991b1b;
+    padding:8px 12px;border-radius:999px;font-weight:900;
+}
+.driver-status-card{
+    grid-column:1/-1;background:linear-gradient(135deg,#ffffff,#f8fbff);
+    border:1px solid #dbeafe;border-radius:26px;padding:24px;
+    display:flex;align-items:center;gap:18px;
+    box-shadow:0 18px 40px rgba(15,23,42,.07);
+}
+.driver-status-icon{
+    width:64px;height:64px;border-radius:22px;display:grid;place-items:center;
+    font-size:30px;background:#eff6ff;color:#2563eb;
+}
+.driver-status-card.warning .driver-status-icon{background:#fff7ed;color:#ea580c;}
+.driver-status-card h3{margin:0;font-size:28px;font-weight:950;color:#14213d;}
+.driver-status-card p{margin:5px 0 0;color:#64748b;font-weight:850;}
+.admin-table tbody tr:hover{background:#f8fafc;}
+@media(max-width:700px){
+    .driver-search-box{flex-direction:column;align-items:stretch;}
+    .driver-search-btn{width:100%;}
+}
+</style>
+
+<div class="dashboard-grid">
+
+    <section class="stats-row">
+        <div class="mini-stat-card">
+            <p>Total Drivers</p>
+            <h3>{{ total_drivers }}</h3>
+            <span>All registered drivers</span>
+        </div>
+
+        <div class="mini-stat-card">
+            <p>Active Drivers</p>
+            <h3>{{ active_drivers }}</h3>
+            <span>Currently active accounts</span>
+        </div>
+
+        <div class="mini-stat-card">
+            <p>Assigned Vehicles</p>
+            <h3>{{ assigned_vehicles }}</h3>
+            <span>Vehicles linked to drivers</span>
+        </div>
+
+        <div class="mini-stat-card">
+            <p>Total Seats</p>
+            <h3>{{ total_seats }}</h3>
+            <span>Total capacity of all cabs</span>
+        </div>
+    </section>
+
+    <section class="driver-status-card {% if drivers_without_vehicle > 0 %}warning{% else %}good{% endif %}">
+        <div class="driver-status-icon">🚖</div>
+        <div>
+            <h3>Driver Vehicle Status</h3>
+            <p>
+                {% if drivers_without_vehicle > 0 %}
+                    {{ drivers_without_vehicle }} driver{{ drivers_without_vehicle|pluralize }} without assigned vehicle.
+                {% else %}
+                    All drivers have assigned vehicles.
+                {% endif %}
+            </p>
+        </div>
+    </section>
+
+    <section class="panel-card" style="grid-column: 1 / -1;">
+        <div class="panel-head">
+            <div>
+                <h3>Driver Directory</h3>
+                <p>Search drivers and check assigned cab details</p>
+            </div>
+        </div>
+
+        <form method="get" class="driver-search-form">
+            <div class="driver-search-box">
+                <span class="search-icon">🔍</span>
+
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="Search driver, phone number, vehicle number or model..."
+                >
+
+                <button type="submit" class="driver-search-btn">
+                    Search Driver
+                </button>
+            </div>
+        </form>
+
+        <div class="table-wrap" style="margin-top: 18px;">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Driver</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Vehicle Number</th>
+                        <th>Vehicle Model</th>
+                        <th>Seats</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for driver in drivers %}
+                    <tr>
+                        <td>{{ driver.id }}</td>
+
+                        <td>
+                            <div class="driver-profile">
+                                <div class="driver-avatar">
+                                    {{ driver.username|first|upper }}
+                                </div>
+                                <div>
+                                    <strong>{{ driver.username }}</strong>
+                                    <div class="driver-sub">Driver ID #{{ driver.id }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>{{ driver.phone_number|default:"--" }}</td>
+                        <td>{{ driver.address|default:"--" }}</td>
+
+                        <td>
+                            {% if driver.vehicle %}
+                                <span class="vehicle-badge">🚖 {{ driver.vehicle.vehicle_number }}</span>
+                            {% else %}
+                                <span class="vehicle-missing">No Vehicle</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if driver.vehicle %}
+                                {{ driver.vehicle.vehicle_model|default:"--" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if driver.vehicle %}
+                                {{ driver.vehicle.seat_count|default:"--" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if driver.is_active %}
+                                <span class="status-pill completed">Active</span>
+                            {% else %}
+                                <span class="status-pill warning">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="8">No drivers found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

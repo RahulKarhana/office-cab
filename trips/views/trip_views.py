@@ -3,15 +3,28 @@ from django.db import transaction
 from django.db.models import Case, When, Value, IntegerField
 from django.utils import timezone
 from math import radians, cos, sin, asin, sqrt
-
+from trips.utils.notification import send_push_notification
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from datetime import datetime, time
+from trips.utils.smart_notifications import create_smart_notification
 
-from trips.models import DriverLocation, Notification, Trip, TripCancellation, Vehicle
+from trips.models import (
+    DriverLocation,
+    Notification,
+    Trip,
+    TripCancellation,
+    Vehicle,
+    RouteRunStop,
+    RouteRun,
+    EmployeeLeave,
+    Notification,
+)
+
 from trips.serializers import (
     TripSerializer,
     UserOptionSerializer,
@@ -56,6 +69,84 @@ class TripViewSet(ModelViewSet):
     def _closed_statuses(self):
         return [Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED]
 
+    def _get_ordered_stops(self, route_run):
+        stops = route_run.stops.select_related("employee")
+
+        if route_run.trip_type == Trip.TRIP_TYPE_DROP:
+            return stops.order_by("-stop_order")
+
+        return stops.order_by("stop_order")
+
+    def _get_current_stop(self, route_run):
+        return (
+            self._get_ordered_stops(route_run)
+            .filter(
+                is_picked=False,
+                is_no_show=False,
+            )
+            .first()
+        )
+
+    def _get_next_stop_after_current(self, route_run, current_stop):
+        stops = list(self._get_ordered_stops(route_run))
+
+        found_current = False
+
+        for stop in stops:
+            if stop.id == current_stop.id:
+                found_current = True
+                continue
+
+            if found_current and not stop.is_picked and not stop.is_no_show:
+                return stop
+
+        return None
+
+    def _is_after_10am_today(self):
+        now = timezone.localtime()
+        today = timezone.localdate()
+
+        ten_am_today = timezone.make_aware(
+            datetime.combine(today, time(10, 0)),
+            timezone.get_current_timezone(),
+        )
+
+        return now >= ten_am_today
+
+    def _should_send_cancel_notification(self, trip):
+        return bool(trip.notification_sent and self._is_after_10am_today())
+
+    def _send_admin_cancel_notification_if_needed(self, trip):
+        if not self._should_send_cancel_notification(trip):
+            return False
+
+        self.send_notification(
+            trip.employee,
+            f"Your {trip.trip_type.lower()} cab has been cancelled by admin.",
+            title="❌ Cab Cancelled",
+            push_data={
+                "type": "TRIP_CANCELLED",
+                "trip_id": str(trip.id),
+                "trip_type": trip.trip_type,
+                "route_run_id": str(trip.route_run_id or ""),
+            },
+        )
+
+        if trip.driver:
+            self.send_notification(
+                trip.driver,
+                f"{trip.trip_type.capitalize()} trip for {trip.employee.username} has been cancelled by admin.",
+                title="❌ Trip Cancelled",
+                push_data={
+                    "type": "TRIP_CANCELLED",
+                    "trip_id": str(trip.id),
+                    "trip_type": trip.trip_type,
+                    "route_run_id": str(trip.route_run_id or ""),
+                },
+            )
+
+        return True
+
     def _cancel_route_run_if_possible(self, trip):
         if not trip.route_run:
             return
@@ -67,10 +158,200 @@ class TripViewSet(ModelViewSet):
         except Exception:
             pass
 
-    def _notify_admins(self, message):
+    def _notify_admins(self,
+        message,
+        title="Admin Alert",
+        push_data=None,
+        notification_type=Notification.TYPE_INFO,
+        priority=Notification.PRIORITY_LOW,
+        trip=None,
+        route_run=None,
+        driver=None,
+        employee=None,
+    ):
         admins = User.objects.filter(role="ADMIN", is_active=True)
+
         for admin in admins:
-            self.send_notification(admin, message)
+            create_smart_notification(
+                user=admin,
+                title=title,
+                message=message,
+                notification_type=notification_type,
+                priority=priority,
+                trip=trip,
+                route_run=route_run,
+                driver=driver,
+                employee=employee,
+                push_data=push_data or {},
+            )
+
+    def _handle_trip_start_notifications(self, trip):
+        route_run = trip.route_run
+
+        if not route_run:
+            if trip.trip_type == Trip.TRIP_TYPE_PICKUP:
+                msg = "Your pickup cab has started 🚖"
+            else:
+                msg = "Your drop cab has started 🚖"
+
+            self.send_notification(
+                trip.employee,
+                msg,
+                title="🚖 Trip Started",
+                push_data={
+                    "type": "TRIP_STARTED",
+                    "trip_id": str(trip.id),
+                    "screen": "active_trip",
+                },
+            )
+            return
+
+        if not route_run.started_at:
+            now = timezone.now()
+
+            route_run.started_at = now
+            route_run.save(update_fields=["started_at"])
+
+            Trip.objects.filter(
+                route_run=route_run,
+                status=Trip.STATUS_ASSIGNED,
+            ).update(
+                status=Trip.STATUS_STARTED,
+                start_time=now,
+            )
+
+        stops = self._get_ordered_stops(route_run)
+
+        for stop in stops:
+            if route_run.trip_type == Trip.TRIP_TYPE_DROP:
+                msg = "Your drop cab has started 🚖"
+            else:
+                msg = "Your pickup cab has started 🚖"
+
+            self.send_notification(
+                stop.employee,
+                msg,
+                title="Cab Started 🚗",
+                push_data={
+                    "type": "CAB_STARTED",
+                    "trip_id": str(trip.id),
+                    "route_run_id": str(route_run.id),
+                    "trip_type": route_run.trip_type,
+                    "screen": "active_trip",
+                },
+            )
+
+        first_stop = stops.first()
+
+        if first_stop:
+            if route_run.trip_type == Trip.TRIP_TYPE_DROP:
+                first_msg = "You are first for drop. Please be ready."
+                first_type = "NEXT_DROP"
+            else:
+                first_msg = "Next turn is yours. Be ready!"
+                first_type = "NEXT_PICKUP"
+
+            self.send_notification(
+                first_stop.employee,
+                first_msg,
+                title="Driver is coming 🚗",
+                push_data={
+                    "type": first_type,
+                    "trip_id": str(trip.id),
+                    "route_run_id": str(route_run.id),
+                    "stop_id": str(first_stop.id),
+                    "screen": "active_trip",
+                },
+            )
+
+    def _handle_stop_done(self, route_run, current_stop):
+        current_stop.is_picked = True
+        current_stop.picked_at = timezone.now()
+        current_stop.save(update_fields=["is_picked", "picked_at"])
+
+        next_stop = self._get_next_stop_after_current(route_run, current_stop)
+
+        if next_stop:
+            if route_run.trip_type == Trip.TRIP_TYPE_DROP:
+                msg = "Driver is coming to drop you 🚗"
+                notification_type = "NEXT_DROP"
+            else:
+                msg = "Driver is coming to pick you 🚗"
+                notification_type = "NEXT_PICKUP"
+
+            self.send_notification(
+                next_stop.employee,
+                msg,
+                title="Your turn 🚗",
+                push_data={
+                    "type": notification_type,
+                    "route_run_id": str(route_run.id),
+                    "stop_id": str(next_stop.id),
+                    "screen": "active_trip",
+                },
+            )
+
+        return next_stop
+
+    def _complete_route_if_finished(self, route_run):
+        remaining_stops = route_run.stops.filter(
+            is_picked=False,
+            is_no_show=False,
+        ).count()
+
+        route_completed = False
+
+        if remaining_stops == 0:
+            now = timezone.now()
+
+            if hasattr(route_run, "completed_at") and not route_run.completed_at:
+                route_run.completed_at = now
+                route_run.save(update_fields=["completed_at"])
+
+            Trip.objects.filter(
+                route_run=route_run,
+                status=Trip.STATUS_STARTED,
+            ).update(
+                status=Trip.STATUS_COMPLETED,
+                end_time=now,
+            )
+
+            route_completed = True
+            self._notify_route_completed(route_run)
+
+        return remaining_stops, route_completed
+
+    def _notify_route_completed(self, route_run):
+        trips = Trip.objects.select_related("employee").filter(
+            route_run=route_run,
+            status=Trip.STATUS_COMPLETED,
+        )
+
+        for trip in trips:
+            self.send_notification(
+                trip.employee,
+                "Your trip has been completed. Please submit your review.",
+                title="✅ Trip Completed",
+                push_data={
+                    "type": "TRIP_COMPLETED",
+                    "trip_id": str(trip.id),
+                    "route_run_id": str(route_run.id),
+                    "screen": "review",
+                },
+            )
+
+        self._notify_admins(
+            f"{route_run.trip_type.capitalize()} route #{route_run.id} has been completed.",
+            title="✅ Route Completed",
+            notification_type=Notification.TYPE_ROUTE_COMPLETED,
+            priority=Notification.PRIORITY_MEDIUM,
+            route_run=route_run,
+            push_data={
+                "type": "ROUTE_COMPLETED",
+                "route_run_id": str(route_run.id),
+                "screen": "admin_dashboard",
+            },
+        )
 
     def _calculate_distance_km(self, lat1, lon1, lat2, lon2):
         lon1, lat1, lon2, lat2 = map(float, [lon1, lat1, lon2, lat2])
@@ -89,7 +370,6 @@ class TripViewSet(ModelViewSet):
         if distance_km is None:
             return None
 
-        # simple city estimation
         eta = int((distance_km / 25) * 60)
         return max(1, eta)
 
@@ -177,7 +457,7 @@ class TripViewSet(ModelViewSet):
 
         if user.role != "EMPLOYEE":
             return Response(
-                {"error": "Only employee can view live pickup status."},
+                {"error": "Only employee can view live route status."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -192,7 +472,6 @@ class TripViewSet(ModelViewSet):
             .prefetch_related("route_run__stops__employee")
             .filter(
                 employee=user,
-                trip_type=Trip.TRIP_TYPE_PICKUP,
                 status__in=self._active_statuses(),
             )
             .order_by("-created_at")
@@ -201,7 +480,7 @@ class TripViewSet(ModelViewSet):
 
         if not trip:
             return Response(
-                {"detail": "No active pickup trip found."},
+                {"detail": "No active trip found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -212,7 +491,7 @@ class TripViewSet(ModelViewSet):
             )
 
         route_run = trip.route_run
-        stops = list(route_run.stops.select_related("employee").order_by("stop_order"))
+        stops = list(self._get_ordered_stops(route_run))
 
         if not stops:
             return Response(
@@ -228,34 +507,38 @@ class TripViewSet(ModelViewSet):
         driver_longitude = driver_location.longitude if driver_location else None
         last_updated = driver_location.updated_at if driver_location else None
 
-        current_stop = next((s for s in stops if not s.is_picked), None)
-
-        my_stop = next(
-            (s for s in stops if s.employee_id == user.id),
+        current_stop = next(
+            (s for s in stops if not s.is_picked and not s.is_no_show),
             None,
         )
 
+        my_stop = next((s for s in stops if s.employee_id == user.id), None)
+
         next_stop = None
         if current_stop:
-            next_stop = next(
-                (
-                    s for s in stops
-                    if not s.is_picked and s.stop_order > current_stop.stop_order
-                ),
-                None,
-            )
+            found_current = False
+            for stop in stops:
+                if stop.id == current_stop.id:
+                    found_current = True
+                    continue
+
+                if found_current and not stop.is_picked and not stop.is_no_show:
+                    next_stop = stop
+                    break
 
         total_stops = len(stops)
-        completed_stops = len([s for s in stops if s.is_picked])
-        remaining_stops = len([s for s in stops if not s.is_picked])
+        completed_stops = len([s for s in stops if s.is_picked or s.is_no_show])
+        remaining_stops = len([s for s in stops if not s.is_picked and not s.is_no_show])
 
         live_stops = []
         cumulative_eta = 0
 
-        for stop in stops:
+        for index, stop in enumerate(stops):
             stop_status = "UPCOMING"
 
-            if stop.is_picked:
+            if stop.is_no_show:
+                stop_status = "NO_SHOW"
+            elif stop.is_picked:
                 stop_status = "COMPLETED"
             elif current_stop and stop.id == current_stop.id:
                 stop_status = "CURRENT"
@@ -263,6 +546,9 @@ class TripViewSet(ModelViewSet):
                 stop_status = "YOUR_TURN" if current_stop and current_stop.id == my_stop.id else "YOUR_STOP"
             elif next_stop and stop.id == next_stop.id:
                 stop_status = "NEXT"
+
+            is_current_stop = bool(current_stop and stop.id == current_stop.id)
+            show_chat_option = bool(is_current_stop and not stop.is_picked and not stop.is_no_show)
 
             distance_km = None
             eta_minutes = None
@@ -278,19 +564,25 @@ class TripViewSet(ModelViewSet):
                         )
                         eta_minutes = self._estimate_eta_minutes(distance_km)
                         cumulative_eta = eta_minutes or 0
-                elif not stop.is_picked and current_stop and stop.stop_order > current_stop.stop_order:
-                    cumulative_eta += 7
-                    eta_minutes = cumulative_eta
+                elif not stop.is_picked and not stop.is_no_show and current_stop:
+                    current_index = stops.index(current_stop)
+                    if index > current_index:
+                        cumulative_eta += 7
+                        eta_minutes = cumulative_eta
 
             live_stops.append(
                 {
                     "id": stop.id,
                     "stop_order": stop.stop_order,
+                    "display_order": index + 1,
                     "employee_name": stop.employee.username,
                     "pickup_location": stop.pickup_location,
                     "pickup_latitude": stop.pickup_latitude,
                     "pickup_longitude": stop.pickup_longitude,
+                    "is_current_stop": is_current_stop,
+                    "show_chat_option": show_chat_option,
                     "is_picked": stop.is_picked,
+                    "is_no_show": stop.is_no_show,
                     "status": stop_status,
                     "distance_km": round(distance_km, 2) if distance_km is not None else None,
                     "distance_text": self._format_distance_text(distance_km),
@@ -299,52 +591,55 @@ class TripViewSet(ModelViewSet):
                 }
             )
 
-        current_stop_data = None
-        if current_stop:
-            current_stop_item = next(
-                (item for item in live_stops if item["id"] == current_stop.id),
-                None,
-            )
-            current_stop_data = current_stop_item
+        current_stop_data = next(
+            (item for item in live_stops if current_stop and item["id"] == current_stop.id),
+            None,
+        )
 
-        next_stop_data = None
-        if next_stop:
-            next_stop_item = next(
-                (item for item in live_stops if item["id"] == next_stop.id),
-                None,
-            )
-            next_stop_data = next_stop_item
+        next_stop_data = next(
+            (item for item in live_stops if next_stop and item["id"] == next_stop.id),
+            None,
+        )
 
-        my_stop_data = None
-        if my_stop:
-            my_stop_item = next(
-                (item for item in live_stops if item["id"] == my_stop.id),
-                None,
-            )
-            my_stop_data = my_stop_item
+        my_stop_data = next(
+            (item for item in live_stops if my_stop and item["id"] == my_stop.id),
+            None,
+        )
 
-        if my_stop and my_stop.is_picked:
-            status_text = "You have already been picked up. Cab is continuing on route."
-        elif current_stop and my_stop and current_stop.id == my_stop.id:
-            status_text = "Cab is currently coming for your pickup."
-        elif current_stop and next_stop and my_stop and next_stop.id == my_stop.id:
-            status_text = f"Current pickup is {current_stop.employee.username}. You are next."
-        elif current_stop and my_stop and my_stop.stop_order > current_stop.stop_order:
+        route_word = "drop" if route_run.trip_type == Trip.TRIP_TYPE_DROP else "pickup"
+
+        if my_stop and my_stop.is_no_show:
+            status_text = f"You missed your {route_word}."
+        elif my_stop and my_stop.is_picked:
             status_text = (
-                f"Current pickup is {current_stop.employee.username}. "
-                f"Your pickup will come later in route."
+                "You have been dropped successfully."
+                if route_run.trip_type == Trip.TRIP_TYPE_DROP
+                else "You have already been picked up. Cab is continuing on route."
+            )
+        elif current_stop and my_stop and current_stop.id == my_stop.id:
+            status_text = (
+                "Cab is currently coming for your drop."
+                if route_run.trip_type == Trip.TRIP_TYPE_DROP
+                else "Cab is currently coming for your pickup."
+            )
+        elif current_stop and next_stop and my_stop and next_stop.id == my_stop.id:
+            status_text = f"Current {route_word} is {current_stop.employee.username}. You are next."
+        elif current_stop and my_stop:
+            status_text = (
+                f"Current {route_word} is {current_stop.employee.username}. "
+                f"Your {route_word} will come later in route."
             )
         elif route_run.completed_at is not None:
             status_text = "Route completed successfully."
         else:
-            status_text = "Live pickup route is active."
+            status_text = f"Live {route_word} route is active."
 
         return Response(
             {
                 "trip_id": trip.id,
                 "route_run_id": route_run.id,
                 "route_name": route_run.route_template.name
-                if route_run.route_template else "Pickup Route",
+                if route_run.route_template else f"{route_word.capitalize()} Route",
                 "driver_name": trip.driver.username if trip.driver else None,
                 "vehicle_number": trip.vehicle.vehicle_number if trip.vehicle else None,
                 "trip_type": trip.trip_type,
@@ -465,16 +760,7 @@ class TripViewSet(ModelViewSet):
                     reason="Cancelled by admin from assigned cab group",
                 )
 
-                self.send_notification(
-                    trip.employee,
-                    f"Your trip #{trip.id} has been cancelled by admin.",
-                )
-
-                if trip.driver:
-                    self.send_notification(
-                        trip.driver,
-                        f"Trip #{trip.id} has been cancelled by admin.",
-                    )
+                self._send_admin_cancel_notification_if_needed(trip)
 
                 cancelled_count += 1
 
@@ -507,16 +793,7 @@ class TripViewSet(ModelViewSet):
                 reason="Cancelled by admin",
             )
 
-            self.send_notification(
-                trip.employee,
-                f"Your trip #{trip.id} has been cancelled by admin.",
-            )
-
-            if trip.driver:
-                self.send_notification(
-                    trip.driver,
-                    f"Trip #{trip.id} has been cancelled by admin.",
-                )
+            self._send_admin_cancel_notification_if_needed(trip)
 
         return Response(
             {"detail": "Trip cancelled successfully."},
@@ -556,16 +833,7 @@ class TripViewSet(ModelViewSet):
                     reason="Cancelled by admin reset",
                 )
 
-                self.send_notification(
-                    trip.employee,
-                    f"Your trip #{trip.id} has been cancelled by admin reset.",
-                )
-
-                if trip.driver:
-                    self.send_notification(
-                        trip.driver,
-                        f"Trip #{trip.id} has been cancelled by admin reset.",
-                    )
+                self._send_admin_cancel_notification_if_needed(trip)
 
         return Response(
             {"detail": f"{total} active trips reset successfully."},
@@ -736,10 +1004,103 @@ class TripViewSet(ModelViewSet):
             raise PermissionDenied("Only Admin can delete trips.")
 
         instance.delete()
+    @action(detail=False, methods=["post"], url_path="mark-leave")
+    def mark_leave(self, request):
+        if request.user.role != "EMPLOYEE":
+            return Response(
+                {"error": "Only employee can mark leave."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        leave_date = request.data.get("leave_date")
+        reason = request.data.get("reason", "").strip()
+
+        if not leave_date:
+            return Response(
+                {"error": "leave_date is required in YYYY-MM-DD format."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            leave, created = EmployeeLeave.objects.get_or_create(
+                employee=request.user,
+                leave_date=leave_date,
+                defaults={"reason": reason},
+            )
+
+            if not created:
+                leave.reason = reason
+                leave.save(update_fields=["reason"])
+
+            trips = Trip.objects.select_related(
+                "driver",
+                "employee",
+                "route_run",
+            ).filter(
+                employee=request.user,
+                trip_date=leave_date,
+                status=Trip.STATUS_ASSIGNED,
+            )
+
+            cancelled_count = 0
+
+            for trip in trips:
+                trip.status = Trip.STATUS_CANCELLED
+                trip.save(update_fields=["status"])
+
+                if trip.route_run_id:
+                    RouteRunStop.objects.filter(
+                        route_run=trip.route_run,
+                        employee=trip.employee,
+                    ).update(
+                        is_no_show=True,
+                        no_show_at=timezone.now(),
+                    )
+
+                TripCancellation.objects.create(
+                    trip=trip,
+                    cancelled_by=request.user,
+                    reason=reason or "Marked leave by employee",
+                    declaration_accepted=False,
+                    declaration_text="",
+                    cancelled_by_role=request.user.role,
+                )
+
+                cancelled_count += 1
+
+            started_trips_count = Trip.objects.filter(
+                employee=request.user,
+                trip_date=leave_date,
+                status=Trip.STATUS_STARTED,
+            ).count()
+
+        self._notify_admins(
+            f"{request.user.username} marked leave for {leave_date}. "
+            f"{cancelled_count} assigned trip(s) auto-cancelled.",
+            title="Employee Leave Marked",
+            push_data={
+                "type": "EMPLOYEE_LEAVE",
+                "employee_id": str(request.user.id),
+                "leave_date": str(leave_date),
+            },
+        )
+
+        return Response(
+            {
+                "message": "Leave marked successfully.",
+                "leave_date": leave_date,
+                "cancelled_trips": cancelled_count,
+                "started_trips_not_cancelled": started_trips_count,
+                "driver_fcm_sent": False,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=True, methods=["post"], url_path="employee-cancel")
     def cancel_trip(self, request, pk=None):
         trip = self.get_object()
+
+        SELF_TRAVEL_REASON = "I will come office by self"
 
         if request.user.role != "EMPLOYEE":
             return Response(
@@ -753,32 +1114,140 @@ class TripViewSet(ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        try:
+        if trip.status == Trip.STATUS_STARTED:
+            return Response(
+                {"error": "You can't cancel the cab after trip started."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if trip.status == Trip.STATUS_COMPLETED:
+            return Response(
+                {"error": "Completed trip cannot be cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if trip.status == Trip.STATUS_CANCELLED:
+            return Response(
+                {"error": "Trip is already cancelled."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reason = request.data.get("reason", "").strip()
+        declaration_accepted = request.data.get("declaration_accepted", False)
+
+        if not reason:
+            return Response(
+                {"error": "Cancellation reason is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        declaration_required = False
+
+        if trip.trip_type == Trip.TRIP_TYPE_DROP:
+            pickup_trip = Trip.objects.filter(
+                employee=request.user,
+                trip_type=Trip.TRIP_TYPE_PICKUP,
+                trip_date=trip.trip_date,
+            ).order_by("-created_at").first()
+
+            if pickup_trip and pickup_trip.status != Trip.STATUS_CANCELLED:
+                return Response(
+                    {"error": "First cancel your today's pickup."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if pickup_trip and pickup_trip.status == Trip.STATUS_CANCELLED:
+                pickup_cancellation = TripCancellation.objects.filter(
+                    trip=pickup_trip,
+                    cancelled_by=request.user,
+                ).order_by("-cancelled_at").first()
+
+                if (
+                    pickup_cancellation
+                    and pickup_cancellation.reason.lower() == SELF_TRAVEL_REASON.lower()
+                ):
+                    declaration_required = True
+
+        if declaration_required and not declaration_accepted:
+            return Response(
+                {
+                    "error": "Self declaration is required for drop cancellation.",
+                    "declaration_required": True,
+                    "declaration_text": (
+                        "I confirm that I came to office by myself and I am cancelling "
+                        "my drop cab by my own choice. I will manage my return travel myself."
+                    ),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        declaration_text = ""
+
+        if declaration_required:
+            declaration_text = (
+                "I confirm that I came to office by myself and I am cancelling "
+                "my drop cab by my own choice. I will manage my return travel myself."
+            )
+
+        with transaction.atomic():
             trip.cancel()
+
+            # ✅ Remove this employee from active driver pickup/drop list
+            if trip.route_run_id:
+                RouteRunStop.objects.filter(
+                    route_run=trip.route_run,
+                    employee=trip.employee,
+                ).update(
+                    is_no_show=True,
+                    no_show_at=timezone.now(),
+                )
+
             TripCancellation.objects.create(
                 trip=trip,
                 cancelled_by=request.user,
-                reason=request.data.get("reason", ""),
-            )
-        except ValueError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST,
+                reason=reason,
+                declaration_accepted=bool(declaration_accepted),
+                declaration_text=declaration_text,
+                cancelled_by_role=request.user.role,
             )
 
         if trip.driver:
             self.send_notification(
                 trip.driver,
-                f"Trip has been cancelled by {trip.employee.username}.",
+                f"{trip.trip_type.capitalize()} trip cancelled by {trip.employee.username}. Reason: {reason}",
+                title="❌ Trip Cancelled",
+                push_data={
+                    "type": "TRIP_CANCELLED",
+                    "trip_id": str(trip.id),
+                    "trip_type": trip.trip_type,
+                    "reason": reason,
+                    "screen": "driver_route",
+                },
             )
 
-        self._notify_admins(f"Trip cancelled by {trip.employee.username}.")
-
-        return Response(
-            {"message": "Trip cancelled successfully"},
-            status=status.HTTP_200_OK,
+        self._notify_admins(
+            f"{trip.trip_type.capitalize()} trip cancelled by {trip.employee.username}. Reason: {reason}.",
+            title="❌ Employee Trip Cancelled",
+            push_data={
+                "type": "TRIP_CANCELLED",
+                "trip_id": str(trip.id),
+                "trip_type": trip.trip_type,
+                "reason": reason,
+                "screen": "assigned_cabs",
+            },
         )
 
+        return Response(
+            {
+                "message": "Trip cancelled successfully.",
+                "trip_id": trip.id,
+                "trip_type": trip.trip_type,
+                "reason": reason,
+                "declaration_required": declaration_required,
+                "declaration_accepted": bool(declaration_accepted),
+            },
+            status=status.HTTP_200_OK,
+        )
     @action(detail=True, methods=["post"])
     def start_trip(self, request, pk=None):
         trip = self.get_object()
@@ -803,13 +1272,17 @@ class TripViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if trip.trip_type == Trip.TRIP_TYPE_PICKUP:
-            self.send_notification(trip.employee, "Your pickup trip has started.")
-        else:
-            self.send_notification(trip.employee, "Your drop trip has started.")
+        self._handle_trip_start_notifications(trip)
 
         self._notify_admins(
-            f"Trip {trip.id} has started by driver {trip.driver.username}."
+            f"Trip {trip.id} has started by driver {trip.driver.username}.",
+            title="🚖 Trip Started",
+            push_data={
+                "type": "TRIP_STARTED",
+                "trip_id": str(trip.id),
+                "route_run_id": str(trip.route_run_id or ""),
+                "trip_type": trip.trip_type,
+            },
         )
 
         return Response(
@@ -817,7 +1290,314 @@ class TripViewSet(ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    @action(detail=True, methods=["post"])
+    @action(detail=False, methods=["post"], url_path="pickup-done")
+    def pickup_done(self, request):
+        if request.user.role != "DRIVER":
+            return Response(
+                {"error": "Only driver can mark stop done."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        stop_id = request.data.get("stop_id")
+
+        if not stop_id:
+            return Response(
+                {"error": "stop_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        current_stop = (
+            RouteRunStop.objects.select_related(
+                "route_run",
+                "employee",
+                "route_run__driver",
+            )
+            .filter(id=stop_id)
+            .first()
+        )
+
+        if not current_stop:
+            return Response(
+                {"error": "Stop not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        route_run = current_stop.route_run
+
+        assigned_trip = Trip.objects.filter(
+            route_run=route_run,
+            driver=request.user,
+            status=Trip.STATUS_STARTED,
+        ).first()
+
+        if not assigned_trip:
+            return Response(
+                {"error": "You are not assigned to this active route."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if current_stop.is_picked:
+            return Response(
+                {"detail": "This stop is already marked done."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if current_stop.is_no_show:
+            return Response(
+                {"detail": "This stop is already marked no-show."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            next_stop = self._handle_stop_done(route_run, current_stop)
+            remaining_stops, route_completed = self._complete_route_if_finished(route_run)
+
+        action_word = "Drop" if route_run.trip_type == Trip.TRIP_TYPE_DROP else "Pickup"
+
+        return Response(
+            {
+                "message": f"{action_word} marked successfully.",
+                "current_stop_id": current_stop.id,
+                "next_stop_id": next_stop.id if next_stop else None,
+                "next_employee": next_stop.employee.username if next_stop else None,
+                "remaining_stops": remaining_stops,
+                "route_completed": route_completed,
+                "trip_type": route_run.trip_type,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="mark-arrived")
+    def mark_arrived(self, request):
+        if request.user.role != "DRIVER":
+            return Response(
+                {"error": "Only driver can perform this action."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        route_run_id = request.data.get("route_run_id")
+
+        if not route_run_id:
+            return Response(
+                {"error": "route_run_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        route_run = RouteRun.objects.filter(
+            id=route_run_id,
+            driver=request.user,
+            started_at__isnull=False,
+            completed_at__isnull=True,
+        ).first()
+
+        if not route_run:
+            return Response(
+                {"error": "Active route run not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        current_stop = self._get_current_stop(route_run)
+
+        if not current_stop:
+            return Response(
+                {"error": "No active stop found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        now = timezone.now()
+
+        current_stop.arrival_time = now
+        current_stop.waiting_started_at = now
+        current_stop.save(update_fields=["arrival_time", "waiting_started_at"])
+
+        route_word = "drop" if route_run.trip_type == Trip.TRIP_TYPE_DROP else "pickup"
+
+        self.send_notification(
+            current_stop.employee,
+            f"Driver has arrived at your {route_word} location 🚗",
+            title="Arrived",
+            push_data={
+                "type": "ARRIVED",
+                "route_run_id": str(route_run.id),
+                "stop_id": str(current_stop.id),
+                "trip_type": route_run.trip_type,
+            },
+        )
+
+        return Response(
+            {
+                "message": "Arrival marked.",
+                "stop_id": current_stop.id,
+                "employee": current_stop.employee.username,
+                "waiting_started_at": current_stop.waiting_started_at,
+                "trip_type": route_run.trip_type,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="keep-waiting")
+    def keep_waiting(self, request):
+        if request.user.role != "DRIVER":
+            return Response(
+                {"error": "Only driver can perform this action."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        route_run_id = request.data.get("route_run_id")
+
+        if not route_run_id:
+            return Response(
+                {"error": "route_run_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        route_run = RouteRun.objects.filter(
+            id=route_run_id,
+            driver=request.user,
+            started_at__isnull=False,
+            completed_at__isnull=True,
+        ).first()
+
+        if not route_run:
+            return Response(
+                {"error": "Active route run not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        current_stop = self._get_current_stop(route_run)
+
+        if not current_stop:
+            return Response(
+                {"error": "No active stop found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        current_stop.waiting_started_at = timezone.now()
+        current_stop.save(update_fields=["waiting_started_at"])
+
+        route_word = "drop" if route_run.trip_type == Trip.TRIP_TYPE_DROP else "pickup"
+
+        self.send_notification(
+            current_stop.employee,
+            f"Driver is still waiting at your {route_word} location.",
+            title="Driver Waiting",
+            push_data={
+                "type": "KEEP_WAITING",
+                "route_run_id": str(route_run.id),
+                "stop_id": str(current_stop.id),
+                "trip_type": route_run.trip_type,
+            },
+        )
+
+        return Response(
+            {
+                "message": "Waiting continued.",
+                "stop_id": current_stop.id,
+                "employee": current_stop.employee.username,
+                "waiting_started_at": current_stop.waiting_started_at,
+                "trip_type": route_run.trip_type,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["post"], url_path="mark-no-show")
+    def mark_no_show(self, request):
+        if request.user.role != "DRIVER":
+            return Response(
+                {"error": "Only driver can perform this action."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        route_run_id = request.data.get("route_run_id")
+
+        if not route_run_id:
+            return Response(
+                {"error": "route_run_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        route_run = RouteRun.objects.filter(
+            id=route_run_id,
+            driver=request.user,
+            started_at__isnull=False,
+            completed_at__isnull=True,
+        ).first()
+
+        if not route_run:
+            return Response(
+                {"error": "Active route run not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        current_stop = self._get_current_stop(route_run)
+
+        if not current_stop:
+            return Response(
+                {"error": "No active stop found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        current_stop.is_no_show = True
+        current_stop.no_show_at = timezone.now()
+        current_stop.save(update_fields=["is_no_show", "no_show_at"])
+
+        route_word = "drop" if route_run.trip_type == Trip.TRIP_TYPE_DROP else "pickup"
+
+        self._notify_admins(
+            f"{current_stop.employee.username} marked as no-show for route #{route_run.id}.",
+            title="🚫 Employee No-show",
+            notification_type=Notification.TYPE_NO_SHOW,
+            priority=Notification.PRIORITY_HIGH,
+            route_run=route_run,
+            driver=request.user,
+            employee=current_stop.employee,
+            push_data={
+                "type": "NO_SHOW",
+                "route_run_id": str(route_run.id),
+                "employee_id": str(current_stop.employee.id),
+                "screen": "admin_dashboard",
+            },
+        )
+
+        next_stop = self._get_next_stop_after_current(route_run, current_stop)
+
+        if next_stop:
+            if route_run.trip_type == Trip.TRIP_TYPE_DROP:
+                msg = "Driver is coming to drop you 🚗"
+                notification_type = "NEXT_DROP"
+            else:
+                msg = "Driver is coming to pick you 🚗"
+                notification_type = "NEXT_PICKUP"
+
+            self.send_notification(
+                next_stop.employee,
+                msg,
+                title="Your turn 🚗",
+                push_data={
+                    "type": notification_type,
+                    "route_run_id": str(route_run.id),
+                    "stop_id": str(next_stop.id),
+                    "screen": "active_trip",
+                    "trip_type": route_run.trip_type,
+                },
+            )
+
+        remaining_stops, route_completed = self._complete_route_if_finished(route_run)
+
+        return Response(
+            {
+                "message": "Marked no show.",
+                "current_stop_id": current_stop.id,
+                "next_stop_id": next_stop.id if next_stop else None,
+                "next_employee": next_stop.employee.username if next_stop else None,
+                "remaining_stops": remaining_stops,
+                "route_completed": route_completed,
+                "trip_type": route_run.trip_type,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"], url_path="complete-trip")
     def complete_trip(self, request, pk=None):
         trip = self.get_object()
 
@@ -844,6 +1624,12 @@ class TripViewSet(ModelViewSet):
         self.send_notification(
             trip.employee,
             "Trip completed. Please submit your review.",
+            title="✅ Trip Completed",
+            push_data={
+                "type": "TRIP_COMPLETED",
+                "trip_id": str(trip.id),
+                "screen": "review",
+            },
         )
 
         self._notify_admins(
@@ -891,12 +1677,22 @@ class TripViewSet(ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
-    def send_notification(self, user, message):
+    def send_notification(self, user, message, title="Trip Update", push_data=None):
         if not user:
             return
 
         Notification.objects.create(
             user=user,
-            title="Trip Update",
+            title=title,
             message=message,
         )
+
+        try:
+            send_push_notification(
+                user=user,
+                title=title,
+                body=message,
+                data=push_data or {},
+            )
+        except Exception as e:
+            print("FCM ERROR:", e)

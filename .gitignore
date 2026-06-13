@@ -4,4 +4,4 @@ _pycache_/
 *.pyc
 db.sqlite3
 staticfiles/
-.env
+.envconfig/firebase_key.json

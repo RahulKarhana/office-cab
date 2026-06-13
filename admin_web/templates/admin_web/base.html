@@ -1,0 +1,333 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CabMate Admin{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'admin_web/css/admin.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root{
+            --cab-bg:#f6f8fc;
+            --cab-sidebar:#fffaf4;
+            --cab-sidebar-2:#eef7ff;
+            --cab-border:#e5e7eb;
+            --cab-text:#132238;
+            --cab-muted:#64748b;
+            --cab-navy:#14213d;
+            --cab-blue:#2563eb;
+            --cab-red:#b42335;
+            --cab-soft-red:#fff1f2;
+            --cab-green:#16a34a;
+        }
+
+        body{
+            background:linear-gradient(135deg,#f8fafc,#eef6ff) !important;
+            color:var(--cab-text);
+        }
+
+        .admin-layout{
+            background:linear-gradient(135deg,#f8fafc,#eef6ff) !important;
+        }
+
+        .sidebar-toggle-desktop {
+            position: absolute;
+            top: 20px;
+            right: -16px;
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            color: #14213d;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+            pointer-events: auto;
+        }
+
+        .sidebar {
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,0.12), transparent 30%),
+                linear-gradient(180deg, #fffaf4 0%, #f8fbff 48%, #eef6ff 100%) !important;
+            border-right: 1px solid #dbeafe !important;
+            box-shadow: 12px 0 40px rgba(15,23,42,.05);
+        }
+
+        .brand-logo {
+            background: linear-gradient(135deg, #b42335, #f97316) !important;
+            color: #ffffff !important;
+            box-shadow:0 12px 24px rgba(180,35,53,.20);
+        }
+
+        .brand-box h2{
+            color:#14213d !important;
+            letter-spacing:-.5px;
+        }
+
+        .brand-box p,
+        .nav-label{
+            color:#7c8aa0 !important;
+        }
+
+        .nav-link {
+            color: #334155 !important;
+            border:1px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,.75) !important;
+            color: #14213d !important;
+            border-color:#e0ecff;
+            box-shadow:0 10px 20px rgba(15,23,42,.04);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #14213d, #2563eb) !important;
+            color: #ffffff !important;
+            box-shadow:0 14px 28px rgba(37,99,235,.22);
+        }
+
+        .nav-link.active .nav-icon,
+        .nav-link.active span{
+            color:#ffffff !important;
+        }
+
+        .support-card{
+            background:
+                radial-gradient(circle at top right, rgba(255,255,255,.20), transparent 35%),
+                linear-gradient(135deg,#14213d,#2563eb) !important;
+            color:#ffffff !important;
+            border:0 !important;
+        }
+
+        .support-card h4,
+        .support-card p{
+            color:#ffffff !important;
+        }
+
+        .main-content{
+            background:linear-gradient(135deg,#f8fafc,#eef6ff) !important;
+        }
+
+        .topbar{
+            min-height:86px !important;
+            padding:20px 28px !important;
+            background:linear-gradient(135deg,#f8fbff,#eef6ff) !important;
+            border-bottom:1px solid #dbeafe !important;
+        }
+
+        .topbar-left h1{
+            color:#14213d !important;
+            font-size:34px !important;
+            letter-spacing:-1px;
+        }
+
+        .topbar-left p{
+            color:#64748b !important;
+            font-weight:700;
+        }
+
+        .menu-btn{
+            background:#ffffff !important;
+            color:#14213d !important;
+            box-shadow:0 10px 20px rgba(15,23,42,.08);
+        }
+
+        .page-content{
+            padding-top:22px !important;
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,.05), transparent 34%),
+                linear-gradient(135deg,#f8fafc,#eef6ff) !important;
+        }
+
+        @media (max-width: 991px) {
+            .sidebar-toggle-desktop {
+                display: none;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar" id="sidebar">
+            <button class="sidebar-toggle-desktop" id="sidebarToggleDesktop" type="button" aria-label="Collapse sidebar">
+                ❮
+            </button>
+
+            <div class="sidebar-top">
+                <div class="brand-box">
+                    <div class="brand-logo">C</div>
+                    <div>
+                        <h2>CabMate</h2>
+                        <p>Admin Control</p>
+                    </div>
+                </div>
+
+                <button class="sidebar-close" id="sidebarClose" type="button">
+                    ✕
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <p class="nav-label">Main Menu</p>
+
+                <a href="{% url 'admin_web:dashboard' %}" class="nav-link {% block nav_dashboard %}{% endblock %}">
+                    <span class="nav-icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="{% url 'admin_web:employees' %}" class="nav-link {% block nav_employees %}{% endblock %}">
+                    <span class="nav-icon">👨‍💼</span>
+                    <span>Employees</span>
+                </a>
+
+                <a href="{% url 'admin_web:drivers' %}" class="nav-link {% block nav_drivers %}{% endblock %}">
+                    <span class="nav-icon">🚖</span>
+                    <span>Drivers</span>
+                </a>
+
+                <a href="{% url 'admin_web:routes' %}" class="nav-link {% block nav_routes %}{% endblock %}">
+                    <span class="nav-icon">🛣️</span>
+                    <span>Routes</span>
+                </a>
+
+                <a href="{% url 'admin_web:tracking' %}" class="nav-link {% block nav_tracking %}{% endblock %}">
+                    <span class="nav-icon">📍</span>
+                    <span>Live Tracking</span>
+                </a>
+
+                <a href="{% url 'admin_web:trips' %}" class="nav-link {% block nav_trips %}{% endblock %}">
+                    <span class="nav-icon">📋</span>
+                    <span>Trips</span>
+                </a>
+
+                <a href="{% url 'admin_web:alerts' %}" class="nav-link {% block nav_alerts %}{% endblock %}">
+                    <span class="nav-icon">🚨</span>
+                    <span>Emergency Alerts</span>
+                </a>
+
+                <a href="{% url 'admin_web:notifications' %}" class="nav-link {% block nav_notifications %}{% endblock %}">
+                    <span class="nav-icon">🔔</span>
+                    <span>Notifications</span>
+                </a>
+
+                <a href="{% url 'admin_web:reports' %}" class="nav-link {% block nav_reports %}{% endblock %}">
+                    <span class="nav-icon">📊</span>
+                    <span>Reports</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="support-card">
+                    <h4>CabMate Ops</h4>
+                    <p>Monitor transport, routes, and emergency activity from one place.</p>
+                </div>
+            </div>
+        </aside>
+
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-btn" id="menuBtn" type="button">
+                        ☰
+                    </button>
+
+                    <div>
+                        <h1>{% block page_heading %}Admin Dashboard{% endblock %}</h1>
+                        <p>{% block page_subheading %}Manage your daily office cab operations{% endblock %}</p>
+                    </div>
+                </div>
+
+                <div class="topbar-right"></div>
+            </header>
+
+            <section class="page-content">
+                {% block content %}
+                {% endblock %}
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const body = document.body;
+            const menuBtn = document.getElementById("menuBtn");
+            const sidebar = document.getElementById("sidebar");
+            const sidebarClose = document.getElementById("sidebarClose");
+            const sidebarOverlay = document.getElementById("sidebarOverlay");
+            const sidebarToggleDesktop = document.getElementById("sidebarToggleDesktop");
+
+            function openSidebar() {
+                if (sidebar) sidebar.classList.add("active");
+                if (sidebarOverlay) sidebarOverlay.classList.add("active");
+            }
+
+            function closeSidebar() {
+                if (sidebar) sidebar.classList.remove("active");
+                if (sidebarOverlay) sidebarOverlay.classList.remove("active");
+            }
+
+            function updateSidebarToggleIcon() {
+                if (!sidebarToggleDesktop) return;
+                if (body.classList.contains("sidebar-collapsed")) {
+                    sidebarToggleDesktop.innerHTML = "❯";
+                    sidebarToggleDesktop.setAttribute("aria-label", "Expand sidebar");
+                } else {
+                    sidebarToggleDesktop.innerHTML = "❮";
+                    sidebarToggleDesktop.setAttribute("aria-label", "Collapse sidebar");
+                }
+            }
+
+            function saveSidebarState() {
+                localStorage.setItem(
+                    "cabmate_sidebar_collapsed",
+                    body.classList.contains("sidebar-collapsed") ? "1" : "0"
+                );
+            }
+
+            function loadSidebarState() {
+                const saved = localStorage.getItem("cabmate_sidebar_collapsed");
+                if (saved === "1") {
+                    body.classList.add("sidebar-collapsed");
+                } else {
+                    body.classList.remove("sidebar-collapsed");
+                }
+                updateSidebarToggleIcon();
+            }
+
+            if (menuBtn) menuBtn.addEventListener("click", openSidebar);
+            if (sidebarClose) sidebarClose.addEventListener("click", closeSidebar);
+            if (sidebarOverlay) sidebarOverlay.addEventListener("click", closeSidebar);
+
+            if (sidebarToggleDesktop) {
+                sidebarToggleDesktop.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    body.classList.toggle("sidebar-collapsed");
+                    updateSidebarToggleIcon();
+                    saveSidebarState();
+                });
+            }
+
+            loadSidebarState();
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

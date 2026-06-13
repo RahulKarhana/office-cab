@@ -8,12 +8,12 @@ User = get_user_model()
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     # Show these columns in user list
-    list_display = ("username", "email", "role", "is_staff", "is_active")
+    list_display = ("username", "email", "role", "is_staff", "is_active", "is_female")
     list_filter = ("role", "is_staff", "is_active")
 
     # Add "role" and "phone_number" in user edit page
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Extra Info", {"fields": ("role", "phone_number")}),
+        ("Extra Info", {"fields": ("role", "phone_number", "is_female")}),
     )
 
     # Add "role" and "phone_number" in add-user page

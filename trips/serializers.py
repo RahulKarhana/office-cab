@@ -2,6 +2,7 @@ from math import radians, cos, sin, asin, sqrt
 from django.utils import timezone
 from rest_framework import serializers
 from .models import EmergencyAlert
+from trips.models import DeviceToken
 from .models import (
     Trip,
     Review,
@@ -202,10 +203,36 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class NotificationSerializer(serializers.ModelSerializer):
+    notification_type_display = serializers.CharField(
+        source="get_notification_type_display",
+        read_only=True,
+    )
+    priority_display = serializers.CharField(
+        source="get_priority_display",
+        read_only=True,
+    )
+    trip_id = serializers.IntegerField(source="trip.id", read_only=True)
+    route_run_id = serializers.IntegerField(source="route_run.id", read_only=True)
+    driver_name = serializers.CharField(source="driver.username", read_only=True)
+    employee_name = serializers.CharField(source="employee.username", read_only=True)
+
     class Meta:
         model = Notification
-        fields = ["id", "title", "message", "is_read", "created_at"]
-
+        fields = [
+            "id",
+            "title",
+            "message",
+            "notification_type",
+            "notification_type_display",
+            "priority",
+            "priority_display",
+            "is_read",
+            "trip_id",
+            "route_run_id",
+            "driver_name",
+            "employee_name",
+            "created_at",
+        ]
 
 class AssignedCabSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(source="employee.username", read_only=True)
@@ -771,3 +798,9 @@ class EmployeeLivePickupStatusSerializer(serializers.Serializer):
     driver_latitude = serializers.FloatField(allow_null=True)
     driver_longitude = serializers.FloatField(allow_null=True)
     last_updated = serializers.DateTimeField(allow_null=True)
+
+class DeviceTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceToken
+        fields = ["id", "token", "device_type", "is_active"]
+        read_only_fields = ["id", "is_active"]

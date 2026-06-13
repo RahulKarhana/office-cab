@@ -148,20 +148,92 @@ class Review(models.Model):
 
 
 class Notification(models.Model):
+    PRIORITY_LOW = "LOW"
+    PRIORITY_MEDIUM = "MEDIUM"
+    PRIORITY_HIGH = "HIGH"
+    PRIORITY_CRITICAL = "CRITICAL"
+
+    PRIORITY_CHOICES = [
+        (PRIORITY_LOW, "Low"),
+        (PRIORITY_MEDIUM, "Medium"),
+        (PRIORITY_HIGH, "High"),
+        (PRIORITY_CRITICAL, "Critical"),
+    ]
+
+    TYPE_INFO = "INFO"
+    TYPE_ROUTE_DELAY = "ROUTE_DELAY"
+    TYPE_OVERSPEED = "OVERSPEED"
+    TYPE_NO_SHOW = "NO_SHOW"
+    TYPE_ROUTE_COMPLETED = "ROUTE_COMPLETED"
+    TYPE_SOS = "SOS"
+
+    TYPE_CHOICES = [
+        (TYPE_INFO, "Info"),
+        (TYPE_ROUTE_DELAY, "Route Delay"),
+        (TYPE_OVERSPEED, "Overspeed"),
+        (TYPE_NO_SHOW, "No-show"),
+        (TYPE_ROUTE_COMPLETED, "Route Completed"),
+        (TYPE_SOS, "SOS"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="notifications",
     )
+
     title = models.CharField(max_length=255)
     message = models.TextField()
+
+    notification_type = models.CharField(
+        max_length=50,
+        choices=TYPE_CHOICES,
+        default=TYPE_INFO,
+    )
+
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default=PRIORITY_LOW,
+    )
+
     is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+
+    trip = models.ForeignKey(
+        "Trip",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    route_run = models.ForeignKey(
+        "RouteRun",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    driver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="driver_notifications",
+    )
+
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="employee_notifications",
+    )
+
     nearby_alert_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Notification for {self.user.username} - {self.title}"
-
+        return f"{self.title} - {self.user.username}"
 
 class DriverLocation(models.Model):
     driver = models.OneToOneField(
@@ -189,12 +261,45 @@ class TripCancellation(models.Model):
         on_delete=models.CASCADE,
     )
     reason = models.TextField(blank=True)
+
+    # ✅ STEP 8: Employee declaration form fields
+    declaration_accepted = models.BooleanField(default=False)
+
+    declaration_text = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    cancelled_by_role = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+    )
+
     cancelled_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Trip {self.trip_id} cancelled by {self.cancelled_by.username}"
+    
+class EmployeeLeave(models.Model):
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="cab_leaves",
+        limit_choices_to={"role": "EMPLOYEE"},
+    )
 
+    leave_date = models.DateField()
+    reason = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ("employee", "leave_date")
+        ordering = ["-leave_date"]
+
+    def __str__(self):
+        return f"{self.employee.username} leave on {self.leave_date}"
+    
 class RouteTemplate(models.Model):
     name = models.CharField(max_length=200)
 
@@ -301,6 +406,11 @@ class RouteRunStop(models.Model):
     stop_order = models.IntegerField()
     is_picked = models.BooleanField(default=False)
     picked_at = models.DateTimeField(null=True, blank=True)
+    delay_warning_sent = models.BooleanField(default=False)
+    arrival_time = models.DateTimeField(null=True, blank=True)
+    waiting_started_at = models.DateTimeField(null=True, blank=True)
+    is_no_show = models.BooleanField(default=False)
+    no_show_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["stop_order"]
@@ -308,6 +418,34 @@ class RouteRunStop(models.Model):
     def __str__(self):
         return f"{self.employee.username} - Stop {self.stop_order}"
 
+class DeviceToken(models.Model):
+    DEVICE_TYPE_CHOICES = (
+        ("ANDROID", "Android"),
+        ("IOS", "iOS"),
+        ("WEB", "Web"),
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="device_tokens"
+    )
+    token = models.TextField(unique=True)
+
+    device_type = models.CharField(
+        max_length=20,
+        choices=DEVICE_TYPE_CHOICES,
+        default="ANDROID"
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.device_type}"
+    
 class EmergencyAlert(models.Model):
     STATUS_PENDING = "PENDING"
     STATUS_READ = "READ"
@@ -362,3 +500,36 @@ class EmergencyAlert(models.Model):
 
     def __str__(self):
         return f"EmergencyAlert #{self.id} - {self.employee.username}"
+
+
+class DriverLocationHistory(models.Model):
+    driver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="location_history",
+        limit_choices_to={"role": "DRIVER"},
+    )
+
+    route_run = models.ForeignKey(
+        "RouteRun",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="driver_speed_history",
+    )
+
+    trip_type = models.CharField(max_length=20, blank=True, null=True)
+
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+
+    speed_kmph = models.FloatField(default=0)
+    is_overspeed = models.BooleanField(default=False)
+
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-recorded_at"]
+
+    def __str__(self):
+        return f"{self.driver} - {self.speed_kmph} km/h"

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Driver Performance</title>
+
+    <style>
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family:Inter,Arial,sans-serif;
+            background:linear-gradient(180deg,#eef4ff,#f8fafc 45%,#f5f7fb);
+            color:#111827;
+            padding:28px;
+        }
+        .header{
+            background:linear-gradient(135deg,#111827,#1f2937);
+            color:white;
+            padding:28px;
+            border-radius:28px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            box-shadow:0 18px 45px rgba(15,23,42,.18);
+        }
+        .header h1{margin:0;font-size:34px}
+        .header p{margin:8px 0 0;color:#cbd5e1;font-weight:700}
+        .btn{
+            background:white;
+            color:#111827;
+            padding:12px 16px;
+            border-radius:14px;
+            text-decoration:none;
+            font-weight:900;
+            border:0;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .filter-card,.card{
+            background:white;
+            margin-top:22px;
+            padding:22px;
+            border-radius:24px;
+            box-shadow:0 12px 30px rgba(15,23,42,.08);
+        }
+        form{display:flex;gap:12px;flex-wrap:wrap}
+        input,button{
+            height:48px;
+            border-radius:14px;
+            border:1px solid #dbe3ef;
+            padding:0 14px;
+            font-weight:800;
+        }
+        button{
+            background:#111827;
+            color:white;
+            cursor:pointer;
+            border:0;
+        }
+        .stats{
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:16px;
+            margin-top:22px;
+        }
+        .stat{
+            background:white;
+            padding:20px;
+            border-radius:22px;
+            box-shadow:0 10px 25px rgba(15,23,42,.06);
+        }
+        .stat span{
+            color:#64748b;
+            font-size:12px;
+            font-weight:900;
+            text-transform:uppercase;
+        }
+        .stat strong{
+            display:block;
+            font-size:32px;
+            margin-top:8px;
+        }
+        table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:1050px;
+        }
+        .table-wrap{overflow:auto}
+        th,td{
+            padding:15px;
+            border-bottom:1px solid #eef2f7;
+            text-align:left;
+            font-weight:800;
+            vertical-align:middle;
+        }
+        th{
+            color:#64748b;
+            font-size:12px;
+            text-transform:uppercase;
+        }
+        .driver-name{
+            font-size:15px;
+            font-weight:950;
+        }
+        .muted{
+            display:block;
+            color:#94a3b8;
+            font-size:12px;
+            margin-top:4px;
+        }
+        .score-box{
+            display:flex;
+            align-items:center;
+            gap:10px;
+        }
+        .score-ring{
+            width:48px;
+            height:48px;
+            border-radius:50%;
+            display:grid;
+            place-items:center;
+            background:#eef2ff;
+            color:#3730a3;
+            font-weight:950;
+        }
+        .badge{
+            display:inline-flex;
+            padding:7px 10px;
+            border-radius:999px;
+            font-size:11px;
+            font-weight:950;
+        }
+        .badge.SAFE{background:#dcfce7;color:#166534}
+        .badge.MODERATE{background:#fef3c7;color:#92400e}
+        .badge.RISKY{background:#fee2e2;color:#991b1b}
+        .progress{
+            height:10px;
+            width:130px;
+            background:#e5e7eb;
+            border-radius:999px;
+            overflow:hidden;
+            margin-top:6px;
+        }
+        .progress-fill{
+            height:100%;
+            background:linear-gradient(90deg,#16a34a,#22c55e);
+            border-radius:999px;
+        }
+        .speed-chip{
+            display:inline-flex;
+            padding:7px 10px;
+            border-radius:999px;
+            background:#eff6ff;
+            color:#1d4ed8;
+            font-size:12px;
+            font-weight:950;
+        }
+        .danger{
+            background:#fee2e2;
+            color:#991b1b;
+        }
+        .empty{
+            text-align:center;
+            padding:28px;
+            color:#64748b;
+            font-weight:900;
+        }
+        .period-row{
+            margin-top:16px;
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+        }
+        .period-label{
+            margin-top:14px;
+            font-weight:900;
+            color:#475569;
+        }
+        .two-grid{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:22px;
+        }
+        @media(max-width:1000px){
+            .stats{grid-template-columns:1fr 1fr}
+            .two-grid{grid-template-columns:1fr}
+            .header{flex-direction:column;align-items:flex-start;gap:14px}
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="header">
+    <div>
+        <h1>🚦 Driver Behaviour Analytics</h1>
+        <p>Safety score, overspeed count, average speed, max speed and trip performance</p>
+    </div>
+
+    <a href="{% url 'admin_web:reports' %}" class="btn">← Back to Reports</a>
+</div>
+
+<div class="filter-card">
+    <form method="get">
+        <input type="date" name="date" value="{{ date_filter }}">
+        <input type="hidden" name="period" value="{{ period }}">
+        <button type="submit">Apply</button>
+    </form>
+
+    <div class="period-row">
+        <a href="?date={{ date_filter }}&period=daily"
+           class="btn"
+           style="{% if period == 'daily' %}background:#111827;color:white;{% endif %}">
+            Daily
+        </a>
+
+        <a href="?date={{ date_filter }}&period=weekly"
+           class="btn"
+           style="{% if period == 'weekly' %}background:#2563eb;color:white;{% endif %}">
+            Weekly
+        </a>
+
+        <a href="?date={{ date_filter }}&period=monthly"
+           class="btn"
+           style="{% if period == 'monthly' %}background:#7c3aed;color:white;{% endif %}">
+            Monthly
+        </a>
+    </div>
+
+    <div class="period-label">
+        {{ period_label }}
+    </div>
+</div>
+
+<div class="stats">
+    <div class="stat"><span>Total Drivers</span><strong>{{ total_drivers }}</strong></div>
+    <div class="stat"><span>Safe Drivers</span><strong>{{ safe_drivers }}</strong></div>
+    <div class="stat"><span>Moderate Risk</span><strong>{{ moderate_drivers }}</strong></div>
+    <div class="stat"><span>Risky Drivers</span><strong>{{ risky_drivers }}</strong></div>
+    <div class="stat"><span>Total Overspeed</span><strong>{{ total_overspeed }}</strong></div>
+</div>
+
+<div class="two-grid">
+    <div class="card">
+        <h2 style="margin-top:0;">🏆 Driver Ranking Leaderboard</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Driver</th>
+                        <th>Safety Score</th>
+                        <th>Completion</th>
+                        <th>Avg Speed</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for driver in leaderboard %}
+                    <tr>
+                        <td>
+                            {% if forloop.counter == 1 %}
+                                🥇
+                            {% elif forloop.counter == 2 %}
+                                🥈
+                            {% elif forloop.counter == 3 %}
+                                🥉
+                            {% else %}
+                                #{{ forloop.counter }}
+                            {% endif %}
+                        </td>
+
+                        <td>{{ driver.username }}</td>
+
+                        <td>
+                            <span class="badge {{ driver.badge }}">
+                                {{ driver.safety_score }}/100
+                            </span>
+                        </td>
+
+                        <td>{{ driver.completion_percent }}%</td>
+
+                        <td>{{ driver.avg_speed }} km/h</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="empty">No leaderboard data found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="margin-top:0;color:#991b1b;">🚨 Most Risky Drivers</h2>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Driver</th>
+                        <th>Overspeed</th>
+                        <th>Max Speed</th>
+                        <th>Safety</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for driver in risky_drivers_panel %}
+                    <tr>
+                        <td>{{ driver.username }}</td>
+
+                        <td>
+                            <span class="speed-chip danger">
+                                {{ driver.overspeed_count }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="speed-chip danger">
+                                {{ driver.max_speed }} km/h
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="badge {{ driver.badge }}">
+                                {{ driver.badge_label }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="empty">
+                            No risky drivers found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">📊 Average Speed Chart</h2>
+    <canvas id="avgSpeedChart" height="100"></canvas>
+</div>
+
+<div class="card">
+    <h2 style="margin-top:0;">Driver Performance Details</h2>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Driver</th>
+                    <th>Safety</th>
+                    <th>Badge</th>
+                    <th>Trips</th>
+                    <th>Completion</th>
+                    <th>Avg Speed</th>
+                    <th>Max Speed</th>
+                    <th>Overspeed</th>
+                    <th>Cancelled</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for driver in drivers %}
+                <tr>
+                    <td>
+                        <span class="driver-name">{{ driver.username }}</span>
+                        <span class="muted">{{ driver.phone_number }}</span>
+                    </td>
+
+                    <td>
+                        <div class="score-box">
+                            <div class="score-ring">{{ driver.safety_score }}</div>
+                            <span class="muted">/100</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="badge {{ driver.badge }}">{{ driver.badge_label }}</span>
+                    </td>
+
+                    <td>
+                        {{ driver.total_trips }}
+                        <span class="muted">
+                            A: {{ driver.assigned_trips }} |
+                            S: {{ driver.started_trips }} |
+                            C: {{ driver.completed_trips }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ driver.completion_percent }}%
+                        <div class="progress">
+                            <div class="progress-fill" style="width: {{ driver.completion_percent }}%;"></div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="speed-chip">{{ driver.avg_speed }} km/h</span>
+                    </td>
+
+                    <td>
+                        <span class="speed-chip {% if driver.max_speed > 80 %}danger{% endif %}">
+                            {{ driver.max_speed }} km/h
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="speed-chip {% if driver.overspeed_count > 0 %}danger{% endif %}">
+                            {{ driver.overspeed_count }}
+                        </span>
+                    </td>
+
+                    <td>{{ driver.cancelled_trips }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="empty">No driver data found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const ctx = document.getElementById("avgSpeedChart");
+
+new Chart(ctx, {
+    type: "bar",
+    data: {
+        labels: {{ avg_speed_chart_labels|safe }},
+        datasets: [{
+            label: "Average Speed (km/h)",
+            data: {{ avg_speed_chart_values|safe }},
+            borderWidth: 1,
+            borderRadius: 12
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>

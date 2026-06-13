@@ -1,0 +1,894 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Trips{% endblock %}
+{% block nav_trips %}active{% endblock %}
+{% block page_heading %}Trips Management{% endblock %}
+{% block page_subheading %}Route-wise trip control and monitoring{% endblock %}
+
+{% block content %}
+
+<style>
+/* =============================
+   PRO TRIPS PAGE POLISH
+   ============================= */
+.topbar{
+    background:rgba(248,251,255,.92) !important;
+}
+.page-content{
+    background:
+        radial-gradient(circle at top left, rgba(37,99,235,.08), transparent 30%),
+        linear-gradient(135deg,#f8fafc,#eef6ff) !important;
+}
+.trips-toolbar{
+    background:linear-gradient(135deg,#ffffff,#f8fbff) !important;
+    border:1px solid #dbeafe;
+    border-radius:28px !important;
+    padding:20px !important;
+    box-shadow:0 18px 42px rgba(15,23,42,.08) !important;
+    margin-bottom:18px !important;
+}
+.trips-toolbar-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:16px;
+}
+.trips-toolbar-head h3{
+    margin:0;
+    font-size:24px;
+    font-weight:950;
+    color:#14213d;
+}
+.trips-toolbar-head p{
+    margin:5px 0 0;
+    color:#64748b;
+    font-weight:800;
+}
+.trips-live-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:#ecfdf5;
+    color:#166534;
+    border:1px solid #bbf7d0;
+    padding:9px 14px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+    white-space:nowrap;
+}
+.trips-filter-form{
+    display:grid !important;
+    grid-template-columns:minmax(280px, 1.5fr) minmax(180px,.7fr) minmax(180px,.7fr) auto;
+    gap:12px !important;
+    align-items:center;
+}
+.trip-field{
+    height:52px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:#ffffff;
+    border:1px solid #dbeafe;
+    border-radius:18px;
+    padding:0 14px;
+    box-shadow:0 10px 24px rgba(15,23,42,.05);
+}
+.trip-field-icon{
+    font-size:17px;
+    flex:0 0 auto;
+}
+.trip-field input,
+.trip-field select{
+    width:100%;
+    height:100%;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:#0f172a;
+    font-weight:850;
+    font-size:14px;
+}
+.trip-field select{
+    cursor:pointer;
+}
+.trip-apply-btn{
+    height:52px;
+    border:0;
+    border-radius:18px;
+    padding:0 24px;
+    background:linear-gradient(135deg,#2563eb,#0284c7);
+    color:#ffffff;
+    font-size:14px;
+    font-weight:950;
+    cursor:pointer;
+    box-shadow:0 14px 26px rgba(37,99,235,.24);
+    transition:.22s ease;
+    white-space:nowrap;
+}
+.trip-apply-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 18px 34px rgba(37,99,235,.30);
+}
+.trip-summary-card{
+    border:1px solid #dbeafe !important;
+    background:linear-gradient(135deg,#ffffff,#f8fbff) !important;
+}
+.trip-summary-card:nth-child(1){border-left:6px solid #2563eb !important;}
+.trip-summary-card:nth-child(2){border-left:6px solid #7c3aed !important;}
+.trip-summary-card:nth-child(3){border-left:6px solid #16a34a !important;}
+.trip-summary-card:nth-child(4){border-left:6px solid #f59e0b !important;}
+.trip-summary-card span{color:#475569 !important;}
+.trip-summary-card strong{color:#14213d !important;}
+.panel-card{
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid #dbeafe !important;
+    border-radius:28px !important;
+    box-shadow:0 18px 45px rgba(15,23,42,.07) !important;
+}
+.route-trip-table thead th{
+    background:#f8fbff !important;
+    color:#475569 !important;
+    font-size:12px !important;
+    font-weight:950 !important;
+    letter-spacing:.03em;
+}
+.route-trip-table tbody tr{
+    transition:.18s ease;
+}
+.route-trip-table tbody tr:hover td{
+    background:#f8fbff !important;
+}
+.route-name-cell strong{
+    color:#14213d !important;
+    font-weight:950 !important;
+}
+.route-name-cell small{
+    color:#64748b !important;
+}
+.employee-count-pill{
+    background:#eff6ff !important;
+    color:#1d4ed8 !important;
+    border:1px solid #dbeafe;
+}
+.action-btn.secondary{
+    background:#eef2ff !important;
+    color:#3730a3 !important;
+    border:1px solid #c7d2fe !important;
+    font-weight:950 !important;
+}
+.action-btn.danger{
+    background:#fee2e2 !important;
+    color:#991b1b !important;
+    border:1px solid #fecaca !important;
+    font-weight:950 !important;
+}
+@media(max-width:1000px){
+    .trips-filter-form{
+        grid-template-columns:1fr 1fr;
+    }
+    .trip-apply-btn{
+        width:100%;
+    }
+}
+@media(max-width:700px){
+    .trips-filter-form{
+        grid-template-columns:1fr;
+    }
+    .trips-toolbar-head{
+        flex-direction:column;
+    }
+}
+
+.trips-toolbar{
+    background:#fff;
+    border-radius:24px;
+    padding:18px;
+    box-shadow:0 14px 34px rgba(15,23,42,.07);
+    margin-bottom:18px;
+}
+.trips-filter-form{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+}
+.trip-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:18px;
+}
+.trip-summary-card{
+    background:#fff;
+    border-radius:22px;
+    padding:18px;
+    box-shadow:0 12px 30px rgba(15,23,42,.06);
+    position:relative;
+    overflow:hidden;
+}
+.trip-summary-card::after{
+    content:"";
+    position:absolute;
+    width:82px;
+    height:82px;
+    border-radius:50%;
+    right:-18px;
+    top:-18px;
+    background:rgba(255,255,255,.18);
+}
+.trip-summary-card span{
+    color:#64748b;
+    font-size:12px;
+    font-weight:950;
+    text-transform:uppercase;
+}
+.trip-summary-card strong{
+    display:block;
+    font-size:30px;
+    margin-top:8px;
+    color:#111827;
+}
+.route-trip-table th,
+.route-trip-table td{
+    vertical-align:middle;
+}
+.route-name-cell strong{
+    display:block;
+    font-size:15px;
+    color:#111827;
+}
+.route-name-cell small{
+    display:block;
+    color:#64748b;
+    font-weight:800;
+    margin-top:4px;
+}
+.employee-count-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:8px 12px;
+    background:#eef2ff;
+    color:#3730a3;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+}
+.type-pill{
+    display:inline-flex;
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+}
+.type-pill.PICKUP{background:#dbeafe;color:#1d4ed8}
+.type-pill.DROP{background:#ede9fe;color:#6d28d9}
+.status-pill-xl{
+    display:inline-flex;
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:950;
+}
+.status-pill-xl.ASSIGNED{background:#fef3c7;color:#92400e}
+.status-pill-xl.STARTED{background:#dcfce7;color:#166534}
+.status-pill-xl.COMPLETED{background:#dbeafe;color:#1e40af}
+.status-pill-xl.CANCELLED{background:#fee2e2;color:#991b1b}
+.progress-mini{
+    height:9px;
+    border-radius:999px;
+    background:#e5e7eb;
+    overflow:hidden;
+    width:150px;
+    margin-top:6px;
+}
+.progress-mini-fill{
+    height:100%;
+    background:linear-gradient(90deg,#2563eb,#22c55e);
+    border-radius:999px;
+}
+.trip-modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.58);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    backdrop-filter:blur(4px);
+}
+.trip-modal-card{
+    width:100%;
+    max-width:1150px;
+    max-height:92vh;
+    overflow-y:auto;
+    background:#fff;
+    border-radius:26px;
+    box-shadow:0 28px 70px rgba(0,0,0,.22);
+}
+.trip-modal-header{
+    padding:20px 22px;
+    border-bottom:1px solid #e5e7eb;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+}
+.trip-modal-header h3{
+    margin:0;
+    font-size:26px;
+    font-weight:950;
+}
+.trip-modal-header p{
+    margin:5px 0 0;
+    color:#64748b;
+    font-weight:800;
+}
+.trip-modal-close{
+    border:0;
+    background:#f3f4f6;
+    width:44px;
+    height:44px;
+    border-radius:14px;
+    font-size:18px;
+    cursor:pointer;
+    font-weight:950;
+}
+.trip-modal-body{padding:22px}
+.trip-modal-info-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+}
+.trip-info-box{
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:14px;
+}
+.trip-info-box small{
+    display:block;
+    color:#64748b;
+    margin-bottom:7px;
+    font-weight:900;
+}
+.trip-info-box strong{
+    color:#111827;
+    font-size:15px;
+    font-weight:950;
+}
+.trip-section-title{
+    margin:20px 0 12px;
+    font-size:18px;
+    font-weight:950;
+    color:#111827;
+}
+.employee-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:12px;
+}
+.employee-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 8px 22px rgba(15,23,42,.04);
+}
+.employee-card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+.employee-card strong{
+    font-size:14px;
+    font-weight:950;
+}
+.employee-card p{
+    margin:8px 0 0;
+    color:#475569;
+    font-size:13px;
+    font-weight:750;
+}
+.stop-order{
+    background:#eef2ff;
+    color:#4338ca;
+    border-radius:999px;
+    padding:5px 10px;
+    font-size:11px;
+    font-weight:950;
+}
+.stop-done{color:#059669;font-weight:950}
+.stop-pending{color:#d97706;font-weight:950}
+.empty-state{
+    padding:26px;
+    text-align:center;
+    color:#64748b;
+    font-weight:900;
+}
+@media(max-width:1000px){
+    .trip-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .trip-modal-info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+    .trip-summary-grid,.trip-modal-info-grid{grid-template-columns:1fr}
+}
+</style>
+
+<div class="trips-toolbar">
+    <div class="trips-toolbar-head">
+        <div>
+            <h3>🚖 Route-wise Trip Control</h3>
+            <p>Search and monitor route trips, drivers, vehicles and employee groups.</p>
+        </div>
+        <div class="trips-live-chip">● Route View</div>
+    </div>
+
+    <form method="get" class="trips-filter-form">
+        <div class="trip-field">
+            <span class="trip-field-icon">🔍</span>
+            <input
+                type="text"
+                name="q"
+                value="{{ query }}"
+                placeholder="Search route, employee, driver, vehicle..."
+            >
+        </div>
+
+        <div class="trip-field">
+            <span class="trip-field-icon">📌</span>
+            <select name="status">
+                <option value="">All Status</option>
+                <option value="ASSIGNED" {% if status_filter == "ASSIGNED" %}selected{% endif %}>Assigned</option>
+                <option value="STARTED" {% if status_filter == "STARTED" %}selected{% endif %}>Running</option>
+                <option value="COMPLETED" {% if status_filter == "COMPLETED" %}selected{% endif %}>Completed</option>
+                <option value="CANCELLED" {% if status_filter == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+
+        <div class="trip-field">
+            <span class="trip-field-icon">📅</span>
+            <input type="date" name="date" value="{{ date_filter }}">
+        </div>
+
+        <button class="trip-apply-btn" type="submit">Apply Filter</button>
+    </form>
+</div>
+
+<div class="trip-summary-grid">
+    <div class="trip-summary-card">
+        <span>Total Routes / Trips</span>
+        <strong>{{ total_groups }}</strong>
+    </div>
+    <div class="trip-summary-card">
+        <span>Total Employees</span>
+        <strong>{{ total_employees }}</strong>
+    </div>
+    <div class="trip-summary-card">
+        <span>Running Routes</span>
+        <strong>{{ started_groups }}</strong>
+    </div>
+    <div class="trip-summary-card">
+        <span>Assigned Routes</span>
+        <strong>{{ assigned_groups }}</strong>
+    </div>
+</div>
+
+<div class="panel-card">
+    <div class="table-wrap">
+        <table class="admin-table route-trip-table">
+            <thead>
+                <tr>
+                    <th>Route / Trip</th>
+                    <th>Driver</th>
+                    <th>Vehicle</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Employees</th>
+                    <th>Progress</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for trip_group in trip_groups %}
+                <tr>
+                    <td class="route-name-cell">
+                        <strong>{{ trip_group.route_name }}</strong>
+                        <small>ID: {{ trip_group.display_id }}</small>
+                    </td>
+
+                    <td>{{ trip_group.driver_name }}</td>
+                    <td>{{ trip_group.vehicle_number }}</td>
+
+                    <td>
+                        <span class="status-pill-xl {{ trip_group.status }}">
+                            {% if trip_group.status == "STARTED" %}
+                                Running
+                            {% elif trip_group.status == "COMPLETED" %}
+                                Completed
+                            {% elif trip_group.status == "CANCELLED" %}
+                                Cancelled
+                            {% else %}
+                                Assigned
+                            {% endif %}
+                        </span>
+                    </td>
+
+                    <td>{{ trip_group.trip_date }}</td>
+
+                    <td>
+                        <span class="type-pill {{ trip_group.trip_type }}">
+                            {{ trip_group.trip_type }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="employee-count-pill">
+                            👥 {{ trip_group.total_employees }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <strong>{{ trip_group.completed_count }}/{{ trip_group.total_employees }}</strong>
+                        <div class="progress-mini">
+                            <div class="progress-mini-fill" style="width:{{ trip_group.progress_percent }}%;"></div>
+                        </div>
+                    </td>
+
+                    <td style="display:flex; gap:7px; flex-wrap:wrap;">
+                        <button
+                            type="button"
+                            class="action-btn secondary"
+                            onclick="openTripModal('{{ trip_group.key }}')"
+                        >
+                            View
+                        </button>
+
+                        {% if trip_group.status == "ASSIGNED" or trip_group.status == "STARTED" %}
+                            {% if trip_group.route_run_id %}
+                                <a href="{% url 'admin_web:cancel_route_run_trips' trip_group.route_run_id %}" class="action-btn danger">
+                                    Cancel Route
+                                </a>
+                            {% else %}
+                                <a href="{% url 'admin_web:cancel_trip' trip_group.representative_trip_id %}" class="action-btn danger">
+                                    Cancel
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <span style="color:#9ca3af;font-weight:800;">No Action</span>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="empty-state">No route-wise trip data found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="tripModal" class="trip-modal-overlay" onclick="closeTripModal(event)">
+    <div class="trip-modal-card">
+        <div class="trip-modal-header">
+            <div>
+                <h3 id="modalTripTitle">Route Details</h3>
+                <p id="modalTripSubtitle">Live view + employee list</p>
+            </div>
+            <button type="button" class="trip-modal-close" onclick="closeTripModal()">✕</button>
+        </div>
+
+        <div class="trip-modal-body">
+            <div class="trip-modal-info-grid">
+                <div class="trip-info-box">
+                    <small>Route / Trip</small>
+                    <strong id="modalRouteName">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Driver</small>
+                    <strong id="modalDriver">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Vehicle</small>
+                    <strong id="modalVehicle">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Status</small>
+                    <strong id="modalStatus">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Trip Type</small>
+                    <strong id="modalTripType">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Total Employees</small>
+                    <strong id="modalTotalEmployees">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Progress</small>
+                    <strong id="modalProgress">--</strong>
+                </div>
+                <div class="trip-info-box">
+                    <small>Driver Last Update</small>
+                    <strong id="modalDriverUpdatedAt">--</strong>
+                </div>
+            </div>
+
+            <div id="tripMap" style="height: 380px; border-radius: 18px; overflow: hidden; margin-top: 18px;"></div>
+
+            <div class="trip-section-title">Employees in this route</div>
+            <div id="modalEmployeesList" class="employee-grid">
+                <div class="empty-state">No employee data available.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_API_KEY"></script>
+
+<script>
+const tripModalData = {{ trip_modal_data_json|safe }};
+
+let tripMap = null;
+let tripDriverMarker = null;
+let tripRoutePolyline = null;
+let tripMarkers = [];
+let selectedTripKey = null;
+let tripModalRefreshTimer = null;
+
+function closeTripModal(event = null) {
+    if (event && event.target && event.target.id !== "tripModal") return;
+
+    document.getElementById("tripModal").style.display = "none";
+    selectedTripKey = null;
+
+    if (tripModalRefreshTimer) {
+        clearInterval(tripModalRefreshTimer);
+        tripModalRefreshTimer = null;
+    }
+}
+
+function openTripModal(key) {
+    const data = tripModalData[String(key)];
+    if (!data) return;
+
+    selectedTripKey = String(key);
+
+    document.getElementById("modalTripTitle").innerText = data.route_name || "Route Details";
+    document.getElementById("modalTripSubtitle").innerText = `${data.trip_date || "--"} • ${data.trip_type || "--"}`;
+    document.getElementById("modalRouteName").innerText = data.route_name || "--";
+    document.getElementById("modalDriver").innerText = data.driver_name || "--";
+    document.getElementById("modalVehicle").innerText = `${data.vehicle_model || "--"} (${data.vehicle_number || "--"})`;
+    document.getElementById("modalStatus").innerText = data.status || "--";
+    document.getElementById("modalTripType").innerText = data.trip_type || "--";
+    document.getElementById("modalTotalEmployees").innerText = data.total_employees ?? "--";
+    document.getElementById("modalProgress").innerText = `${data.completed_count || 0}/${data.total_employees || 0} completed`;
+    document.getElementById("modalDriverUpdatedAt").innerText = data.driver_live_updated_at || "--";
+
+    buildEmployeesList(data.employees || []);
+
+    document.getElementById("tripModal").style.display = "flex";
+
+    setTimeout(() => {
+        renderTripMap(data);
+    }, 150);
+
+    if (tripModalRefreshTimer) clearInterval(tripModalRefreshTimer);
+    tripModalRefreshTimer = setInterval(refreshSelectedDriverLocation, 5000);
+}
+
+function buildEmployeesList(employees) {
+    const container = document.getElementById("modalEmployeesList");
+
+    if (!employees || !employees.length) {
+        container.innerHTML = '<div class="empty-state">No employee data available.</div>';
+        return;
+    }
+
+    container.innerHTML = employees.map(emp => `
+        <div class="employee-card">
+            <div class="employee-card-top">
+                <strong>${emp.employee_name || "Employee"}</strong>
+                <span class="stop-order">Stop ${emp.stop_order ?? "--"}</span>
+            </div>
+            <p>📍 From: ${emp.pickup_location || "--"}</p>
+            <p>🏢 To: ${emp.drop_location || "Office"}</p>
+            <p class="${emp.is_picked ? "stop-done" : "stop-pending"}">
+                ${emp.is_picked ? "✅ Completed" : "⏳ Pending"}
+            </p>
+        </div>
+    `).join("");
+}
+
+function validLatLng(lat, lng) {
+    if (lat === null || lat === undefined || lng === null || lng === undefined) return null;
+    const parsedLat = parseFloat(lat);
+    const parsedLng = parseFloat(lng);
+    if (isNaN(parsedLat) || isNaN(parsedLng)) return null;
+    return { lat: parsedLat, lng: parsedLng };
+}
+
+function clearTripMapObjects() {
+    tripMarkers.forEach(marker => marker.setMap(null));
+    tripMarkers = [];
+
+    if (tripDriverMarker) {
+        tripDriverMarker.setMap(null);
+        tripDriverMarker = null;
+    }
+
+    if (tripRoutePolyline) {
+        tripRoutePolyline.setMap(null);
+        tripRoutePolyline = null;
+    }
+}
+
+function renderTripMap(data) {
+    const driver = validLatLng(data.driver_live_lat, data.driver_live_lng);
+
+    const employees = (data.employees || [])
+        .filter(emp => validLatLng(emp.lat, emp.lng))
+        .map(emp => ({
+            lat: parseFloat(emp.lat),
+            lng: parseFloat(emp.lng),
+            employee_name: emp.employee_name,
+            pickup_location: emp.pickup_location,
+            stop_order: emp.stop_order,
+            is_picked: emp.is_picked,
+        }));
+
+    const center = driver || (employees.length ? { lat: employees[0].lat, lng: employees[0].lng } : { lat: 28.6139, lng: 77.2090 });
+
+    tripMap = new google.maps.Map(document.getElementById("tripMap"), {
+        zoom: 12,
+        center: center,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+    });
+
+    clearTripMapObjects();
+
+    const bounds = new google.maps.LatLngBounds();
+    let hasPoint = false;
+    const pathPoints = [];
+
+    if (driver) {
+        tripDriverMarker = new google.maps.Marker({
+            position: driver,
+            map: tripMap,
+            title: data.driver_name || "Driver",
+            icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+        });
+        bounds.extend(driver);
+        pathPoints.push(driver);
+        hasPoint = true;
+    }
+
+    employees.forEach(emp => {
+        const position = { lat: emp.lat, lng: emp.lng };
+        const marker = new google.maps.Marker({
+            position: position,
+            map: tripMap,
+            title: emp.employee_name || "Employee",
+            icon: emp.is_picked
+                ? "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                : "https://maps.google.com/mapfiles/ms/icons/purple-dot.png",
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="min-width:180px;">
+                    <strong>${emp.employee_name || "Employee"}</strong><br>
+                    ${emp.pickup_location || "--"}<br>
+                    Stop ${emp.stop_order ?? "--"}<br>
+                    ${emp.is_picked ? "Completed" : "Pending"}
+                </div>
+            `,
+        });
+
+        marker.addListener("click", () => infoWindow.open(tripMap, marker));
+        tripMarkers.push(marker);
+        bounds.extend(position);
+        pathPoints.push(position);
+        hasPoint = true;
+    });
+
+    if (pathPoints.length >= 2) {
+        tripRoutePolyline = new google.maps.Polyline({
+            path: pathPoints,
+            geodesic: true,
+            strokeColor: "#4F46E5",
+            strokeOpacity: 1,
+            strokeWeight: 4,
+        });
+        tripRoutePolyline.setMap(tripMap);
+    }
+
+    if (hasPoint) {
+        tripMap.fitBounds(bounds);
+        google.maps.event.addListenerOnce(tripMap, "bounds_changed", function () {
+            if (tripMap.getZoom() > 14) tripMap.setZoom(14);
+        });
+    }
+}
+
+function animateDriverMarker(newPosition) {
+    if (!tripDriverMarker) return;
+
+    const start = tripDriverMarker.getPosition();
+    const startLat = start.lat();
+    const startLng = start.lng();
+
+    const deltaLat = (newPosition.lat - startLat) / 30;
+    const deltaLng = (newPosition.lng - startLng) / 30;
+
+    let i = 0;
+    const animation = setInterval(() => {
+        i++;
+        tripDriverMarker.setPosition({
+            lat: startLat + (deltaLat * i),
+            lng: startLng + (deltaLng * i),
+        });
+
+        if (i >= 30) {
+            clearInterval(animation);
+            tripDriverMarker.setPosition(newPosition);
+        }
+    }, 35);
+}
+
+async function refreshSelectedDriverLocation() {
+    if (!selectedTripKey) return;
+
+    const data = tripModalData[selectedTripKey];
+    if (!data || !data.driver_id) return;
+
+    try {
+        const response = await fetch("/api/trips/locations/");
+        const payload = await response.json();
+
+        let locations = [];
+        if (Array.isArray(payload)) {
+            locations = payload;
+        } else if (payload.results && Array.isArray(payload.results)) {
+            locations = payload.results;
+        }
+
+        const match = locations.find(item => String(item.driver) === String(data.driver_id));
+        if (!match || match.latitude == null || match.longitude == null) return;
+
+        const newPosition = validLatLng(match.latitude, match.longitude);
+        if (!newPosition) return;
+
+        data.driver_live_lat = newPosition.lat;
+        data.driver_live_lng = newPosition.lng;
+        data.driver_live_updated_at = match.updated_at || "";
+
+        document.getElementById("modalDriverUpdatedAt").innerText = data.driver_live_updated_at || "--";
+
+        if (tripDriverMarker) {
+            animateDriverMarker(newPosition);
+        } else if (tripMap) {
+            tripDriverMarker = new google.maps.Marker({
+                position: newPosition,
+                map: tripMap,
+                title: data.driver_name || "Driver",
+                icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            });
+        }
+    } catch (error) {
+        console.error("Driver modal refresh failed:", error);
+    }
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,994 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}CabMate Admin Dashboard{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+{% block page_heading %}{% endblock %}
+{% block page_subheading %}{% endblock %}
+
+{% block content %}
+
+<style>
+    :root {
+        --dark-red: #14213d;
+        --red: #2563eb;
+        --soft-red: #e0f2fe;
+        --light-red: #eef6ff;
+        --white: #ffffff;
+        --cream: #fffaf4;
+        --light-gray: #f8fafc;
+        --border-red: #dbeafe;
+        --black: #111827;
+        --muted: #64748b;
+        --accent-red: #b42335;
+        --accent-green: #16a34a;
+        --accent-orange: #ea580c;
+    }
+
+    .topbar{display:none !important;}
+
+    .page-content {
+        padding-top: 18px !important;
+        background:
+            radial-gradient(circle at top left, rgba(37,99,235,0.08), transparent 32%),
+            radial-gradient(circle at top right, rgba(180,35,53,0.04), transparent 30%),
+            linear-gradient(135deg, #f8fafc, #eef6ff) !important;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    /* COMPACT CONTROL CENTER HEADER */
+
+    .dashboard-control-header{
+        grid-column:1 / -1;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:18px;
+        padding:18px 20px;
+        border-radius:24px;
+        background:linear-gradient(135deg,#ffffff,#f8fbff);
+        border:1px solid #dbeafe;
+        box-shadow:0 14px 34px rgba(15,23,42,.07);
+    }
+
+    .dashboard-control-title{
+        display:flex;
+        align-items:center;
+        gap:14px;
+    }
+
+    .dashboard-control-icon{
+        width:52px;
+        height:52px;
+        border-radius:18px;
+        display:grid;
+        place-items:center;
+        color:white;
+        font-size:25px;
+        background:linear-gradient(135deg,#14213d,#2563eb);
+        box-shadow:0 12px 24px rgba(37,99,235,.22);
+        flex-shrink:0;
+    }
+
+    .dashboard-control-title h1{
+        margin:0;
+        font-size:30px;
+        line-height:1.05;
+        font-weight:950;
+        color:#14213d;
+        letter-spacing:-.8px;
+    }
+
+    .dashboard-control-title p{
+        margin:6px 0 0;
+        color:#64748b;
+        font-weight:750;
+        font-size:13px;
+    }
+
+    .dashboard-live-pill{
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        padding:10px 15px;
+        border-radius:999px;
+        background:#ecfdf5;
+        border:1px solid #bbf7d0;
+        color:#166534;
+        font-weight:950;
+        white-space:nowrap;
+    }
+
+    .dashboard-live-dot{
+        width:9px;
+        height:9px;
+        background:#22c55e;
+        border-radius:50%;
+        box-shadow:0 0 0 0 rgba(34,197,94,.45);
+        animation:dashboardPulse 1.6s infinite;
+    }
+
+    @keyframes dashboardPulse{
+        70%{box-shadow:0 0 0 9px rgba(34,197,94,0);}
+        100%{box-shadow:0 0 0 0 rgba(34,197,94,0);}
+    }
+
+    .top-kpi-grid{
+        grid-column:1 / -1;
+        display:grid;
+        grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:14px;
+    }
+
+    .kpi-card{
+        position:relative;
+        overflow:hidden;
+        border-radius:24px;
+        padding:18px;
+        min-height:112px;
+        color:white;
+        border:1px solid rgba(255,255,255,.35);
+        box-shadow:0 18px 38px rgba(15,23,42,.12);
+        display:flex;
+        align-items:center;
+        gap:14px;
+    }
+
+    .kpi-card::after{
+        content:"";
+        position:absolute;
+        width:96px;
+        height:96px;
+        border-radius:50%;
+        right:-24px;
+        top:-22px;
+        background:rgba(255,255,255,.14);
+    }
+
+    .kpi-card.trips{background:linear-gradient(135deg,#2563eb,#1e3a8a);}
+    .kpi-card.started{background:linear-gradient(135deg,#f59e0b,#c2410c);}
+    .kpi-card.completed{background:linear-gradient(135deg,#16a34a,#166534);}
+    .kpi-card.sos{background:linear-gradient(135deg,#ef4444,#991b1b);}
+
+    .kpi-icon{
+        width:48px;
+        height:48px;
+        border-radius:16px;
+        background:rgba(255,255,255,.18);
+        display:grid;
+        place-items:center;
+        font-size:25px;
+        flex-shrink:0;
+        position:relative;
+        z-index:1;
+    }
+
+    .kpi-card h3{
+        margin:0;
+        font-size:34px;
+        font-weight:950;
+        line-height:1;
+        position:relative;
+        z-index:1;
+    }
+
+    .kpi-card p{
+        margin:7px 0 0;
+        font-size:13px;
+        font-weight:900;
+        opacity:.92;
+        position:relative;
+        z-index:1;
+    }
+
+    .progress-card.compact-progress{
+        grid-column:1 / -1;
+        margin:0;
+        background:#ffffff !important;
+        border:1px solid #dbeafe;
+        border-radius:22px;
+        padding:16px 18px;
+        box-shadow:0 12px 28px rgba(15,23,42,.06);
+    }
+
+    .progress-card-top{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        margin-bottom:10px;
+    }
+
+    .progress-title{
+        display:flex;
+        align-items:center;
+        gap:10px;
+        color:#14213d;
+        font-weight:950;
+        font-size:18px;
+    }
+
+    .progress-percent-text{
+        color:#14213d;
+        font-size:20px;
+        font-weight:950;
+    }
+
+    .progress-track{
+        height:12px;
+        border-radius:999px;
+        background:#e5e7eb !important;
+        overflow:hidden;
+    }
+
+    .progress-fill{
+        height:100%;
+        border-radius:999px;
+        background:linear-gradient(135deg,#2563eb,#16a34a) !important;
+    }
+
+    /* ANALYTICS */
+
+    .today-analytics-panel {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #ffffff, #f8fbff);
+        border: 1px solid #dbeafe;
+        border-radius: 28px;
+        padding: 20px;
+        box-shadow: 0 18px 45px rgba(15,23,42,0.06);
+    }
+
+    .panel-head h3 {
+        color: #14213d;
+        font-weight: 950;
+        margin-bottom: 4px;
+    }
+
+    .panel-head p {
+        color: var(--muted);
+        font-weight: 700;
+    }
+
+    .today-analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    .today-analytics-card {
+        border: 1px solid #dbeafe;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 22px;
+        padding: 18px;
+        min-height: 122px;
+        box-shadow: 0 14px 32px rgba(15,23,42,0.06);
+        transition: 0.22s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .today-analytics-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 38px rgba(220,38,38,0.15);
+    }
+
+    .today-analytics-card span {
+        font-size: 13px;
+        font-weight: 950;
+        color: #14213d;
+    }
+
+    .today-analytics-card h2 {
+        margin: 8px 0 4px;
+        font-size: 34px;
+        font-weight: 950;
+        color: var(--black);
+    }
+
+    .today-analytics-card p {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--muted);
+    }
+
+    .today-analytics-card.started {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    }
+
+    .today-analytics-card.completed {
+        background: linear-gradient(135deg, #ecfdf5, #dcfce7);
+    }
+
+    .today-analytics-card.late {
+        background: linear-gradient(135deg, #fff7ed, #fed7aa);
+    }
+
+    .today-analytics-card.cancelled {
+        background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+    }
+
+    .today-analytics-card.noshow {
+        background: linear-gradient(135deg, #f8fafc, #eef2ff);
+    }
+
+    /* LIST BOX */
+
+    .analytics-list-box {
+        display: none;
+        margin-top: 18px;
+        background: #ffffff;
+        border: 1px solid #fecaca;
+        border-radius: 22px;
+        padding: 18px;
+        box-shadow: 0 10px 20px rgba(220,38,38,0.06);
+    }
+
+    .analytics-list-box.show {
+        display: block;
+    }
+
+    .analytics-list-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+
+    .analytics-list-head h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 950;
+        color: #14213d;
+    }
+
+    .analytics-close-btn {
+        border: none;
+        background: #fee2e2;
+        color: #991b1b;
+        border-radius: 12px;
+        width: 38px;
+        height: 38px;
+        cursor: pointer;
+        font-weight: 900;
+    }
+
+    .analytics-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .analytics-table th,
+    .analytics-table td {
+        padding: 13px 12px;
+        border-bottom: 1px solid #f3d4d4;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    .analytics-table th {
+        color: #991b1b;
+        font-weight: 950;
+        background: #fff1f2;
+    }
+
+    .analytics-table td {
+        font-weight: 750;
+        color: #111827;
+        background: #ffffff;
+    }
+
+    /* BUTTONS */
+
+    .track-btn,
+    .reason-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+        color: #ffffff;
+    }
+
+    .track-btn {
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+    }
+
+    .reason-btn {
+        background: linear-gradient(135deg, #991b1b, #450a0a);
+    }
+
+    /* STATS */
+
+    .system-stats-grid {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .premium-stat {
+        background: linear-gradient(135deg, #ffffff, #fffaf5);
+        border: 1px solid #fecaca;
+        border-radius: 22px;
+        padding: 18px;
+        box-shadow: 0 10px 24px rgba(220,38,38,0.08);
+    }
+
+    .premium-stat p {
+        margin: 0;
+        color: #991b1b;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .premium-stat h3 {
+        margin: 8px 0 4px;
+        font-size: 34px;
+        font-weight: 950;
+        color: #111827;
+    }
+
+    .premium-stat span {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 750;
+    }
+
+    /* QUICK ACTIONS */
+
+    .quick-actions-panel.premium {
+        grid-column: 1 / -1;
+        border-radius: 28px;
+
+        background:
+            radial-gradient(circle at top right, rgba(220,38,38,0.08), transparent 30%),
+            linear-gradient(135deg, #fff7f7, #fff1f2);
+
+        border: 1px solid #fecaca;
+        color: #111827;
+        box-shadow: 0 20px 40px rgba(220,38,38,0.10);
+    }
+
+    .quick-actions-panel.premium .panel-head h3 {
+        color: #7f1d1d;
+    }
+
+    .quick-actions-panel.premium .panel-head p {
+        color: #6b7280;
+    }
+
+    .quick-actions-grid.premium {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .quick-action-card {
+        text-decoration: none;
+        border: 1px solid #fecaca;
+        background: #ffffff;
+        color: #7f1d1d;
+        border-radius: 18px;
+        padding: 16px;
+        font-weight: 950;
+        transition: 0.22s ease;
+        box-shadow: 0 10px 20px rgba(220,38,38,0.08);
+    }
+
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        background: #fff1f2;
+        color: #991b1b;
+    }
+
+    .quick-action-card span {
+        display: block;
+        font-size: 24px;
+        margin-bottom: 8px;
+    }
+
+    /* LIVE TRIP */
+
+    .trips-panel {
+        background: linear-gradient(135deg, #ffffff, #fffaf5) !important;
+        border: 1px solid #fecaca !important;
+        border-radius: 26px !important;
+        box-shadow: 0 18px 45px rgba(220,38,38,0.08) !important;
+    }
+
+    .admin-table th {
+        background: #fff1f2 !important;
+        color: #991b1b !important;
+    }
+
+    .admin-table td {
+        color: #111827 !important;
+    }
+
+
+    @media (max-width: 900px){
+        .dashboard-control-header{
+            flex-direction:column;
+            align-items:flex-start;
+        }
+        .top-kpi-grid{
+            grid-template-columns:repeat(2,1fr);
+        }
+        .dashboard-control-title h1{
+            font-size:26px;
+        }
+    }
+
+    @media (max-width: 600px){
+        .top-kpi-grid{
+            grid-template-columns:1fr;
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .today-analytics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .system-stats-grid,
+        .quick-actions-grid.premium {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 700px) {
+        .today-analytics-grid,
+        .system-stats-grid,
+        .quick-actions-grid.premium {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-panel.compact .hero-title {
+            font-size: 26px !important;
+        }
+
+        .analytics-table {
+            min-width: 850px;
+        }
+
+        .analytics-list-box {
+            overflow-x: auto;
+        }
+    }
+
+
+</style>
+
+
+<div class="dashboard-grid">
+
+    <section class="dashboard-control-header">
+        <div class="dashboard-control-title">
+            <div class="dashboard-control-icon">🚖</div>
+            <div>
+                <h1>CabMate Control Center</h1>
+                <p>Real-time office cab operations dashboard • {{ today|date:"d M Y" }}</p>
+            </div>
+        </div>
+
+        <div class="dashboard-live-pill">
+            <span class="dashboard-live-dot"></span>
+            Updated Live
+        </div>
+    </section>
+
+    <section class="top-kpi-grid">
+        <div class="kpi-card trips">
+            <div class="kpi-icon">🚖</div>
+            <div>
+                <h3>{{ today_total_trips }}</h3>
+                <p>Today's Trips</p>
+            </div>
+        </div>
+
+        <div class="kpi-card started">
+            <div class="kpi-icon">🚦</div>
+            <div>
+                <h3>{{ today_started_trips }}</h3>
+                <p>Started Routes</p>
+            </div>
+        </div>
+
+        <div class="kpi-card completed">
+            <div class="kpi-icon">✅</div>
+            <div>
+                <h3>{{ completion_percent }}%</h3>
+                <p>Completion</p>
+            </div>
+        </div>
+
+        <div class="kpi-card sos">
+            <div class="kpi-icon">🚨</div>
+            <div>
+                <h3>{{ unread_emergency_alerts }}</h3>
+                <p>Emergency SOS</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="progress-card compact-progress">
+        <div class="progress-card-top">
+            <div class="progress-title">
+                <span>📈</span>
+                <strong>Today’s completion progress</strong>
+            </div>
+            <strong class="progress-percent-text">{{ completion_percent }}%</strong>
+        </div>
+
+        <div class="progress-track">
+            <div class="progress-fill" style="width: {{ completion_percent }}%;"></div>
+        </div>
+    </section>
+
+    <section class="today-analytics-panel">
+        <div class="panel-head">
+            <div>
+                <h3>Today’s Analytics</h3>
+                <p>Click any card to view detailed list</p>
+            </div>
+        </div>
+
+        <div class="today-analytics-grid">
+            <button type="button" class="today-analytics-card started" onclick="showAnalyticsList('startedList')">
+                <span>🚦 Cab Started</span>
+                <h2>{{ started_cabs_count }}</h2>
+                <p>Running cab routes today</p>
+            </button>
+
+            <button type="button" class="today-analytics-card completed" onclick="showAnalyticsList('completedList')">
+                <span>✅ Cab Completed</span>
+                <h2>{{ completed_cabs_count }}</h2>
+                <p>Completed cab routes today</p>
+            </button>
+
+            <button type="button" class="today-analytics-card late" onclick="showAnalyticsList('lateList')">
+                <span>⏱️ Late Cab</span>
+                <h2>{{ late_cabs_count }}</h2>
+                <p>Pending started route runs</p>
+            </button>
+
+            <button type="button" class="today-analytics-card cancelled" onclick="showAnalyticsList('cancelledList')">
+                <span>❌ Cancelled</span>
+                <h2>{{ cancelled_trips_count }}</h2>
+                <p>Cancelled employee trips</p>
+            </button>
+
+            <button type="button" class="today-analytics-card noshow" onclick="showAnalyticsList('noShowList')">
+                <span>🚫 No-show</span>
+                <h2>{{ no_show_count }}</h2>
+                <p>Missed pickup/drop stops</p>
+            </button>
+        </div>
+
+        <div id="startedList" class="analytics-list-box">
+            <div class="analytics-list-head">
+                <h3>Started Cab List</h3>
+                <button type="button" class="analytics-close-btn" onclick="hideAnalyticsLists()">✕</button>
+            </div>
+
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Trip Type</th>
+                        <th>Started</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in started_cabs %}
+                    <tr>
+                        <td>{{ run.route_template.name|default:"Manual Route" }}</td>
+                        <td>{{ run.driver.username|default:"--" }}</td>
+                        <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
+                        <td>{{ run.trip_type }}</td>
+                        <td>{{ run.started_at|time:"h:i A" }}</td>
+                        <td><a href="{% url 'admin_web:tracking' %}" class="track-btn">Track Cab</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6">No started cab found today.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="completedList" class="analytics-list-box">
+            <div class="analytics-list-head">
+                <h3>Completed Cab List</h3>
+                <button type="button" class="analytics-close-btn" onclick="hideAnalyticsLists()">✕</button>
+            </div>
+
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Trip Type</th>
+                        <th>Completed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in completed_cabs %}
+                    <tr>
+                        <td>{{ run.route_template.name|default:"Manual Route" }}</td>
+                        <td>{{ run.driver.username|default:"--" }}</td>
+                        <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
+                        <td>{{ run.trip_type }}</td>
+                        <td>{{ run.completed_at|time:"h:i A" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No completed cab found today.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="lateList" class="analytics-list-box">
+            <div class="analytics-list-head">
+                <h3>Late Cab List</h3>
+                <button type="button" class="analytics-close-btn" onclick="hideAnalyticsLists()">✕</button>
+            </div>
+
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Trip Type</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in late_cabs %}
+                    <tr>
+                        <td>{{ run.route_template.name|default:"Manual Route" }}</td>
+                        <td>{{ run.driver.username|default:"--" }}</td>
+                        <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
+                        <td>{{ run.trip_type }}</td>
+                        <td><a href="{% url 'admin_web:tracking' %}" class="track-btn">Track Cab</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No late cab found today.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="cancelledList" class="analytics-list-box">
+            <div class="analytics-list-head">
+                <h3>Cancelled Employee List</h3>
+                <button type="button" class="analytics-close-btn" onclick="hideAnalyticsLists()">✕</button>
+            </div>
+
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Route</th>
+                        <th>Trip Type</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trip in cancelled_trips %}
+                    <tr>
+                        <td>{{ trip.employee.username|default:"--" }}</td>
+                        <td>{{ trip.driver.username|default:"--" }}</td>
+                        <td>{{ trip.vehicle.vehicle_number|default:"--" }}</td>
+                        <td>
+                            {% if trip.route_run and trip.route_run.route_template %}
+                                {{ trip.route_run.route_template.name }}
+                            {% else %}
+                                Manual Trip
+                            {% endif %}
+                        </td>
+                        <td>{{ trip.trip_type }}</td>
+                        <td>
+                            <a href="{% url 'admin_web:trip_history' %}" class="reason-btn">Check Reason</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6">No cancelled trips found today.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="noShowList" class="analytics-list-box">
+            <div class="analytics-list-head">
+                <h3>No-show Employee List</h3>
+                <button type="button" class="analytics-close-btn" onclick="hideAnalyticsLists()">✕</button>
+            </div>
+
+            <table class="analytics-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Stop Order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stop in no_show_stops %}
+                    <tr>
+                        <td>{{ stop.employee.username|default:"--" }}</td>
+                        <td>{{ stop.route_run.route_template.name|default:"Manual Route" }}</td>
+                        <td>{{ stop.route_run.driver.username|default:"--" }}</td>
+                        <td>{{ stop.route_run.vehicle.vehicle_number|default:"--" }}</td>
+                        <td>{{ stop.stop_order }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">No no-show found today.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="system-stats-grid">
+        <div class="premium-stat">
+            <p>Total Employees</p>
+            <h3>{{ total_employees }}</h3>
+            <span>Registered in system</span>
+        </div>
+
+        <div class="premium-stat">
+            <p>Total Drivers</p>
+            <h3>{{ total_drivers }}</h3>
+            <span>Available in system</span>
+        </div>
+
+        <div class="premium-stat">
+            <p>Vehicles Active</p>
+            <h3>{{ total_vehicles }}</h3>
+            <span>Total registered vehicles</span>
+        </div>
+
+        <div class="premium-stat">
+            <p>Emergency SOS</p>
+            <h3>{{ unread_emergency_alerts }}</h3>
+            <span>Needs immediate action</span>
+        </div>
+    </section>
+
+    <section class="panel-card quick-actions-panel premium">
+        <div class="panel-head">
+            <div>
+                <h3>Quick Actions</h3>
+                <p>Fast controls for daily admin operations</p>
+            </div>
+        </div>
+
+        <div class="quick-actions-grid premium">
+            <a href="{% url 'admin_web:routes' %}" class="quick-action-card">
+                <span>➕</span>
+                Create / Assign Route
+            </a>
+
+            <a href="{% url 'admin_web:tracking' %}" class="quick-action-card">
+                <span>📍</span>
+                View Live Tracking
+            </a>
+
+            <a href="{% url 'admin_web:alerts' %}" class="quick-action-card">
+                <span>🚨</span>
+                Check SOS Alerts
+            </a>
+
+            <a href="{% url 'admin_web:assigned_trips' %}" class="quick-action-card">
+                <span>🚖</span>
+                Assigned Trips
+            </a>
+
+            <a href="{% url 'admin_web:trip_history' %}" class="quick-action-card">
+                <span>🕘</span>
+                Trip History
+            </a>
+
+            <a href="{% url 'admin_web:reports' %}" class="quick-action-card">
+                <span>📊</span>
+                Reports
+            </a>
+        </div>
+    </section>
+
+    <section class="panel-card trips-panel">
+        <div class="panel-head">
+            <div>
+                <h3>Live Trip Activity</h3>
+                <p>Current trip movement overview</p>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Route</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trip in recent_live_trips %}
+                    <tr>
+                        <td>{{ trip.employee.username|default:"--" }}</td>
+                        <td>{{ trip.driver.username|default:"--" }}</td>
+                        <td>{{ trip.vehicle.vehicle_number|default:"--" }}</td>
+                        <td>
+                            {% if trip.route_run and trip.route_run.route_template %}
+                                {{ trip.route_run.route_template.name }}
+                            {% else %}
+                                Manual Trip
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if trip.status == "STARTED" %}
+                                <span class="status-pill live">Live</span>
+                            {% elif trip.status == "ASSIGNED" %}
+                                <span class="status-pill assigned">Assigned</span>
+                            {% elif trip.status == "COMPLETED" %}
+                                <span class="status-pill completed">Completed</span>
+                            {% elif trip.status == "CANCELLED" %}
+                                <span class="status-pill warning">Cancelled</span>
+                            {% else %}
+                                <span class="status-pill assigned">{{ trip.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">No trip activity found for today.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    function hideAnalyticsLists() {
+        document.querySelectorAll(".analytics-list-box").forEach(function(box) {
+            box.classList.remove("show");
+        });
+    }
+
+    function showAnalyticsList(id) {
+        hideAnalyticsLists();
+        const box = document.getElementById(id);
+        if (box) {
+            box.classList.add("show");
+            box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+    }
+</script>
+
+{% endblock %}

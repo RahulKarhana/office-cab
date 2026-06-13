@@ -1,0 +1,179 @@
+<div class="trip-card {{ card_type }} collapsed" id="card{{ run.id }}">
+    <div class="premium-card-bg"></div>
+
+    <div class="card-top">
+        <div>
+            <div class="route-title">
+                <span class="route-index">{{ forloop.counter }}</span>
+                {{ run.route_name }}
+            </div>
+
+            <div class="badge-row">
+
+                <span class="status {{ run.status }}">{{ run.status }}</span>
+                <span class="type-pill {{ run.trip_type }}">{{ run.trip_type }}</span>
+            </div>
+            <div class="smart-badges">
+
+                {% if run.is_live %}
+                    <div class="smart-badge live">
+                        🟢 Live
+                    </div>
+                {% endif %}
+
+                {% if run.trip_type == "PICKUP" %}
+                    <div class="smart-badge pickup-chip">
+                        🚖 Pickup Running
+                    </div>
+                {% else %}
+                    <div class="smart-badge drop-chip">
+                        🌙 Drop Running
+                    </div>
+                {% endif %}
+
+                {% if run.is_delayed %}
+                    <div class="smart-badge delayed">
+                        ⏰ Delayed
+                    </div>
+                {% endif %}
+
+                {% if run.is_overspeed %}
+                    <div class="smart-badge overspeed">
+                        🚨 Overspeed
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <button
+            type="button"
+            class="card-expand-arrow"
+            onclick="toggleCard('{{ run.id }}', this)"
+            title="Expand card"
+        >
+            ▾
+        </button>
+    </div>
+    <div class="route-health {{ run.health_status|lower }}">
+        {% if run.health_status == "EXCELLENT" %}
+            🟢 Route Healthy
+        {% elif run.health_status == "MODERATE" %}
+            🟡 Moderate Attention
+        {% else %}
+            🔴 Critical Route
+        {% endif %}
+    </div>
+    <div class="route-progress-wrap">
+        <div class="route-progress-top">
+            <span>Route Progress</span>
+            <strong>{{ run.completed_employees|default:0 }}/{{ run.total_employees }}</strong>
+        </div>
+
+        <div class="route-progress-bar">
+            <div
+                class="route-progress-fill {{ card_type }}"
+                style="width: {{ run.completion_percent|default:0 }}%;"
+            ></div>
+        </div>
+
+        <div class="route-progress-meta">
+            <span>👥 {{ run.total_employees }} Employees</span>
+            <span>✅ {{ run.completion_percent|default:0 }}%</span>
+        </div>
+    </div>
+
+    <div class="smart-badges">
+        <span class="smart-badge eta">⏱ ETA: {{ run.eta_text|default:"--" }}</span>
+        <span class="smart-badge current">📍 Current: {{ run.current_stop_name|default:"Not started" }}</span>
+    </div>
+
+    <div class="details">
+        <div>🚗 <b>Driver:</b> {{ run.driver_name }}</div>
+        <div>🚖 <b>Vehicle:</b> {{ run.vehicle_number }}</div>
+        <div>📅 <b>Date:</b> {{ run.run_date }}</div>
+        <div>⏰ <b>Time:</b> {% if run.pickup_time %}{{ run.pickup_time|time:"h:i A" }}{% else %}--{% endif %}</div>
+    </div>
+
+    <button type="button" class="employee-toggle" onclick="toggleEmployees('{{ run.id }}')">
+        👥 View Employee Timeline
+    </button>
+
+    <div class="employee-box" id="employees{{ run.id }}">
+        {% for emp in run.employees %}
+        <div class="
+            employee-row
+            premium-employee
+
+            {% if emp.is_no_show %}
+                employee-no-show
+            {% elif emp.is_picked %}
+                employee-completed
+            {% elif emp.is_current %}
+                employee-current
+            {% else %}
+                employee-pending
+            {% endif %}
+        ">
+            <div class="timeline-dot {% if emp.is_picked %}done{% elif emp.is_no_show %}no-show{% else %}pending{% endif %}"></div>
+
+            <div class="employee-main">
+                <div class="employee-head">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <strong>{{ forloop.counter }}. {{ emp.employee_name }}</strong>
+
+                        {% if emp.is_current %}
+                            <span class="live-current-badge">
+                                LIVE
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    {% if emp.is_no_show %}
+                        <span class="emp-status no-show">No-show</span>
+                    {% elif emp.is_picked %}
+                        <span class="emp-status done">Picked</span>
+                    {% else %}
+                        <span class="emp-status pending">Pending</span>
+                    {% endif %}
+                </div>
+
+                <div class="emp-location">
+                    📍 From: {{ emp.pickup_location }}<br>
+                    🏁 To: {{ emp.drop_location|default:"Office" }}
+                </div>
+
+                {% if emp.trip_id %}
+                <form method="post" action="{% url 'admin_web:cancel_trip' emp.trip_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="single-cancel" onclick="return confirm('Cancel this employee trip?')">
+                        Cancel This Employee Trip
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="employee-row">No employees found</div>
+        {% endfor %}
+    </div>
+
+    <div class="actions">
+        <form method="post" action="{% url 'admin_web:cancel_route_run_trips' run.id %}">
+            {% csrf_token %}
+            <a
+                href="{% url 'admin_web:admin_live_map' %}?route_run_id={{ run.id }}"
+                class="card-btn live-map-btn"
+            >
+                🗺 Live Map
+            </a>
+            <button type="submit" class="card-btn cancel" onclick="return confirm('Cancel all trips for this route?')">
+                Cancel All
+            </button>
+        </form>
+
+        <button type="button" class="card-btn more" onclick="toggleCard('{{ run.id }}',this)">
+            More
+        </button>
+    </div>
+</div>

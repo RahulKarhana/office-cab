@@ -1,0 +1,484 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Employees - CabMate Admin{% endblock %}
+{% block nav_employees %}active{% endblock %}
+{% block page_heading %}Employees{% endblock %}
+{% block page_subheading %}Smart employee assignment and route management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .employee-page {
+        display: grid;
+        gap: 22px;
+    }
+
+    .employee-hero {
+        background: linear-gradient(135deg, #111827, #1f2937);
+        color: white;
+        border-radius: 28px;
+        padding: 26px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    }
+
+    .employee-hero h2 {
+        margin: 0;
+        font-size: 32px;
+        font-weight: 900;
+    }
+
+    .employee-hero p {
+        margin: 8px 0 0;
+        color: #cbd5e1;
+        font-weight: 600;
+    }
+
+    .hero-badge {
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.16);
+        padding: 12px 16px;
+        border-radius: 999px;
+        font-weight: 900;
+        color: #dbeafe;
+        white-space: nowrap;
+    }
+
+    .employee-stats {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 14px;
+    }
+
+    .emp-stat {
+        text-decoration: none;
+        color: white;
+        border-radius: 22px;
+        padding: 18px;
+        min-height: 118px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+        transition: 0.22s ease;
+    }
+
+    .emp-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+    }
+
+    .emp-stat::after {
+        content: "";
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        right: -30px;
+        top: -30px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.22);
+    }
+
+    .emp-stat span {
+        font-size: 13px;
+        font-weight: 800;
+        color: rgba(255,255,255,0.82);
+    }
+
+    .emp-stat h3 {
+        margin: 10px 0 4px;
+        font-size: 34px;
+        font-weight: 900;
+    }
+
+    .emp-stat small {
+        color: rgba(255,255,255,0.78);
+        font-weight: 700;
+    }
+
+    .stat-total { background: linear-gradient(135deg, #2563eb, #1e3a8a); }
+    .stat-assigned { background: linear-gradient(135deg, #16a34a, #065f46); }
+    .stat-unassigned { background: linear-gradient(135deg, #f97316, #c2410c); }
+    .stat-active { background: linear-gradient(135deg, #7c3aed, #4c1d95); }
+    .stat-inactive { background: linear-gradient(135deg, #64748b, #0f172a); }
+    .stat-pickup { background: linear-gradient(135deg, #0891b2, #164e63); }
+
+    .employee-panel {
+        background: white;
+        border-radius: 28px;
+        padding: 22px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .panel-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .panel-top h3 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    .panel-top p {
+        margin: 5px 0 0;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .employee-search {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .employee-search input {
+        width: 320px;
+        max-width: 100%;
+        height: 46px;
+        border-radius: 16px;
+        border: 1px solid #dbe2ea;
+        padding: 0 15px;
+        font-weight: 700;
+        outline: none;
+    }
+
+    .employee-search input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+    }
+
+    .search-btn {
+        height: 46px;
+        border: none;
+        border-radius: 16px;
+        padding: 0 20px;
+        background: #111827;
+        color: white;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .employee-table-wrap {
+        overflow-x: auto;
+        border-radius: 22px;
+        border: 1px solid #edf0f4;
+    }
+
+    .employee-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 1180px;
+    }
+
+    .employee-table th {
+        text-align: left;
+        padding: 14px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .employee-table td {
+        padding: 15px 14px;
+        border-bottom: 1px solid #edf0f4;
+        font-weight: 700;
+        color: #334155;
+        vertical-align: middle;
+        background: white;
+    }
+
+    .employee-table tbody tr:hover td {
+        background: #f8fafc;
+    }
+
+    .emp-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .emp-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        color: white;
+        background: linear-gradient(135deg, #6366f1, #2563eb);
+    }
+
+    .emp-user strong {
+        display: block;
+        color: #111827;
+        font-weight: 900;
+    }
+
+    .emp-user small {
+        color: #64748b;
+        font-weight: 700;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .pill-active { background: #dcfce7; color: #166534; }
+    .pill-inactive { background: #fee2e2; color: #991b1b; }
+    .pill-assigned { background: #dbeafe; color: #1d4ed8; }
+    .pill-unassigned { background: #ffedd5; color: #c2410c; }
+
+    .action-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .mini-action {
+        text-decoration: none;
+        border: none;
+        border-radius: 12px;
+        padding: 9px 12px;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .mini-action.assign {
+        background: #111827;
+        color: white;
+    }
+
+    .mini-action.change {
+        background: #2563eb;
+        color: white;
+    }
+
+    .mini-action.view {
+        background: #eef2ff;
+        color: #4338ca;
+    }
+
+    .empty-row {
+        text-align: center;
+        padding: 28px !important;
+        color: #64748b !important;
+        font-weight: 900 !important;
+    }
+
+    @media (max-width: 1300px) {
+        .employee-stats {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 800px) {
+        .employee-hero {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .employee-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .employee-search,
+        .employee-search input,
+        .search-btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="employee-page">
+
+    <section class="employee-hero">
+        <div>
+            <h2>Employee Route Control</h2>
+            <p>Manage new joiners, assigned employees, unassigned employees, pickup data and route assignment.</p>
+        </div>
+
+        <div class="hero-badge">
+            Today: {{ today }}
+        </div>
+    </section>
+
+    <section class="employee-stats">
+        <a href="?filter=all" class="emp-stat stat-total">
+            <span>Total Employees</span>
+            <h3>{{ total_employees }}</h3>
+            <small>All registered employees</small>
+        </a>
+
+        <a href="?filter=assigned" class="emp-stat stat-assigned">
+            <span>Assigned Employees</span>
+            <h3>{{ assigned_employees_count }}</h3>
+            <small>Route/trip assigned today</small>
+        </a>
+
+        <a href="?filter=unassigned" class="emp-stat stat-unassigned">
+            <span>Unassigned Employees</span>
+            <h3>{{ unassigned_employees_count }}</h3>
+            <small>Need route assignment</small>
+        </a>
+
+        <a href="?filter=active" class="emp-stat stat-active">
+            <span>Active Employees</span>
+            <h3>{{ active_employees }}</h3>
+            <small>Currently active accounts</small>
+        </a>
+
+        <a href="?filter=inactive" class="emp-stat stat-inactive">
+            <span>Inactive Employees</span>
+            <h3>{{ inactive_employees }}</h3>
+            <small>Disabled accounts</small>
+        </a>
+
+        <a href="?filter=all" class="emp-stat stat-pickup">
+            <span>Pickup Saved</span>
+            <h3>{{ employees_with_pickup }}</h3>
+            <small>Pickup location available</small>
+        </a>
+    </section>
+
+    <section class="employee-panel">
+        <div class="panel-top">
+            <div>
+                <h3>Employee Directory</h3>
+                <p>
+                    Filter:
+                    <strong>
+                        {% if filter_type == "assigned" %}
+                            Assigned Employees
+                        {% elif filter_type == "unassigned" %}
+                            Unassigned Employees
+                        {% elif filter_type == "active" %}
+                            Active Employees
+                        {% elif filter_type == "inactive" %}
+                            Inactive Employees
+                        {% else %}
+                            All Employees
+                        {% endif %}
+                    </strong>
+                </p>
+            </div>
+
+            <form method="get" class="employee-search">
+                <input type="hidden" name="filter" value="{{ filter_type }}">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    placeholder="Search username, phone, address or pickup"
+                >
+                <button type="submit" class="search-btn">Search</button>
+            </form>
+        </div>
+
+        <div class="employee-table-wrap">
+            <table class="employee-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Phone</th>
+                        <th>Pickup Location</th>
+                        <th>Today Route</th>
+                        <th>Driver</th>
+                        <th>Cab</th>
+                        <th>Assignment</th>
+                        <th>Account</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in employee_rows %}
+                    <tr>
+                        <td>
+                            <div class="emp-user">
+                                <div class="emp-avatar">
+                                    {{ row.employee.username|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <strong>{{ row.employee.username }}</strong>
+                                    <small>ID: {{ row.employee.id }}</small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>{{ row.employee.phone_number|default:"--" }}</td>
+
+                        <td>{{ row.employee.pickup_location|default:"No pickup saved" }}</td>
+
+                        <td>{{ row.route_name }}</td>
+
+                        <td>{{ row.driver_name }}</td>
+
+                        <td>{{ row.vehicle_number }}</td>
+
+                        <td>
+                            {% if row.is_assigned %}
+                                <span class="pill pill-assigned">Assigned</span>
+                            {% else %}
+                                <span class="pill pill-unassigned">Unassigned</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if row.employee.is_active %}
+                                <span class="pill pill-active">Active</span>
+                            {% else %}
+                                <span class="pill pill-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <div class="action-group">
+                                {% if row.is_assigned %}
+                                    <a href="{% url 'admin_web:employee_route_search' row.employee.id %}" class="mini-action change">
+                                        Change Route
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'admin_web:employee_route_search' row.employee.id %}" class="mini-action assign">
+                                        Assign Route
+                                    </a>                                
+                                {% endif %}
+                                <a href="#" class="mini-action view">View</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="empty-row">No employees found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

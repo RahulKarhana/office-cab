@@ -31,7 +31,7 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
-
+    
     pickup_latitude = models.FloatField(
         blank=True,
         null=True,
@@ -41,6 +41,7 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
-
+    is_female = models.BooleanField(default=False)
+    
     def _str_(self):
         return self.username
