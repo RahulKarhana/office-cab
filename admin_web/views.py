@@ -15,6 +15,8 @@ from django.utils import timezone
 from django.db.models import Count, Q, Avg, Max
 from django.utils.dateparse import parse_date
 from collections import OrderedDict
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
 from math import radians, cos, sin, asin, sqrt
 from django.views.decorators.http import require_GET, require_POST
 import openpyxl
@@ -180,6 +182,30 @@ def _distance_km(lat1, lng1, lat2, lng2):
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return round(radius * c, 2)
+
+def admin_login_page(request):
+    if request.user.is_authenticated:
+        return redirect("admin_web:dashboard")
+
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "").strip()
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None and user.is_staff:
+            login(request, user)
+            next_url = request.GET.get("next")
+            return redirect(next_url or "admin_web:dashboard")
+
+        messages.error(request, "Invalid username or password.")
+
+    return render(request, "admin_web/login.html")
+
+
+def admin_logout_page(request):
+    logout(request)
+    return redirect("admin_web:admin_login")
 
 # =========================
 # DASHBOARD

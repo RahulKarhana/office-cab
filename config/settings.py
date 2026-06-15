@@ -81,7 +81,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-LOGIN_URL = '/admin/login/'
+
 # Database
 DATABASES = {
     "default": dj_database_url.config(
@@ -90,7 +90,9 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
-
+LOGIN_URL = "/admin-web/login/"
+LOGIN_REDIRECT_URL = "/admin-web/dashboard/"
+LOGOUT_REDIRECT_URL = "/admin-web/login/"
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -165,7 +167,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.onrender.com",
 ]
 
-GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "YOUR_GOOGLE_MAPS_API_KEY")
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "AIzaSyDc5T_2gOtMTmo_an3pFq-drBNt8Mfkn48")
 
 
 import os

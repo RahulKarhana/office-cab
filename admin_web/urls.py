@@ -7,7 +7,8 @@ urlpatterns = [
     path("dashboard/", views.dashboard, name="dashboard"),
     path("employees/", views.employees_page, name="employees"),
     path("drivers/", views.drivers_page, name="drivers"),
-
+    path("login/", views.admin_login_page, name="admin_login"),
+    path("logout/", views.admin_logout_page, name="admin_logout"),
     path("routes/", views.routes_page, name="routes"),
     path("routes/create/", views.create_route, name="create_route"),
     path("routes/<int:route_id>/edit/", views.edit_route, name="edit_route"),
