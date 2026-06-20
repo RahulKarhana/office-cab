@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.db import transaction
 import math
+from trips.utils.notification import send_push_notification
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import resolve, reverse
@@ -596,9 +597,35 @@ def routes_page(request):
             "remaining_seats": remaining_seats,
         })
 
-    employees = User.objects.filter(role="EMPLOYEE", is_active=True).order_by("username")
-    drivers = User.objects.filter(role="DRIVER", is_active=True).order_by("username")
-    vehicles = Vehicle.objects.select_related("driver").order_by("vehicle_number")
+    assigned_employee_ids = RouteStop.objects.filter(
+        route__isnull=False
+    ).values_list("employee_id", flat=True)
+
+    assigned_driver_ids = RouteTemplate.objects.filter(
+        driver__isnull=False
+    ).values_list("driver_id", flat=True)
+
+    assigned_vehicle_ids = RouteTemplate.objects.filter(
+        vehicle__isnull=False
+    ).values_list("vehicle_id", flat=True)
+
+    employees = User.objects.filter(
+        role="EMPLOYEE",
+        is_active=True,
+    ).exclude(
+        id__in=assigned_employee_ids,
+    ).order_by("username")
+
+    drivers = User.objects.filter(
+        role="DRIVER",
+        is_active=True,
+    ).exclude(
+        id__in=assigned_driver_ids,
+    ).order_by("username")
+
+    vehicles = Vehicle.objects.select_related("driver").exclude(
+        id__in=assigned_vehicle_ids,
+    ).order_by("vehicle_number")
 
     holiday_dates = []
 
@@ -747,6 +774,24 @@ def assign_route_trip(request, route_id, trip_type):
             request,
             _extract_response_message(data, f"{trip_type.title()} assigned successfully."),
         )
+
+        try:
+            for stop in route.stops.select_related("employee").all():
+                employee = stop.employee
+
+                send_push_notification(
+                    user=employee,
+                    title=f"{trip_type.title()} Cab Assigned 🚕",
+                    body=f"Your {trip_type.lower()} cab has been assigned. Please check your trip details.",
+                    data={
+                        "type": "TRIP_ASSIGNED",
+                        "trip_type": trip_type,
+                        "route_id": route.id,
+                    },
+                )
+
+        except Exception as e:
+            print("❌ Admin web assign notification error:", e)
     else:
         messages.error(
             request,

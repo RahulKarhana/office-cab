@@ -7,6 +7,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from accounts.models import User
 from trips.models import (
@@ -359,50 +361,75 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    @action(detail=False, methods=["post"], url_path="preview-route-order")
+    @action(detail=False,methods=["post"],url_path="preview-route-order",authentication_classes=[JWTAuthentication, SessionAuthentication],
+    permission_classes=[IsAuthenticated],)
     def preview_route_order(self, request):
         employee_ids = request.data.get("employee_ids", [])
         mode = request.data.get("mode", "MANUAL")
 
-        employees = list(User.objects.filter(id__in=employee_ids))
+        if not employee_ids:
+            return Response({"error": "Please select employees first."}, status=400)
+
+        employees = list(
+            User.objects.filter(id__in=employee_ids, role="EMPLOYEE")
+        )
+
+        employee_map = {emp.id: emp for emp in employees}
+
+        employees = [
+            employee_map[int(emp_id)]
+            for emp_id in employee_ids
+            if str(emp_id).isdigit() and int(emp_id) in employee_map
+        ]
 
         if len(employees) < 2:
-            return Response({"error": "Minimum 2 employees required"}, status=400)
+            return Response({"error": "Minimum 2 employees required."}, status=400)
 
-        # 🟢 MANUAL
+        missing_location = [
+            emp.username
+            for emp in employees
+            if emp.pickup_latitude is None or emp.pickup_longitude is None
+        ]
+
+        if missing_location:
+            return Response(
+                {
+                    "error": "Pickup latitude/longitude missing for: "
+                    + ", ".join(missing_location)
+                },
+                status=400,
+            )
+
+        mode = str(mode).upper()
+
         if mode == "MANUAL":
             ordered = employees
 
-        # 🔵 DISTANCE (simple optimization)
         elif mode == "DISTANCE":
             base = employees[0]
 
             def distance(emp):
-                if not emp.pickup_latitude or not emp.pickup_longitude:
-                    return 999999
                 return (
-                    (emp.pickup_latitude - base.pickup_latitude) ** 2 +
-                    (emp.pickup_longitude - base.pickup_longitude) ** 2
+                    (float(emp.pickup_latitude) - float(base.pickup_latitude)) ** 2
+                    + (float(emp.pickup_longitude) - float(base.pickup_longitude)) ** 2
                 )
 
             ordered = sorted(employees, key=distance)
 
-        # 🟣 FEMALE SAFETY
         elif mode == "SAFE":
-            males = [e for e in employees if not e.is_female]
-            females = [e for e in employees if e.is_female]
+            males = [e for e in employees if not getattr(e, "is_female", False)]
+            females = [e for e in employees if getattr(e, "is_female", False)]
 
             ordered = []
 
-            # ❌ Female should NOT be first pickup
             if males:
                 ordered.append(males.pop(0))
 
-            # females in middle
             ordered.extend(females)
-
-            # remaining males
             ordered.extend(males)
+
+            if not ordered:
+                ordered = employees
 
         else:
             ordered = employees
@@ -412,10 +439,11 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 "id": emp.id,
                 "username": emp.username,
                 "pickup_location": emp.pickup_location,
+                "pickup_latitude": emp.pickup_latitude,
+                "pickup_longitude": emp.pickup_longitude,
             }
             for emp in ordered
-        ])
-    
+        ])    
     @action(detail=True, methods=["post"], url_path="save-route-order")
     def save_route_order(self, request, pk=None):
         route = self.get_object()

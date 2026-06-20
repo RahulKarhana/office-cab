@@ -14,60 +14,40 @@ def initialize_firebase():
     service_account_path = os.path.join(
         settings.BASE_DIR,
         "config",
-        "firebase-service-account.json",
+        "firebase_key.json",
     )
+
+    if not os.path.exists(service_account_path):
+        print(f"Firebase key not found: {service_account_path}")
+        return
 
     cred = credentials.Certificate(service_account_path)
     firebase_admin.initialize_app(cred)
 
-
 def send_push_notification(user, title, body, data=None):
-    initialize_firebase()
+    print("🔥 PUSH FUNCTION CALLED FOR:", user.username)
 
-    data = data or {}
-    data = {str(k): str(v) for k, v in data.items()}
+    initialize_firebase()
 
     tokens = list(
         DeviceToken.objects.filter(user=user, is_active=True)
         .values_list("token", flat=True)
     )
 
-    if not tokens:
-        print(f"No FCM tokens for user {user}")
+    print("📱 TOKENS FOUND:", len(tokens))
 
-        # Save in DB even if no device
-        Notification.objects.create(
-            user=user,
-            title=title,
-            message=body,
-        )
+    if not tokens:
+        print("❌ No FCM tokens for user", user.username)
         return
 
-    message = messaging.MulticastMessage(
-        notification=messaging.Notification(
-            title=title,
-            body=body,
-        ),
-        tokens=tokens,
-        data=data,
-    )
-
     try:
-        response = messaging.send_multicast(message)
-
-        print(
-            f"Push sent: {response.success_count}, failed: {response.failure_count}"
+        message = messaging.MulticastMessage(
+            notification=messaging.Notification(title=title, body=body),
+            data={str(k): str(v) for k, v in (data or {}).items()},
+            tokens=tokens,
         )
-
-        # Handle failed tokens
-        for idx, resp in enumerate(response.responses):
-            if not resp.success:
-                failed_token = tokens[idx]
-                DeviceToken.objects.filter(token=failed_token).update(
-                    is_active=False
-                )
-
+        response = messaging.send_each_for_multicast(message)
+        print("✅ FCM sent:", response.success_count, "failed:", response.failure_count)
     except Exception as e:
-        print(f"FCM ERROR: {e}")
-
+        print("❌ Firebase send error:", e)
     

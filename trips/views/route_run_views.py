@@ -3,7 +3,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from trips.utils.notification import send_push_notification
 from trips.models import Notification, RouteRun, RouteRunStop, Trip
 from trips.serializers import RouteRunSerializer
 
@@ -49,9 +49,10 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
 
         today = timezone.localdate()
 
-        route_run = RouteRun.objects.filter(
+        pickup_run = RouteRun.objects.filter(
             driver=user,
             run_date=today,
+            trip_type="PICKUP",
         ).prefetch_related(
             "stops__employee"
         ).select_related(
@@ -60,16 +61,22 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
             "vehicle",
         ).order_by("-created_at").first()
 
-        if not route_run:
-            return Response(
-                {"detail": "No active route run for today."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        drop_run = RouteRun.objects.filter(
+            driver=user,
+            run_date=today,
+            trip_type="DROP",
+        ).prefetch_related(
+            "stops__employee"
+        ).select_related(
+            "route_template",
+            "driver",
+            "vehicle",
+        ).order_by("-created_at").first()
 
-        return Response(
-            self.get_serializer(route_run).data,
-            status=status.HTTP_200_OK,
-        )
+        return Response({
+            "pickup": self.get_serializer(pickup_run).data if pickup_run else None,
+            "drop": self.get_serializer(drop_run).data if drop_run else None,
+        })
 
     def _get_route_employee_ids(self, route_run):
         return list(route_run.stops.values_list("employee_id", flat=True))
@@ -254,6 +261,53 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+
+    @action(detail=True, methods=["get"], url_path="live_status")
+    def live_status(self, request, pk=None):
+        route_run = self.get_object()
+
+        stops = route_run.stops.select_related("employee").order_by("stop_order")
+
+        total_stops = stops.count()
+        completed_stops = stops.filter(is_picked=True).count()
+        pending_stops = total_stops - completed_stops
+
+        current_stop = stops.filter(is_picked=False).first()
+
+        return Response({
+            "route_run_id": route_run.id,
+            "route_name": route_run.route_template.name if route_run.route_template else "",
+            "driver_name": route_run.driver.username if route_run.driver else "",
+            "vehicle_number": route_run.vehicle.vehicle_number if route_run.vehicle else "",
+            "trip_type": route_run.trip_type,
+            "run_date": route_run.run_date,
+            "started_at": route_run.started_at,
+            "completed_at": route_run.completed_at,
+            "total_stops": total_stops,
+            "completed_stops": completed_stops,
+            "pending_stops": pending_stops,
+            "current_stop": {
+                "id": current_stop.id,
+                "employee_name": current_stop.employee.username if current_stop.employee else "",
+                "pickup_location": current_stop.pickup_location,
+                "pickup_latitude": current_stop.pickup_latitude,
+                "pickup_longitude": current_stop.pickup_longitude,
+                "stop_order": current_stop.stop_order,
+            } if current_stop else None,
+            "stops": [
+                {
+                    "id": stop.id,
+                    "employee_name": stop.employee.username if stop.employee else "",
+                    "pickup_location": stop.pickup_location,
+                    "pickup_latitude": stop.pickup_latitude,
+                    "pickup_longitude": stop.pickup_longitude,
+                    "stop_order": stop.stop_order,
+                    "is_picked": stop.is_picked,
+                    "picked_at": stop.picked_at,
+                }
+                for stop in stops
+            ],
+        }, status=status.HTTP_200_OK)
     @action(detail=True, methods=["post"], url_path="complete_run")
     def complete_run(self, request, pk=None):
         route_run = self.get_object()
@@ -329,4 +383,13 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
             user=user,
             title="Route Update",
             message=message,
+        )
+
+        send_push_notification(
+            user=user,
+            title="Route Update 🚕",
+            body=message,
+            data={
+                "type": "ROUTE_UPDATE",
+            },
         )
