@@ -86,10 +86,10 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Trip.objects.filter(
             employee_id__in=stop_employee_ids,
-            pickup_time__date=route_run.run_date,
+            trip_date=route_run.run_date,
             trip_type=route_run.trip_type,
         ).exclude(
-            status__in=[Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED]
+            status__in=Trip.STATUS_COMPLETED,
         )
 
     @action(detail=True, methods=["post"], url_path="start_run")

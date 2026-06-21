@@ -469,10 +469,12 @@ class TripViewSet(ModelViewSet):
                 "route_run",
                 "route_run__route_template",
             )
-            .prefetch_related("route_run__stops__employee")
+            .prefetch_related("route_run_stops_employee")
             .filter(
                 employee=user,
-                status__in=self._active_statuses(),
+                status=Trip.STATUS_STARTED,
+                route_run_started_at_isnull=False,
+                route_run_completed_at_isnull=True,
             )
             .order_by("-created_at")
             .first()
@@ -480,22 +482,29 @@ class TripViewSet(ModelViewSet):
 
         if not trip:
             return Response(
-                {"detail": "No active trip found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if not trip.route_run:
-            return Response(
-                {"detail": "No route run assigned to this trip."},
+                {"detail": "No live route running right now."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         route_run = trip.route_run
+
+        if route_run.started_at is None:
+            return Response(
+                {"detail": "Route has not started yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if route_run.completed_at is not None:
+            return Response(
+                {"detail": "Route already completed."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         stops = list(self._get_ordered_stops(route_run))
 
         if not stops:
             return Response(
-                {"detail": "No stops found in this route."},
+                {"detail": "No stops found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -512,23 +521,36 @@ class TripViewSet(ModelViewSet):
             None,
         )
 
-        my_stop = next((s for s in stops if s.employee_id == user.id), None)
+        my_stop = next(
+            (s for s in stops if s.employee_id == user.id),
+            None,
+        )
+
+        if not current_stop:
+            return Response(
+                {"detail": "Route already completed."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         next_stop = None
-        if current_stop:
-            found_current = False
-            for stop in stops:
-                if stop.id == current_stop.id:
-                    found_current = True
-                    continue
+        found_current = False
 
-                if found_current and not stop.is_picked and not stop.is_no_show:
-                    next_stop = stop
-                    break
+        for stop in stops:
+            if stop.id == current_stop.id:
+                found_current = True
+                continue
+
+            if found_current and not stop.is_picked and not stop.is_no_show:
+                next_stop = stop
+                break
 
         total_stops = len(stops)
-        completed_stops = len([s for s in stops if s.is_picked or s.is_no_show])
-        remaining_stops = len([s for s in stops if not s.is_picked and not s.is_no_show])
+        completed_stops = len(
+            [s for s in stops if s.is_picked or s.is_no_show]
+        )
+        remaining_stops = len(
+            [s for s in stops if not s.is_picked and not s.is_no_show]
+        )
 
         live_stops = []
         cumulative_eta = 0
@@ -540,97 +562,106 @@ class TripViewSet(ModelViewSet):
                 stop_status = "NO_SHOW"
             elif stop.is_picked:
                 stop_status = "COMPLETED"
-            elif current_stop and stop.id == current_stop.id:
+            elif stop.id == current_stop.id:
                 stop_status = "CURRENT"
             elif my_stop and stop.id == my_stop.id:
-                stop_status = "YOUR_TURN" if current_stop and current_stop.id == my_stop.id else "YOUR_STOP"
+                stop_status = "YOUR_STOP"
             elif next_stop and stop.id == next_stop.id:
                 stop_status = "NEXT"
-
-            is_current_stop = bool(current_stop and stop.id == current_stop.id)
-            show_chat_option = bool(is_current_stop and not stop.is_picked and not stop.is_no_show)
 
             distance_km = None
             eta_minutes = None
 
             if driver_latitude is not None and driver_longitude is not None:
-                if current_stop and stop.id == current_stop.id:
-                    if stop.pickup_latitude is not None and stop.pickup_longitude is not None:
+                if stop.id == current_stop.id:
+                    if (
+                        stop.pickup_latitude is not None and
+                        stop.pickup_longitude is not None
+                    ):
                         distance_km = self._calculate_distance_km(
                             driver_latitude,
                             driver_longitude,
                             stop.pickup_latitude,
                             stop.pickup_longitude,
                         )
+
                         eta_minutes = self._estimate_eta_minutes(distance_km)
                         cumulative_eta = eta_minutes or 0
-                elif not stop.is_picked and not stop.is_no_show and current_stop:
+
+                elif not stop.is_picked and not stop.is_no_show:
                     current_index = stops.index(current_stop)
+
                     if index > current_index:
                         cumulative_eta += 7
                         eta_minutes = cumulative_eta
 
-            live_stops.append(
-                {
-                    "id": stop.id,
-                    "stop_order": stop.stop_order,
-                    "display_order": index + 1,
-                    "employee_name": stop.employee.username,
-                    "pickup_location": stop.pickup_location,
-                    "pickup_latitude": stop.pickup_latitude,
-                    "pickup_longitude": stop.pickup_longitude,
-                    "is_current_stop": is_current_stop,
-                    "show_chat_option": show_chat_option,
-                    "is_picked": stop.is_picked,
-                    "is_no_show": stop.is_no_show,
-                    "status": stop_status,
-                    "distance_km": round(distance_km, 2) if distance_km is not None else None,
-                    "distance_text": self._format_distance_text(distance_km),
-                    "eta_minutes": eta_minutes,
-                    "eta_text": self._format_eta_text(eta_minutes),
-                }
-            )
+            live_stops.append({
+                "id": stop.id,
+                "stop_order": stop.stop_order,
+                "display_order": index + 1,
+                "employee_name": stop.employee.username,
+                "pickup_location": stop.pickup_location,
+                "pickup_latitude": stop.pickup_latitude,
+                "pickup_longitude": stop.pickup_longitude,
+                "is_current_stop": stop.id == current_stop.id,
+                "show_chat_option": stop.id == current_stop.id,
+                "is_picked": stop.is_picked,
+                "is_no_show": stop.is_no_show,
+                "status": stop_status,
+                "distance_km": round(distance_km, 2)
+                if distance_km is not None else None,
+                "distance_text": self._format_distance_text(distance_km),
+                "eta_minutes": eta_minutes,
+                "eta_text": self._format_eta_text(eta_minutes),
+            })
 
         current_stop_data = next(
-            (item for item in live_stops if current_stop and item["id"] == current_stop.id),
+            (x for x in live_stops if x["id"] == current_stop.id),
             None,
         )
 
         next_stop_data = next(
-            (item for item in live_stops if next_stop and item["id"] == next_stop.id),
+            (x for x in live_stops if next_stop and x["id"] == next_stop.id),
             None,
         )
 
         my_stop_data = next(
-            (item for item in live_stops if my_stop and item["id"] == my_stop.id),
+            (x for x in live_stops if my_stop and x["id"] == my_stop.id),
             None,
         )
 
-        route_word = "drop" if route_run.trip_type == Trip.TRIP_TYPE_DROP else "pickup"
+        route_word = (
+            "drop"
+            if route_run.trip_type == Trip.TRIP_TYPE_DROP
+            else "pickup"
+        )
 
-        if my_stop and my_stop.is_no_show:
-            status_text = f"You missed your {route_word}."
+        if route_run.completed_at is not None:
+            status_text = "Route completed successfully."
+
         elif my_stop and my_stop.is_picked:
             status_text = (
                 "You have been dropped successfully."
                 if route_run.trip_type == Trip.TRIP_TYPE_DROP
                 else "You have already been picked up. Cab is continuing on route."
             )
+
         elif current_stop and my_stop and current_stop.id == my_stop.id:
+            status_text = f"Cab is currently coming for your {route_word}."
+
+        elif next_stop and my_stop and next_stop.id == my_stop.id:
             status_text = (
-                "Cab is currently coming for your drop."
-                if route_run.trip_type == Trip.TRIP_TYPE_DROP
-                else "Cab is currently coming for your pickup."
+                f"Current {route_word} is "
+                f"{current_stop.employee.username}. You are next."
             )
-        elif current_stop and next_stop and my_stop and next_stop.id == my_stop.id:
-            status_text = f"Current {route_word} is {current_stop.employee.username}. You are next."
-        elif current_stop and my_stop:
+
+        elif my_stop:
             status_text = (
-                f"Current {route_word} is {current_stop.employee.username}. "
+                f"Current {route_word} is "
+                f"{current_stop.employee.username}. "
                 f"Your {route_word} will come later in route."
             )
-        elif route_run.completed_at is not None:
-            status_text = "Route completed successfully."
+
         else:
             status_text = f"Live {route_word} route is active."
 
@@ -638,13 +669,22 @@ class TripViewSet(ModelViewSet):
             {
                 "trip_id": trip.id,
                 "route_run_id": route_run.id,
-                "route_name": route_run.route_template.name
-                if route_run.route_template else f"{route_word.capitalize()} Route",
-                "driver_name": trip.driver.username if trip.driver else None,
-                "vehicle_number": trip.vehicle.vehicle_number if trip.vehicle else None,
+                "route_name": (
+                    route_run.route_template.name
+                    if route_run.route_template
+                    else f"{route_word.capitalize()} Route"
+                ),
+                "driver_name": (
+                    trip.driver.username if trip.driver else None
+                ),
+                "vehicle_number": (
+                    trip.vehicle.vehicle_number if trip.vehicle else None
+                ),
                 "trip_type": trip.trip_type,
                 "trip_status": trip.status,
-                "current_stop_order": current_stop.stop_order if current_stop else None,
+                "current_stop_order": (
+                    current_stop.stop_order if current_stop else None
+                ),
                 "remaining_stops": remaining_stops,
                 "completed_stops": completed_stops,
                 "total_stops": total_stops,
