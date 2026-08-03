@@ -4,8 +4,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from trips.models import RouteRunStop
-from trips.utils.notification import send_push_notification
-
+from trips.services.notification_service import NotificationService
 
 class Command(BaseCommand):
     help = "Auto-send delay warning if driver is waiting more than 10 minutes."
@@ -36,11 +35,15 @@ class Command(BaseCommand):
                 else "pickup"
             )
 
-            send_push_notification(
-                user=stop.employee,
+            NotificationService.send_notification(
+                stop.employee,
+                (
+                    "Your driver has been waiting for more than "
+                    f"10 minutes for your {route_word}. "
+                    "Please respond urgently."
+                ),
                 title="⚠️ Cab Waiting",
-                body=f"Your driver has been waiting for more than 10 minutes for your {route_word}. Please respond urgently.",
-                data={
+                push_data={
                     "type": "WAITING_DELAY",
                     "route_run_id": str(stop.route_run.id),
                     "stop_id": str(stop.id),

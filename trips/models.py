@@ -375,17 +375,48 @@ class RouteRun(models.Model):
         max_length=10,
         choices=Trip.TRIP_TYPE_CHOICES,
     )
+
     run_date = models.DateField()
 
-    started_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    office_deadline_alert_sent = models.BooleanField(
+        default=False,
+    )
+
+    office_15_min_late_alert_sent = models.BooleanField(
+        default=False,
+    )
+
+    start_notifications_sent = models.BooleanField(
+        default=False,
+    )
+
+    heading_to_office_notification_sent = models.BooleanField(
+        default=False,
+    )
+
+    completion_notifications_sent = models.BooleanField(
+        default=False,
+    )
 
     current_stop_order = models.IntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.route_template.name} - {self.trip_type} - {self.run_date}"
-
+        return (
+            f"{self.route_template.name} - "
+            f"{self.trip_type} - "
+            f"{self.run_date}"
+        )
 
 class RouteRunStop(models.Model):
     route_run = models.ForeignKey(
@@ -404,19 +435,102 @@ class RouteRunStop(models.Model):
     pickup_longitude = models.FloatField(null=True, blank=True)
 
     stop_order = models.IntegerField()
+
     is_picked = models.BooleanField(default=False)
     picked_at = models.DateTimeField(null=True, blank=True)
+
     delay_warning_sent = models.BooleanField(default=False)
+
     arrival_time = models.DateTimeField(null=True, blank=True)
     waiting_started_at = models.DateTimeField(null=True, blank=True)
+
+    waiting_minutes = models.IntegerField(default=10)
+    keep_waiting_count = models.IntegerField(default=0)
+
     is_no_show = models.BooleanField(default=False)
     no_show_at = models.DateTimeField(null=True, blank=True)
+
+    five_min_alert_sent = models.BooleanField(default=False)
+    one_km_alert_sent = models.BooleanField(default=False)
+    five_hundred_meter_alert_sent = models.BooleanField(default=False)
+    hundred_meter_alert_sent = models.BooleanField(default=False)
+
+    arrival_notification_sent = models.BooleanField(default=False)
+    pickup_completed_notification_sent = models.BooleanField(default=False)
+    no_show_notification_sent = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["stop_order"]
 
     def __str__(self):
-        return f"{self.employee.username} - Stop {self.stop_order}"
+        return (
+            f"{self.employee.username} - "
+            f"Stop {self.stop_order}"
+        )
+
+class PickupChat(models.Model):
+    route_run = models.ForeignKey(
+        RouteRun,
+        on_delete=models.CASCADE,
+        related_name="pickup_chats",
+    )
+
+    stop = models.ForeignKey(
+        RouteRunStop,
+        on_delete=models.CASCADE,
+        related_name="pickup_chats",
+    )
+
+    driver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="driver_pickup_chats",
+        on_delete=models.CASCADE,
+        limit_choices_to={"role": "DRIVER"},
+    )
+
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="employee_pickup_chats",
+        on_delete=models.CASCADE,
+        limit_choices_to={"role": "EMPLOYEE"},
+    )
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def close_chat(self):
+        self.is_active = False
+        self.closed_at = timezone.now()
+        self.save(update_fields=["is_active", "closed_at"])
+
+    def __str__(self):
+        return f"PickupChat #{self.id} - Stop {self.stop_id}"
+
+
+class PickupChatMessage(models.Model):
+    chat = models.ForeignKey(
+        PickupChat,
+        related_name="messages",
+        on_delete=models.CASCADE,
+    )
+
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+
+    message = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sent_at"]
+
+    def __str__(self):
+        return f"Message #{self.id} - Chat {self.chat_id}"
 
 class DeviceToken(models.Model):
     DEVICE_TYPE_CHOICES = (

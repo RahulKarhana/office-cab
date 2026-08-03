@@ -879,15 +879,24 @@ def repeat_all_routes_action(request):
         return redirect("/admin-web/routes/")
 
     routes = RouteTemplate.objects.all().order_by("id")
+
     if not routes.exists():
         messages.warning(request, "No saved routes found to repeat.")
         return redirect("/admin-web/routes/")
 
     success_count = 0
     fail_count = 0
+    weekend_skip_count = 0
 
     current_date = start_date
+
     while current_date <= end_date:
+        # Saturday = 5, Sunday = 6
+        if current_date.weekday() in [5, 6]:
+            weekend_skip_count += 1
+            current_date += timedelta(days=1)
+            continue
+
         for route in routes:
             success, _, _ = _call_same_server_api(
                 request,
@@ -899,18 +908,31 @@ def repeat_all_routes_action(request):
                 },
                 method="post",
             )
+
             if success:
                 success_count += 1
             else:
                 fail_count += 1
+
         current_date += timedelta(days=1)
 
     if success_count:
-        messages.success(request, f"{success_count} routes repeated successfully.")
+        messages.success(
+            request,
+            f"{success_count} routes repeated successfully. Weekend skipped: {weekend_skip_count} day(s).",
+        )
+
     if fail_count:
-        messages.warning(request, f"{fail_count} routes skipped or failed.")
+        messages.warning(
+            request,
+            f"{fail_count} routes skipped or failed.",
+        )
+
     if not success_count and not fail_count:
-        messages.info(request, "No routes were repeated.")
+        messages.info(
+            request,
+            f"No routes were repeated. Weekend skipped: {weekend_skip_count} day(s).",
+        )
 
     return redirect("/admin-web/routes/")
 

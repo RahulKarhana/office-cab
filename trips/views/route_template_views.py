@@ -1,6 +1,6 @@
 from datetime import datetime, time
 import traceback
-
+from trips.models import EmployeeLeave
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -18,6 +18,7 @@ from trips.models import (
     RouteRunStop,
     Trip,
     Vehicle,
+    EmployeeLeave,
 )
 from trips.serializers import (
     RouteTemplateSerializer,
@@ -216,8 +217,18 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             )
 
             created_count = 0
+            skipped_leave_count = 0
 
             for stop in route.stops.all():
+                is_on_leave = EmployeeLeave.objects.filter(
+                    employee=stop.employee,
+                    leave_date=pickup_datetime.date(),
+                ).exists()
+
+                if is_on_leave:
+                    skipped_leave_count += 1
+                    continue
+
                 RouteRunStop.objects.create(
                     route_run=route_run,
                     employee=stop.employee,
@@ -245,8 +256,11 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
                 created_count += 1
 
-            return route_run, created_count
+            if created_count == 0:
+                route_run.delete()
 
+            return route_run if created_count else None, created_count, skipped_leave_count
+        
     def _should_send_assignment_notification_now(self, route_run):
         now = timezone.localtime()
         today = timezone.localdate()
@@ -270,6 +284,15 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
         )
 
         for stop in route.stops.all():
+
+            is_on_leave = EmployeeLeave.objects.filter(
+                employee=stop.employee,
+                leave_date=route_run.run_date,
+            ).exists()
+
+            if is_on_leave:
+                continue
+
             send_push_notification(
                 stop.employee,
                 "Cab Assigned 🚖",
@@ -281,7 +304,6 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                     "route_run_id": str(route_run.id),
                 },
             )
-
         Trip.objects.filter(route_run=route_run).update(notification_sent=True)
 
     def _handle_assignment_notification(self, route, route_run, trip_type):
@@ -326,11 +348,21 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             if duplicate_response:
                 return duplicate_response
 
-            route_run, created_count = self._create_route_run_and_trips(
+            route_run, created_count, skipped_leave_count = self._create_route_run_and_trips(
                 route,
                 pickup_datetime,
                 trip_type,
             )
+
+            if not route_run:
+                return Response(
+                    {
+                        "error": "No trips created. All employees may be on leave for selected date.",
+                        "created_count": created_count,
+                        "skipped_leave_count": skipped_leave_count,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             notification_sent = self._handle_assignment_notification(
                 route,
@@ -340,7 +372,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
             return Response(
                 {
-                    "message": f"{created_count} trip(s) created successfully.",
+                    "message": f"{created_count} trip(s) created successfully. {skipped_leave_count} employee(s) skipped due to leave.",
                     "route_run_id": route_run.id,
                     "notification_sent": notification_sent,
                     "notification_note": (

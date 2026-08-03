@@ -12,6 +12,7 @@ from trips.emergency_views import EmergencyAlertViewSet
 from trips.views.device_token_views import DeviceTokenViewSet
 from trips.views.analytics_views import analytics_dashboard
 from trips.views.route_run_views import RouteRunViewSet
+from trips.views.chat_views import PickupChatViewSet
 
 router = DefaultRouter()
 
@@ -25,7 +26,8 @@ router.register(r"route-stops", RouteStopViewSet, basename="route-stops")
 router.register(r"locations", DriverLocationViewSet, basename="location")
 router.register(r"cancellations", TripCancellationViewSet, basename="cancellations")
 router.register(r"device-tokens", DeviceTokenViewSet, basename="device-token")
-router.register(r"route-runs", RouteRunViewSet, basename="route-runs")
+router.register(r"route-runs", RouteRunViewSet, basename="route-runs")  
+router.register(r"pickup-chats", PickupChatViewSet, basename="pickup-chat")
 
 
 urlpatterns = router.urls + [
