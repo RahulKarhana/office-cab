@@ -43,9 +43,7 @@ def create_render_admin(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        # Keep the dependency Django generated here.
-        # Example:
-        # ("accounts", "0003_previous_migration"),
+        ("accounts", "0003_user_is_female"),
     ]
 
     operations = [
