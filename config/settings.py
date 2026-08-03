@@ -186,3 +186,6 @@ if os.path.exists(FIREBASE_KEY_PATH) and not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 else:
     print("Firebase key not found. Skipping Firebase initialization.")
+
+
+CREATE_ADMIN = "True"
