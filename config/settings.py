@@ -170,22 +170,26 @@ CSRF_TRUSTED_ORIGINS = [
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "AIzaSyDc5T_2gOtMTmo_an3pFq-drBNt8Mfkn48")
 
 
-import os
 import firebase_admin
 from firebase_admin import credentials
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 FIREBASE_KEY_PATH = os.environ.get(
-    "FIREBASE_KEY_PATH",
-    os.path.join(BASE_DIR, "config", "firebase_key.json")
+    "FIREBASE_CREDENTIALS_PATH",
+    os.path.join(BASE_DIR, "config", "firebase_key.json"),
 )
 
-if os.path.exists(FIREBASE_KEY_PATH) and not firebase_admin._apps:
-    cred = credentials.Certificate(FIREBASE_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-else:
-    print("Firebase key not found. Skipping Firebase initialization.")
+print("🔥 Firebase credential path:", FIREBASE_KEY_PATH)
+print("🔥 Firebase key exists:", os.path.exists(FIREBASE_KEY_PATH))
 
-
+if not firebase_admin._apps:
+    if os.path.exists(FIREBASE_KEY_PATH):
+        try:
+            cred = credentials.Certificate(FIREBASE_KEY_PATH)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin initialized successfully")
+        except Exception as e:
+            print("❌ Firebase initialization error:", e)
+    else:
+        print("❌ Firebase key not found:", FIREBASE_KEY_PATH)
+        
 CREATE_ADMIN = "True"
