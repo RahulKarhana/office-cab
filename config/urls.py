@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
+from trips.views.trip_views import test_fcm
 
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -24,7 +25,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
+    path("test-fcm/", test_fcm, name="test-fcm"),
     # JWT AUTH
     path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

@@ -1,10 +1,11 @@
 from datetime import datetime, time
-
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Case, When, Value, IntegerField
 from django.utils import timezone
-
+from django.http import JsonResponse
+from accounts.models import User
+from trips.utils.notification import send_push_notification
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -1241,3 +1242,31 @@ class TripViewSet(ModelViewSet):
             qs = Trip.objects.none()
 
         return Response(self.get_serializer(qs, many=True).data, status=status.HTTP_200_OK)
+
+def test_fcm(request):
+    try:
+        user = User.objects.get(username="emp4")
+
+        send_push_notification(
+            user=user,
+            title="FCM Test Successful",
+            body="Your Office Cab push notification is working! 🎉",
+            data={"type": "test"},
+        )
+
+        return JsonResponse({
+            "success": True,
+            "message": "FCM test attempted for emp4"
+        })
+
+    except User.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "emp4 user not found"
+        }, status=404)
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": str(e)
+        }, status=500)
