@@ -23,6 +23,7 @@ on:
         options:
           - cab_ready
           - waiting
+          - debug
 
 jobs:
   send-drop-notification:
