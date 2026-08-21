@@ -407,7 +407,16 @@ class RouteRun(models.Model):
     completion_notifications_sent = models.BooleanField(
         default=False,
     )
+    last_two_drop_alert_sent = models.BooleanField(
+        default=False,
+    )
+    drop_cab_ready_notification_sent = models.BooleanField(
+        default=False,
+    )
 
+    drop_waiting_notification_sent = models.BooleanField(
+        default=False,
+    )
     current_stop_order = models.IntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -449,7 +458,8 @@ class RouteRunStop(models.Model):
 
     is_no_show = models.BooleanField(default=False)
     no_show_at = models.DateTimeField(null=True, blank=True)
-
+    is_boarded = models.BooleanField(default=False)
+    boarded_at = models.DateTimeField(null=True, blank=True)
     five_min_alert_sent = models.BooleanField(default=False)
     one_km_alert_sent = models.BooleanField(default=False)
     five_hundred_meter_alert_sent = models.BooleanField(default=False)

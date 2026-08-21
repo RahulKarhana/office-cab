@@ -13,6 +13,7 @@ from trips.views.device_token_views import DeviceTokenViewSet
 from trips.views.analytics_views import analytics_dashboard
 from trips.views.route_run_views import RouteRunViewSet
 from trips.views.chat_views import PickupChatViewSet
+from trips.views.drop_schedule_views import trigger_drop_schedule
 
 router = DefaultRouter()
 
@@ -37,5 +38,10 @@ urlpatterns = router.urls + [
     "analytics/dashboard/",
     analytics_dashboard,
     name="analytics-dashboard",
-),
+),  
+    path(
+        "drop-schedule/trigger/",
+        trigger_drop_schedule,
+        name="trigger-drop-schedule",
+    ),
 ]

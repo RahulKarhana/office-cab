@@ -24,10 +24,20 @@ class RouteService:
 
     @staticmethod
     def get_pending_stops(route_run):
-        return RouteService.get_ordered_stops(route_run).filter(
+        stops = RouteService.get_ordered_stops(route_run).filter(
             is_picked=False,
             is_no_show=False,
         )
+
+        # DROP:
+        # Only employees who actually boarded the cab at office
+        # can become home-drop stops.
+        if route_run.trip_type == Trip.TRIP_TYPE_DROP:
+            stops = stops.filter(
+                is_boarded=True,
+            )
+
+        return stops
 
     @staticmethod
     def get_current_stop(route_run):
@@ -308,17 +318,16 @@ class RouteService:
             NotificationService.send_notification(
                 current_stop.employee,
                 (
-                    "Your pickup has been completed successfully.\n"
-                    f"Driver: {driver_name}\n"
-                    f"Vehicle: {vehicle_number}"
+                    "Your drop has been completed successfully.\n"
+                    "Please submit your trip review."
                 ),
-                title="Pickup Completed ✅",
+                title="Drop Completed ✅",
                 push_data={
-                    "type": "PICKUP_COMPLETED",
+                    "type": "DROP_COMPLETED_REVIEW",
                     "route_run_id": str(route_run.id),
                     "stop_id": str(current_stop.id),
                     "trip_type": route_run.trip_type,
-                    "screen": "active_trip",
+                    "screen": "review",
                 },
             )
 
@@ -360,9 +369,8 @@ class RouteService:
 
     @staticmethod
     def complete_route_if_finished(route_run):
-        remaining_stops = route_run.stops.filter(
-            is_picked=False,
-            is_no_show=False,
+        remaining_stops = RouteService.get_pending_stops(
+            route_run
         ).count()
 
         ready_to_complete = remaining_stops == 0
@@ -744,23 +752,29 @@ class RouteService:
         driver_name = RouteService._driver_name(route_run)
         vehicle_number = RouteService._vehicle_number(route_run)
 
-        for trip in trips:
-            NotificationService.send_notification(
-                trip.employee,
-                (
-                    f"Today's {route_run.trip_type.lower()} "
-                    "trip has been completed successfully.\n"
-                    "Please submit your trip review."
-                ),
-                title="Trip Completed ✅",
-                push_data={
-                    "type": "TRIP_COMPLETED",
-                    "trip_id": str(trip.id),
-                    "route_run_id": str(route_run.id),
-                    "trip_type": route_run.trip_type,
-                    "screen": "review",
-                },
-            )
+        # PICKUP:
+        # Keep existing final Trip Completed / Review notification.
+        #
+        # DROP:
+        # Do not send this again because each employee already receives
+        # Drop Completed + Review when their individual drop is completed.
+        if route_run.trip_type == Trip.TRIP_TYPE_PICKUP:
+            for trip in trips:
+                NotificationService.send_notification(
+                    trip.employee,
+                    (
+                        "Today's pickup trip has been completed successfully.\n"
+                        "Please submit your trip review."
+                    ),
+                    title="Trip Completed ✅",
+                    push_data={
+                        "type": "TRIP_COMPLETED",
+                        "trip_id": str(trip.id),
+                        "route_run_id": str(route_run.id),
+                        "trip_type": route_run.trip_type,
+                        "screen": "review",
+                    },
+                )
 
         late_minutes = RouteService.calculate_late_minutes(
             route_run,
