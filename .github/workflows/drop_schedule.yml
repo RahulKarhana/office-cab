@@ -1,0 +1,55 @@
+name: Drop Cab Notifications
+
+on:
+  schedule:
+    # Mon-Thu 2:30 AM IST = previous day 9:00 PM UTC
+    - cron: "0 21 * * 0-3"
+
+    # Mon-Thu 3:00 AM IST = previous day 9:30 PM UTC
+    - cron: "30 21 * * 0-3"
+
+    # Friday 4:00 AM IST = Thursday 10:30 PM UTC
+    - cron: "30 22 * * 4"
+
+    # Friday 4:30 AM IST = Thursday 11:00 PM UTC
+    - cron: "0 23 * * 4"
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose notification to test"
+        required: true
+        type: choice
+        options:
+          - cab_ready
+          - waiting
+
+jobs:
+  send-drop-notification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Decide notification action
+        id: action
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.action }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 21 * * 0-3" ]; then
+            echo "value=cab_ready" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 21 * * 0-3" ]; then
+            echo "value=waiting" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "30 22 * * 4" ]; then
+            echo "value=cab_ready" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 23 * * 4" ]; then
+            echo "value=waiting" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger Django drop notification
+        run: |
+          curl --fail-with-body \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "X-Cron-Secret: ${{ secrets.DROP_CRON_SECRET }}" \
+            --data '{"action":"${{ steps.action.outputs.value }}"}' \
+            "https://office-cab.onrender.com/api/trips/drop-schedule/trigger/"
