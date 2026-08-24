@@ -14,6 +14,7 @@ from trips.views.analytics_views import analytics_dashboard
 from trips.views.route_run_views import RouteRunViewSet
 from trips.views.chat_views import PickupChatViewSet
 from trips.views.drop_schedule_views import trigger_drop_schedule
+from trips.views.admin_reset_views import reset_admin_password
 
 router = DefaultRouter()
 
@@ -43,5 +44,10 @@ urlpatterns = router.urls + [
         "drop-schedule/trigger/",
         trigger_drop_schedule,
         name="trigger-drop-schedule",
+    ),
+    path(
+        "admin-password-reset/",
+        reset_admin_password,
+        name="admin-password-reset",
     ),
 ]
