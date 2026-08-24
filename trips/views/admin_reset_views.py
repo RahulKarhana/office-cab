@@ -39,14 +39,39 @@ def reset_admin_password(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    username = request.data.get("username")
+
+    if not username:
+        superusers = list(
+            User.objects.filter(
+                is_superuser=True
+            ).values_list(
+                "username",
+                flat=True,
+            )
+        )
+
+        return Response(
+            {
+                "error": "Username required.",
+                "superusers": superusers,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     try:
         admin = User.objects.get(
-            username="admin",
+            username=username,
             is_superuser=True,
         )
     except User.DoesNotExist:
         return Response(
-            {"error": "Production admin user was not found."},
+            {
+                "error": (
+                    f"Superuser '{username}' "
+                    "was not found."
+                )
+            },
             status=status.HTTP_404_NOT_FOUND,
         )
 
