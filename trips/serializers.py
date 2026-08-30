@@ -65,7 +65,10 @@ def format_distance_text(distance_km):
 
 
 class RouteRunStopSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source="employee.username", read_only=True)
+    employee_name = serializers.CharField(
+        source="employee.username",
+        read_only=True,
+    )
 
     class Meta:
         model = RouteRunStop
@@ -77,8 +80,18 @@ class RouteRunStopSerializer(serializers.ModelSerializer):
             "pickup_latitude",
             "pickup_longitude",
             "stop_order",
+
+            # PICKUP STATUS
             "is_picked",
             "picked_at",
+
+            # DROP BOARDING STATUS
+            "is_boarded",
+            "boarded_at",
+
+            # NO SHOW STATUS
+            "is_no_show",
+            "no_show_at",
         ]
 
 
