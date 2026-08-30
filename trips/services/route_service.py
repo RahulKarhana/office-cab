@@ -315,21 +315,10 @@ class RouteService:
         vehicle_number = RouteService._vehicle_number(route_run)
 
         if route_run.trip_type == Trip.TRIP_TYPE_PICKUP:
-            NotificationService.send_notification(
-                current_stop.employee,
-                (
-                    "Your drop has been completed successfully.\n"
-                    "Please submit your trip review."
-                ),
-                title="Drop Completed ✅",
-                push_data={
-                    "type": "DROP_COMPLETED_REVIEW",
-                    "route_run_id": str(route_run.id),
-                    "stop_id": str(current_stop.id),
-                    "trip_type": route_run.trip_type,
-                    "screen": "review",
-                },
-            )
+
+            # Pickup stop completed.
+            # Do NOT send review notification here.
+            # Review is available only after the entire route/trip completes.
 
             next_stop = RouteService.get_current_stop(route_run)
 
@@ -344,16 +333,24 @@ class RouteService:
 
             return next_stop
 
+        # ------------------------------------------------------------
+        # DROP STOP COMPLETED
+        # ------------------------------------------------------------
+        # Employee has reached home, but the complete cab route may
+        # still be running for other employees.
+        # Therefore DO NOT ask for a review here.
+        # ------------------------------------------------------------
+
         NotificationService.send_notification(
             current_stop.employee,
             (
-                "Your drop has been completed successfully.\n"
+                "You have reached your drop location successfully.\n"
                 f"Driver: {driver_name}\n"
                 f"Vehicle: {vehicle_number}"
             ),
             title="Drop Completed ✅",
             push_data={
-                "type": "DROP_COMPLETED",
+                "type": "DROP_STOP_COMPLETED",
                 "route_run_id": str(route_run.id),
                 "stop_id": str(current_stop.id),
                 "trip_type": route_run.trip_type,
@@ -758,23 +755,37 @@ class RouteService:
         # DROP:
         # Do not send this again because each employee already receives
         # Drop Completed + Review when their individual drop is completed.
-        if route_run.trip_type == Trip.TRIP_TYPE_PICKUP:
-            for trip in trips:
-                NotificationService.send_notification(
-                    trip.employee,
-                    (
-                        "Today's pickup trip has been completed successfully.\n"
-                        "Please submit your trip review."
-                    ),
-                    title="Trip Completed ✅",
-                    push_data={
-                        "type": "TRIP_COMPLETED",
-                        "trip_id": str(trip.id),
-                        "route_run_id": str(route_run.id),
-                        "trip_type": route_run.trip_type,
-                        "screen": "review",
-                    },
+                # ------------------------------------------------------------
+        # FINAL TRIP COMPLETION
+        # Review becomes available ONLY after the complete route ends.
+        # Works for both PICKUP and DROP.
+        # ------------------------------------------------------------
+
+        for trip in trips:
+
+            if route_run.trip_type == Trip.TRIP_TYPE_PICKUP:
+                message = (
+                    "Today's pickup trip has been completed successfully.\n"
+                    "Please submit your trip review."
                 )
+            else:
+                message = (
+                    "Today's drop trip has been completed successfully.\n"
+                    "Please submit your trip review."
+                )
+
+            NotificationService.send_notification(
+                trip.employee,
+                message,
+                title="Trip Completed ✅",
+                push_data={
+                    "type": "TRIP_COMPLETED",
+                    "trip_id": str(trip.id),
+                    "route_run_id": str(route_run.id),
+                    "trip_type": route_run.trip_type,
+                    "screen": "review",
+                },
+            )
 
         late_minutes = RouteService.calculate_late_minutes(
             route_run,
