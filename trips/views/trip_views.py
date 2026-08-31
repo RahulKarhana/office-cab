@@ -426,10 +426,7 @@ class TripViewSet(ModelViewSet):
                     )
                 )
 
-                live_data["display_state"] = (
-                    "PICKUP_STARTED"
-                )
-
+                live_data["display_state"] = "PICKUP_STARTED"
                 live_data["show_live_route"] = True
 
                 live_data["pickup_assigned"] = True
@@ -441,11 +438,139 @@ class TripViewSet(ModelViewSet):
                     pickup_trip.pickup_time
                 )
 
-                return Response(
-                    live_data,
-                    status=status.HTTP_200_OK,
+                # =====================================================
+                # EMPLOYEE CURRENT STOP ARRIVAL / WAITING / CHAT STATE
+                # =====================================================
+
+                # =====================================================
+                # EMPLOYEE CURRENT STOP ARRIVAL / WAITING / CHAT STATE
+                # =====================================================
+
+                driver_has_arrived = False
+                chat_enabled = False
+                chat_id = None
+                chat = None
+
+                waiting_started_at = None
+                countdown_seconds = 0
+
+                unread_chat_count = 0
+
+
+                if my_stop:
+
+                    current_stop = RouteService.get_current_stop(
+                        pickup_run
+                    )
+
+                    is_my_current_stop = (
+                        current_stop is not None
+                        and current_stop.id == my_stop.id
+                    )
+
+                    # -------------------------------------------------
+                    # DRIVER HAS ARRIVED FOR THIS EMPLOYEE
+                    # -------------------------------------------------
+
+                    if (
+                        is_my_current_stop
+                        and my_stop.arrival_time is not None
+                        and not my_stop.is_picked
+                        and not my_stop.is_no_show
+                    ):
+
+                        driver_has_arrived = True
+
+                        waiting_started_at = (
+                            my_stop.waiting_started_at
+                            or my_stop.arrival_time
+                        )
+
+                        waiting_minutes = (
+                            getattr(
+                                my_stop,
+                                "waiting_minutes",
+                                10,
+                            )
+                            or 10
+                        )
+
+                        countdown_seconds = (
+                            waiting_minutes * 60
+                        )
+
+                        # ---------------------------------------------
+                        # CREATE / GET PICKUP CHAT
+                        # ---------------------------------------------
+
+                        chat = ChatService.ensure_chat_for_stop(
+                            pickup_run,
+                            my_stop,
+                        )
+
+                        if chat:
+
+                            chat_id = chat.id
+
+                            # Chat remains enabled only while active.
+                            chat_enabled = chat.is_active
+
+                            # -----------------------------------------
+                            # UNREAD DRIVER MESSAGES FOR EMPLOYEE
+                            # -----------------------------------------
+
+                            unread_chat_count = (
+                                ChatService.get_unread_count(
+                                    chat,
+                                    user,
+                                )
+                            )
+
+                        # ---------------------------------------------
+                        # EMPLOYEE DISPLAY STATE
+                        # ---------------------------------------------
+
+                        live_data["display_state"] = (
+                            "DRIVER_ARRIVED"
+                        )
+
+                        live_data["your_status"] = (
+                            "DRIVER_ARRIVED"
+                        )
+
+                        live_data["status_text"] = (
+                            "Your cab has reached your pickup "
+                            "location. Please come to the cab."
+                        )
+
+
+                # =====================================================
+                # VALUES REQUIRED BY FLUTTER
+                # =====================================================
+
+                live_data["driver_has_arrived"] = (
+                    driver_has_arrived
                 )
 
+                live_data["chat_enabled"] = (
+                    chat_enabled
+                )
+
+                live_data["chat_id"] = (
+                    chat_id
+                )
+
+                live_data["unread_chat_count"] = (
+                    unread_chat_count
+                )
+
+                live_data["waiting_started_at"] = (
+                    waiting_started_at
+                )
+
+                live_data["countdown_seconds"] = (
+                    countdown_seconds
+                )
             # -----------------------------------------------------
             # PICKUP TRIP EXISTS BUT ROUTE HAS NOT YET BEEN CREATED
             # -----------------------------------------------------

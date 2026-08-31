@@ -508,6 +508,16 @@ class PickupChat(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
+    driver_last_read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    # NEW
+    employee_last_read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ["-created_at"]
