@@ -154,74 +154,527 @@ class TripViewSet(ModelViewSet):
 
         return Response(self.get_serializer(trip).data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["get"], url_path="my-live-pickup-status")
+    @action(
+    detail=False,
+    methods=["get"],
+    url_path="my-live-pickup-status",
+)
     def my_live_pickup_status(self, request):
         user = request.user
 
         if user.role != "EMPLOYEE":
             return Response(
-                {"error": "Only employee can view live route status."},
+                {
+                    "error": (
+                        "Only employee can view "
+                        "live route status."
+                    )
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        trip = (
-            Trip.objects.select_related(
+        today = timezone.localdate()
+
+        # =========================================================
+        # GET TODAY'S PICKUP + DROP
+        # =========================================================
+
+        base_qs = (
+            Trip.objects
+            .select_related(
                 "employee",
                 "driver",
                 "vehicle",
                 "route_run",
                 "route_run__route_template",
             )
-            .prefetch_related("route_run__stops__employee")
+            .prefetch_related(
+                "route_run__stops__employee",
+            )
             .filter(
                 employee=user,
-                status=Trip.STATUS_STARTED,
-                route_run__started_at__isnull=False,
-                route_run__completed_at__isnull=True,
+                trip_date=today,
+            )
+            .exclude(
+                status=Trip.STATUS_CANCELLED,
+            )
+        )
+
+        pickup_trip = (
+            base_qs
+            .filter(
+                trip_type=Trip.TRIP_TYPE_PICKUP,
             )
             .order_by("-created_at")
             .first()
         )
 
-        if not trip:
-            return Response(
-                {"detail": "No live route running right now."},
-                status=status.HTTP_404_NOT_FOUND,
+        drop_trip = (
+            base_qs
+            .filter(
+                trip_type=Trip.TRIP_TYPE_DROP,
             )
-
-        route_run = trip.route_run
-
-        if not route_run:
-            return Response(
-                {"detail": "No route found for this trip."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if route_run.started_at is None:
-            return Response(
-                {"detail": "Route has not started yet."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if route_run.completed_at is not None:
-            return Response(
-                {"detail": "Route already completed."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        if not RouteService.get_ordered_stops(route_run).exists():
-            return Response(
-                {"detail": "No stops found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        data = ETAService.build_employee_live_pickup_status(
-            trip,
-            user,
+            .order_by("-created_at")
+            .first()
         )
 
-        return Response(data, status=status.HTTP_200_OK)
+        if not pickup_trip and not drop_trip:
+            return Response(
+                {
+                    "detail": (
+                        "No pickup or drop cab "
+                        "assigned for today."
+                    )
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
+        # =========================================================
+        # SMALL RESPONSE HELPER
+        # =========================================================
+
+        def basic_data(
+            trip,
+            display_state,
+            status_text,
+            show_live_route=False,
+        ):
+            route_run = trip.route_run
+
+            route_name = None
+            driver_name = None
+            vehicle_number = None
+            route_run_id = None
+
+            if route_run:
+                route_run_id = route_run.id
+
+                if route_run.route_template:
+                    route_name = (
+                        route_run.route_template.name
+                    )
+
+                if route_run.driver:
+                    driver_name = (
+                        route_run.driver.username
+                    )
+
+                if route_run.vehicle:
+                    vehicle_number = (
+                        route_run.vehicle.vehicle_number
+                    )
+
+            if not route_name:
+                route_name = (
+                    "Drop Route"
+                    if trip.trip_type
+                    == Trip.TRIP_TYPE_DROP
+                    else "Pickup Route"
+                )
+
+            return {
+                "route_run_id": route_run_id,
+                "trip_id": trip.id,
+                "trip_type": trip.trip_type,
+                "trip_status": trip.status,
+
+                "route_name": route_name,
+                "driver_name": driver_name,
+                "vehicle_number": vehicle_number,
+
+                "pickup_time": trip.pickup_time,
+
+                # IMPORTANT FOR FLUTTER
+                "display_state": display_state,
+                "status_text": status_text,
+                "show_live_route": show_live_route,
+
+                # Default live values
+                "your_stop_order": None,
+                "current_stop_order": None,
+                "stops_before_you": 0,
+
+                "your_status": display_state,
+
+                "your_eta_minutes": None,
+                "your_eta_text": None,
+
+                "your_distance_km": None,
+                "your_distance_text": None,
+
+                "current_stop_name": None,
+                "next_stop_name": None,
+
+                "driver_latitude": None,
+                "driver_longitude": None,
+                "last_updated": None,
+
+                # Assignment information
+                "pickup_assigned": (
+                    pickup_trip is not None
+                ),
+                "drop_assigned": (
+                    drop_trip is not None
+                ),
+            }
+
+        # =========================================================
+        # 1. PICKUP HAS PRIORITY UNTIL PICKUP ROUTE COMPLETES
+        # =========================================================
+
+        if pickup_trip:
+            pickup_run = pickup_trip.route_run
+
+            # -----------------------------------------------------
+            # PICKUP ASSIGNED, CAB NOT STARTED
+            # -----------------------------------------------------
+
+            if (
+                pickup_run
+                and pickup_run.started_at is None
+                and pickup_run.completed_at is None
+            ):
+                if drop_trip:
+                    message = (
+                        "Pickup and drop cabs are assigned "
+                        "for today. Please wait for your "
+                        "pickup cab to start."
+                    )
+                else:
+                    message = (
+                        "Your pickup cab has been assigned. "
+                        "Please wait for the cab to start."
+                    )
+
+                return Response(
+                    basic_data(
+                        pickup_trip,
+                        "PICKUP_ASSIGNED",
+                        message,
+                        False,
+                    ),
+                    status=status.HTTP_200_OK,
+                )
+
+            # -----------------------------------------------------
+            # PICKUP ROUTE RUNNING
+            # -----------------------------------------------------
+
+            if (
+                pickup_run
+                and pickup_run.started_at is not None
+                and pickup_run.completed_at is None
+            ):
+                my_stop = (
+                    pickup_run.stops
+                    .filter(employee=user)
+                    .first()
+                )
+
+                # Employee already picked up,
+                # but cab is still collecting others.
+                if my_stop and my_stop.is_picked:
+                    data = basic_data(
+                        pickup_trip,
+                        "PICKUP_COMPLETED_FOR_EMPLOYEE",
+                        (
+                            "You have already been picked up. "
+                            "Cab is continuing on route."
+                        ),
+                        False,
+                    )
+
+                    data["your_stop_order"] = (
+                        my_stop.stop_order
+                    )
+
+                    data["your_status"] = (
+                        "PICKED_UP"
+                    )
+
+                    return Response(
+                        data,
+                        status=status.HTTP_200_OK,
+                    )
+
+                # Employee marked no-show.
+                if my_stop and my_stop.is_no_show:
+                    data = basic_data(
+                        pickup_trip,
+                        "PICKUP_NO_SHOW",
+                        (
+                            "You have been marked as No Show "
+                            "for today's pickup."
+                        ),
+                        False,
+                    )
+
+                    data["your_status"] = "NO_SHOW"
+
+                    return Response(
+                        data,
+                        status=status.HTTP_200_OK,
+                    )
+
+                # Cab actively running:
+                # ETA, current stop, next stop etc.
+                live_data = (
+                    ETAService
+                    .build_employee_live_pickup_status(
+                        pickup_trip,
+                        user,
+                    )
+                )
+
+                live_data["display_state"] = (
+                    "PICKUP_STARTED"
+                )
+
+                live_data["show_live_route"] = True
+
+                live_data["pickup_assigned"] = True
+                live_data["drop_assigned"] = (
+                    drop_trip is not None
+                )
+
+                live_data["pickup_time"] = (
+                    pickup_trip.pickup_time
+                )
+
+                return Response(
+                    live_data,
+                    status=status.HTTP_200_OK,
+                )
+
+            # -----------------------------------------------------
+            # PICKUP TRIP EXISTS BUT ROUTE HAS NOT YET BEEN CREATED
+            # -----------------------------------------------------
+
+            if pickup_run is None:
+                return Response(
+                    basic_data(
+                        pickup_trip,
+                        "PICKUP_ASSIGNED",
+                        (
+                            "Your pickup cab has been assigned. "
+                            "Please wait for the cab to start."
+                        ),
+                        False,
+                    ),
+                    status=status.HTTP_200_OK,
+                )
+
+        # =========================================================
+        # 2. PICKUP FINISHED -> NOW SHOW DROP STATUS
+        # =========================================================
+
+        if drop_trip:
+            drop_run = drop_trip.route_run
+
+            # Route may not yet be generated.
+            if drop_run is None:
+                return Response(
+                    basic_data(
+                        drop_trip,
+                        "DROP_ASSIGNED",
+                        (
+                            "Your cab has been assigned for drop. "
+                            "Please reach the cab station on time."
+                        ),
+                        False,
+                    ),
+                    status=status.HTTP_200_OK,
+                )
+
+            my_drop_stop = (
+                drop_run.stops
+                .filter(employee=user)
+                .first()
+            )
+
+            # -----------------------------------------------------
+            # DROP NOT STARTED
+            # -----------------------------------------------------
+
+            if (
+                drop_run.started_at is None
+                and drop_run.completed_at is None
+            ):
+
+                # NO SHOW
+                if (
+                    my_drop_stop
+                    and my_drop_stop.is_no_show
+                ):
+                    data = basic_data(
+                        drop_trip,
+                        "DROP_NO_SHOW",
+                        (
+                            "You have been marked as No Show "
+                            "for today's drop trip."
+                        ),
+                        False,
+                    )
+
+                    data["your_status"] = "NO_SHOW"
+
+                    return Response(
+                        data,
+                        status=status.HTTP_200_OK,
+                    )
+
+                # EMPLOYEE BOARDED
+                if (
+                    my_drop_stop
+                    and my_drop_stop.is_boarded
+                ):
+                    data = basic_data(
+                        drop_trip,
+                        "DROP_BOARDED",
+                        (
+                            "Your drop boarding is completed. "
+                            "Please wait for the cab to start."
+                        ),
+                        False,
+                    )
+
+                    data["your_status"] = "BOARDED"
+
+                    return Response(
+                        data,
+                        status=status.HTTP_200_OK,
+                    )
+
+                # WAITING FCM PERIOD HAS STARTED
+                if getattr(
+                    drop_run,
+                    "drop_waiting_notification_sent",
+                    False,
+                ):
+                    data = basic_data(
+                        drop_trip,
+                        "DROP_WAITING",
+                        (
+                            "Your cab is waiting for you. "
+                            "Please reach the cab "
+                            "as soon as possible."
+                        ),
+                        False,
+                    )
+
+                    data["your_status"] = "WAITING"
+
+                    return Response(
+                        data,
+                        status=status.HTTP_200_OK,
+                    )
+
+                # NORMAL DROP ASSIGNMENT
+                return Response(
+                    basic_data(
+                        drop_trip,
+                        "DROP_ASSIGNED",
+                        (
+                            "Your cab has been assigned for drop. "
+                            "Please reach the cab station on time."
+                        ),
+                        False,
+                    ),
+                    status=status.HTTP_200_OK,
+                )
+
+            # -----------------------------------------------------
+            # DROP ROUTE RUNNING
+            # -----------------------------------------------------
+
+            if (
+                drop_run.started_at is not None
+                and drop_run.completed_at is None
+            ):
+
+                # Employee already dropped.
+                if (
+                    my_drop_stop
+                    and my_drop_stop.is_picked
+                ):
+                    data = basic_data(
+                        drop_trip,
+                        "DROP_COMPLETED_FOR_EMPLOYEE",
+                        (
+                            "You have reached your drop "
+                            "location successfully."
+                        ),
+                        False,
+                    )
+
+                    data["your_status"] = (
+                        "DROPPED"
+                    )
+
+                    return Response(
+                        data,
+                        status=status.HTTP_200_OK,
+                    )
+
+                live_data = (
+                    ETAService
+                    .build_employee_live_pickup_status(
+                        drop_trip,
+                        user,
+                    )
+                )
+
+                live_data["display_state"] = (
+                    "DROP_STARTED"
+                )
+
+                live_data["show_live_route"] = True
+
+                live_data["pickup_assigned"] = (
+                    pickup_trip is not None
+                )
+
+                live_data["drop_assigned"] = True
+
+                live_data["pickup_time"] = (
+                    drop_trip.pickup_time
+                )
+
+                return Response(
+                    live_data,
+                    status=status.HTTP_200_OK,
+                )
+
+            # -----------------------------------------------------
+            # FULL DROP ROUTE COMPLETED
+            # -----------------------------------------------------
+
+            if drop_run.completed_at is not None:
+                return Response(
+                    basic_data(
+                        drop_trip,
+                        "DROP_COMPLETED",
+                        (
+                            "Today's drop trip has been "
+                            "completed successfully."
+                        ),
+                        False,
+                    ),
+                    status=status.HTTP_200_OK,
+                )
+
+        # =========================================================
+        # FALLBACK
+        # =========================================================
+
+        return Response(
+            {
+                "detail": (
+                    "No active cab status is available."
+                )
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
     @action(detail=False, methods=["get"], url_path="assigned-cabs")
     def assigned_cabs(self, request):
         if request.user.role != "ADMIN":
