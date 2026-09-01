@@ -571,6 +571,11 @@ class TripViewSet(ModelViewSet):
                 live_data["countdown_seconds"] = (
                     countdown_seconds
                 )
+
+                return Response(
+                    live_data,
+                    status=status.HTTP_200_OK,
+                )
             # -----------------------------------------------------
             # PICKUP TRIP EXISTS BUT ROUTE HAS NOT YET BEEN CREATED
             # -----------------------------------------------------
