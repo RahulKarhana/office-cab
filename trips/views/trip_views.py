@@ -325,6 +325,40 @@ class TripViewSet(ModelViewSet):
         if pickup_trip:
             pickup_run = pickup_trip.route_run
 
+            my_stop = None
+
+            if pickup_run:
+                my_stop = (
+                    pickup_run.stops
+                    .filter(employee=user)
+                    .first()
+                )
+
+            # =====================================================
+            # PICKUP NO SHOW HAS PRIORITY
+            # Works while route is running AND after completion.
+            # =====================================================
+
+            if my_stop and my_stop.is_no_show:
+                data = basic_data(
+                    pickup_trip,
+                    "PICKUP_NO_SHOW",
+                    (
+                        "Driver marked you as No Show for today's pickup. "
+                        "Please contact admin if you need assistance."
+                    ),
+                    False,
+                )
+
+                data["your_stop_order"] = my_stop.stop_order
+                data["your_status"] = "NO_SHOW"
+                data["pickup_no_show"] = True
+
+                return Response(
+                    data,
+                    status=status.HTTP_200_OK,
+                )
+
             # -----------------------------------------------------
             # PICKUP ASSIGNED, CAB NOT STARTED
             # -----------------------------------------------------
@@ -355,21 +389,16 @@ class TripViewSet(ModelViewSet):
                     ),
                     status=status.HTTP_200_OK,
                 )
-
             # -----------------------------------------------------
             # PICKUP ROUTE RUNNING
-            # -----------------------------------------------------
+            # -----------------complete_run------------------------------------
 
             if (
                 pickup_run
                 and pickup_run.started_at is not None
                 and pickup_run.completed_at is None
             ):
-                my_stop = (
-                    pickup_run.stops
-                    .filter(employee=user)
-                    .first()
-                )
+               
 
                 # Employee already picked up,
                 # but cab is still collecting others.
@@ -397,25 +426,7 @@ class TripViewSet(ModelViewSet):
                         status=status.HTTP_200_OK,
                     )
 
-                # Employee marked no-show.
-                if my_stop and my_stop.is_no_show:
-                    data = basic_data(
-                        pickup_trip,
-                        "PICKUP_NO_SHOW",
-                        (
-                            "You have been marked as No Show "
-                            "for today's pickup."
-                        ),
-                        False,
-                    )
-
-                    data["your_status"] = "NO_SHOW"
-
-                    return Response(
-                        data,
-                        status=status.HTTP_200_OK,
-                    )
-
+                
                 # Cab actively running:
                 # ETA, current stop, next stop etc.
                 live_data = (

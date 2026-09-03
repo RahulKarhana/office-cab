@@ -951,8 +951,12 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         else:
-            # Preserve existing Pickup completion behavior.
-            completed_employee_ids = list(
+            # =====================================================
+            # PICKUP ROUTE COMPLETION
+            # =====================================================
+
+            # Employees actually picked up.
+            picked_employee_ids = list(
                 route_run.stops.filter(
                     is_picked=True,
                     is_no_show=False,
@@ -962,15 +966,39 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
                 )
             )
 
-            completed_trip_qs = trip_qs.filter(
-                employee_id__in=completed_employee_ids
+            # Employees resolved as No Show.
+            no_show_employee_ids = list(
+                route_run.stops.filter(
+                    is_no_show=True,
+                ).values_list(
+                    "employee_id",
+                    flat=True,
+                )
             )
 
-            completed_trip_qs.update(
+            # Close successful pickup trips.
+            trip_qs.filter(
+                employee_id__in=picked_employee_ids
+            ).update(
                 status=Trip.STATUS_COMPLETED,
                 end_time=completed_time,
             )
 
+            # No Show is also a finished pickup outcome.
+            # Do not leave the Trip as STARTED.
+            trip_qs.filter(
+                employee_id__in=no_show_employee_ids
+            ).update(
+                status=Trip.STATUS_COMPLETED,
+                end_time=completed_time,
+            )
+
+            completed_employee_ids = list(
+                set(
+                    picked_employee_ids
+                    + no_show_employee_ids
+                )
+            )
         # ---------------------------------------------------------
         # 8. Route completion notifications
         # ---------------------------------------------------------
