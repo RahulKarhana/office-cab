@@ -162,7 +162,7 @@
         <form method="post" action="{% url 'admin_web:cancel_route_run_trips' run.id %}">
             {% csrf_token %}
             <a
-                href="{% url 'admin_web:admin_live_map' %}?route_run_id={{ run.id }}"
+                href="{% url 'admin_web:tracking' %}?route_run_id={{ run.id }}"
                 class="card-btn live-map-btn"
             >
                 🗺 Live Map
