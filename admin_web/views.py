@@ -2130,13 +2130,23 @@ def assigned_trips_page(request):
         run_date__gte=today,
     ).distinct()
 
+    # -------------------------
+    # DATE FILTER
+    # -------------------------
     parsed_date = parse_date(date_filter) if date_filter else None
+
     if parsed_date:
         runs = runs.filter(run_date=parsed_date)
 
+    # -------------------------
+    # TRIP TYPE FILTER
+    # -------------------------
     if trip_type_filter in ["PICKUP", "DROP"]:
         runs = runs.filter(trip_type=trip_type_filter)
 
+    # -------------------------
+    # SEARCH
+    # -------------------------
     if query:
         runs = runs.filter(
             Q(route_template__name__icontains=query)
@@ -2146,138 +2156,395 @@ def assigned_trips_page(request):
             | Q(stops__pickup_location__icontains=query)
         ).distinct()
 
-    runs = runs.order_by("run_date", "trip_type", "route_template__name")
+    runs = runs.order_by(
+        "run_date",
+        "trip_type",
+        "route_template__name",
+    )
 
     grouped = OrderedDict()
+
     total_assigned = 0
     total_started = 0
 
+    # ==========================================================
+    # BUILD ROUTE RUN CARDS
+    # ==========================================================
+
     for run in runs:
+
         active_trips = list(
             run.trips.filter(
-                status__in=[Trip.STATUS_ASSIGNED, Trip.STATUS_STARTED]
+                status__in=[
+                    Trip.STATUS_ASSIGNED,
+                    Trip.STATUS_STARTED,
+                ]
             ).select_related("employee")
         )
 
         if not active_trips:
             continue
 
-        trip_map = {trip.employee_id: trip for trip in active_trips}
+        trip_map = {
+            trip.employee_id: trip
+            for trip in active_trips
+        }
 
-        assigned_count = sum(1 for trip in active_trips if trip.status == Trip.STATUS_ASSIGNED)
-        started_count = sum(1 for trip in active_trips if trip.status == Trip.STATUS_STARTED)
+        # -------------------------
+        # COUNTS
+        # -------------------------
+
+        assigned_count = sum(
+            1
+            for trip in active_trips
+            if trip.status == Trip.STATUS_ASSIGNED
+        )
+
+        started_count = sum(
+            1
+            for trip in active_trips
+            if trip.status == Trip.STATUS_STARTED
+        )
 
         total_assigned += assigned_count
         total_started += started_count
 
-        stops = list(run.stops.select_related("employee").order_by("stop_order"))
+        # -------------------------
+        # STOPS
+        # -------------------------
 
-        completed_employees = len([s for s in stops if getattr(s, "is_picked", False)])
-        total_employees = len([s for s in stops if s.employee_id in trip_map])
-        completion_percent = int((completed_employees / total_employees) * 100) if total_employees else 0
+        stops = list(
+            run.stops
+            .select_related("employee")
+            .order_by("stop_order")
+        )
+
+        completed_employees = len([
+            stop
+            for stop in stops
+            if (
+                stop.employee_id in trip_map
+                and getattr(stop, "is_picked", False)
+            )
+        ])
+
+        total_employees = len([
+            stop
+            for stop in stops
+            if stop.employee_id in trip_map
+        ])
+
+        completion_percent = (
+            int(
+                (completed_employees / total_employees) * 100
+            )
+            if total_employees
+            else 0
+        )
+
+        # -------------------------
+        # CURRENT STOP
+        # -------------------------
 
         current_stop = next(
-            (s for s in stops if s.employee_id in trip_map and not getattr(s, "is_picked", False)),
+            (
+                stop
+                for stop in stops
+                if (
+                    stop.employee_id in trip_map
+                    and not getattr(
+                        stop,
+                        "is_picked",
+                        False,
+                    )
+                )
+            ),
             None,
         )
 
-        current_stop_name = (
-            current_stop.employee.username
-            if current_stop and current_stop.employee
-            else "Completed" if completion_percent == 100 else "Not started"
-        )
+        if current_stop and current_stop.employee:
+            current_stop_name = (
+                current_stop.employee.username
+            )
+
+        elif completion_percent == 100:
+            current_stop_name = "Completed"
+
+        else:
+            current_stop_name = "Not started"
+
+        # -------------------------
+        # ETA
+        # -------------------------
 
         eta_text = "--"
+
         if started_count:
-            remaining = total_employees - completed_employees
-            eta_text = f"{remaining * 7} min" if remaining > 0 else "Completed"
+            remaining = (
+                total_employees
+                - completed_employees
+            )
+
+            eta_text = (
+                f"{remaining * 7} min"
+                if remaining > 0
+                else "Completed"
+            )
+
+        # -------------------------
+        # EMPLOYEE LIST
+        # -------------------------
 
         employees = []
+
         for stop in stops:
-            trip = trip_map.get(stop.employee_id)
+
+            trip = trip_map.get(
+                stop.employee_id
+            )
+
             if not trip:
                 continue
 
             employees.append({
                 "trip_id": trip.id,
-                "employee_name": stop.employee.username if stop.employee else "--",
-                "pickup_location": stop.pickup_location or "--",
-                "drop_location": trip.drop_location or "Office",
+
+                "employee_name": (
+                    stop.employee.username
+                    if stop.employee
+                    else "--"
+                ),
+
+                "pickup_location": (
+                    stop.pickup_location
+                    or "--"
+                ),
+
+                "drop_location": (
+                    trip.drop_location
+                    or "Office"
+                ),
+
                 "status": trip.status,
-                "is_picked": getattr(stop, "is_picked", False),
-                "is_no_show": getattr(stop, "is_no_show", False),
-                "is_current": bool(current_stop and stop.id == current_stop.id),
-                "stop_order": stop.stop_order,
+
+                "is_picked": getattr(
+                    stop,
+                    "is_picked",
+                    False,
+                ),
+
+                "is_no_show": getattr(
+                    stop,
+                    "is_no_show",
+                    False,
+                ),
+
+                "is_current": bool(
+                    current_stop
+                    and stop.id
+                    == current_stop.id
+                ),
+
+                "stop_order": (
+                    stop.stop_order
+                ),
             })
 
-        first_trip = active_trips[0]
+        # -------------------------
+        # FIRST TRIP
+        # -------------------------
+
+        first_trip = (
+            active_trips[0]
+            if active_trips
+            else None
+        )
+
+        # ======================================================
+        # LIVE / HEALTH VALUES
+        # ======================================================
+
+        is_live = started_count > 0
+
+        # Currently these are static.
+        # Later we can calculate these using
+        # actual driver location / ETA data.
+
+        is_delayed = False
+        is_overspeed = False
+
+        if is_overspeed:
+            health_status = "CRITICAL"
+
+        elif is_delayed:
+            health_status = "MODERATE"
+
+        else:
+            health_status = "EXCELLENT"
+
+        # ======================================================
+        # CREATE CARD
+        # ======================================================
 
         card = {
             "id": run.id,
-            "route_name": run.route_template.name if run.route_template else "Manual Route",
-            "driver_name": run.driver.username if run.driver else "--",
-            "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
-            "trip_type": run.trip_type,
-            "run_date": run.run_date,
-            "pickup_time": first_trip.pickup_time if first_trip else None,
-            "status": Trip.STATUS_STARTED if started_count else Trip.STATUS_ASSIGNED,
-            "total_employees": total_employees,
-            "assigned_count": assigned_count,
-            "started_count": started_count,
-            "completed_employees": completed_employees,
-            "completion_percent": completion_percent,
-            "current_stop_name": current_stop_name,
-            "eta_text": eta_text,
-            "employees": employees,
-            "health_status": (
-                "CRITICAL"
-                if card.get("is_overspeed")
-                else "MODERATE"
-                if card.get("is_delayed")
-                else "EXCELLENT"
+
+            "route_name": (
+                run.route_template.name
+                if run.route_template
+                else "Manual Route"
             ),
-            "completion_percent": int(
-                (started_count / len(employees)) * 100
-            ) if employees else 0,
 
-            "is_live": started_count > 0,
+            "driver_name": (
+                run.driver.username
+                if run.driver
+                else "--"
+            ),
 
-            "is_delayed": False,
+            "vehicle_number": (
+                run.vehicle.vehicle_number
+                if run.vehicle
+                else "--"
+            ),
 
-            "is_overspeed": False,
+            "trip_type": run.trip_type,
+
+            "run_date": run.run_date,
+
+            "pickup_time": (
+                first_trip.pickup_time
+                if first_trip
+                else None
+            ),
+
+            "status": (
+                Trip.STATUS_STARTED
+                if started_count
+                else Trip.STATUS_ASSIGNED
+            ),
+
+            "total_employees": (
+                total_employees
+            ),
+
+            "assigned_count": (
+                assigned_count
+            ),
+
+            "started_count": (
+                started_count
+            ),
+
+            "completed_employees": (
+                completed_employees
+            ),
+
+            "completion_percent": (
+                completion_percent
+            ),
+
+            "current_stop_name": (
+                current_stop_name
+            ),
+
+            "eta_text": (
+                eta_text
+            ),
+
+            "employees": (
+                employees
+            ),
+
+            "health_status": (
+                health_status
+            ),
+
+            "is_live": (
+                is_live
+            ),
+
+            "is_delayed": (
+                is_delayed
+            ),
+
+            "is_overspeed": (
+                is_overspeed
+            ),
         }
+
+        # ======================================================
+        # DATE GROUP
+        # ======================================================
 
         if run.run_date == today:
             label = "Today's Date"
+
         elif run.run_date == tomorrow:
             label = "Tomorrow's Date"
+
         else:
-            label = run.run_date.strftime("%d %b %Y")
+            label = run.run_date.strftime(
+                "%d %b %Y"
+            )
 
         if label not in grouped:
+
             grouped[label] = {
                 "date_value": run.run_date,
                 "pickup_cards": [],
                 "drop_cards": [],
             }
 
+        # -------------------------
+        # PICKUP / DROP
+        # -------------------------
+
         if run.trip_type == Trip.TRIP_TYPE_PICKUP:
-            grouped[label]["pickup_cards"].append(card)
+
+            grouped[label][
+                "pickup_cards"
+            ].append(card)
+
         else:
-            grouped[label]["drop_cards"].append(card)
+
+            grouped[label][
+                "drop_cards"
+            ].append(card)
+
+    # ==========================================================
+    # TEMPLATE CONTEXT
+    # ==========================================================
 
     context = {
         "date_sections": grouped.items(),
+
         "query": query,
+
         "date_filter": date_filter,
-        "trip_type_filter": trip_type_filter,
-        "total_assigned": total_assigned,
-        "total_started": total_started,
-        "total_active": total_assigned + total_started,
+
+        "trip_type_filter": (
+            trip_type_filter
+        ),
+
+        "total_assigned": (
+            total_assigned
+        ),
+
+        "total_started": (
+            total_started
+        ),
+
+        "total_active": (
+            total_assigned
+            + total_started
+        ),
     }
 
-    return render(request, "admin_web/assigned_trips.html", context)
-
+    return render(
+        request,
+        "admin_web/assigned_trips.html",
+        context,
+    )
 @login_required
 @admin_required
 @require_POST
