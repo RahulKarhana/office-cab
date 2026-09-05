@@ -1069,12 +1069,10 @@ class TripViewSet(ModelViewSet):
     detail=True,
     methods=["post"],
     url_path="employee-cancel",
-)
+    )
     def cancel_trip(self, request, pk=None):
         trip = self.get_object()
 
-        PICKUP_SELF_REASON = "I will come office by self"
-        DROP_SELF_REASON = "I will go home by self"
         LEAVE_REASON = "I am on leave today"
 
         # =========================================================
@@ -1101,8 +1099,7 @@ class TripViewSet(ModelViewSet):
             return Response(
                 {
                     "error": (
-                        "You can't cancel the cab "
-                        "after trip started."
+                        "You can't cancel the cab after trip started."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1111,9 +1108,7 @@ class TripViewSet(ModelViewSet):
         if trip.status == Trip.STATUS_COMPLETED:
             return Response(
                 {
-                    "error": (
-                        "Completed trip cannot be cancelled."
-                    )
+                    "error": "Completed trip cannot be cancelled."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -1123,8 +1118,7 @@ class TripViewSet(ModelViewSet):
                 {
                     "error": (
                         "Trip is already cancelled. "
-                        "A cancelled cab cannot be restored "
-                        "for today."
+                        "A cancelled cab cannot be restored for today."
                     )
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1148,15 +1142,21 @@ class TripViewSet(ModelViewSet):
         if not reason:
             return Response(
                 {
-                    "error": (
-                        "Cancellation reason is required."
-                    )
+                    "error": "Cancellation reason is required."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         # =========================================================
         # 3. SELF DECLARATION RULE
+        #
+        # DROP:
+        #   Leave  -> No declaration
+        #   Other  -> Declaration required
+        #   Go home by self -> Declaration required
+        #
+        # PICKUP:
+        #   No Drop self declaration
         # =========================================================
 
         declaration_required = False
@@ -1164,23 +1164,19 @@ class TripViewSet(ModelViewSet):
 
         if trip.trip_type == Trip.TRIP_TYPE_DROP:
 
-            # Leave is the ONLY exception.
             if reason.lower() == LEAVE_REASON.lower():
                 declaration_required = False
                 declaration_text = ""
 
             else:
-                # Any other Drop cancellation reason
-                # requires self declaration.
                 declaration_required = True
 
                 declaration_text = (
                     "I confirm that I am cancelling my drop cab "
                     "by my own choice and I will manage my travel "
                     "home by myself."
-                )        
-                # Pickup does not need this Drop declaration.
-        
+                )
+
         # =========================================================
         # 4. REQUIRE DECLARATION WHEN APPLICABLE
         # =========================================================
@@ -1202,7 +1198,7 @@ class TripViewSet(ModelViewSet):
             )
 
         # =========================================================
-        # 5. CANCEL TRIP
+        # 5. CANCEL TRIP + SAVE CANCELLATION RECORD
         # =========================================================
 
         with transaction.atomic():
@@ -1232,18 +1228,51 @@ class TripViewSet(ModelViewSet):
 
         # =========================================================
         # 6. DRIVER FCM
+        #
+        # Important:
+        # Notification failure must NOT make cancellation fail.
         # =========================================================
 
-        if trip.driver:
-            NotificationService.send_notification(
-                trip.driver,
+        try:
+            if trip.driver:
+                NotificationService.send_notification(
+                    trip.driver,
+                    (
+                        f"{trip.trip_type.capitalize()} trip "
+                        f"cancelled by {trip.employee.username}. "
+                        f"Reason: {reason}"
+                    ),
+                    title="❌ Trip Cancelled",
+                    push_data={
+                        "type": "TRIP_CANCELLED",
+                        "trip_id": str(trip.id),
+                        "trip_type": trip.trip_type,
+                        "reason": reason,
+                        "employee_id": str(
+                            trip.employee_id
+                        ),
+                        "screen": "driver_route",
+                    },
+                )
+
+        except Exception as e:
+            print(
+                "DRIVER CANCELLATION FCM ERROR:",
+                e,
+            )
+
+        # =========================================================
+        # 7. ADMIN FCM
+        # =========================================================
+
+        try:
+            NotificationService.notify_admins(
                 (
                     f"{trip.trip_type.capitalize()} trip "
-                    f"cancelled by "
-                    f"{trip.employee.username}. "
-                    f"Reason: {reason}"
+                    f"cancelled by {trip.employee.username}. "
+                    f"Reason: {reason}."
                 ),
-                title="❌ Trip Cancelled",
+                title="❌ Employee Trip Cancelled",
                 push_data={
                     "type": "TRIP_CANCELLED",
                     "trip_id": str(trip.id),
@@ -1252,61 +1281,50 @@ class TripViewSet(ModelViewSet):
                     "employee_id": str(
                         trip.employee_id
                     ),
-                    "screen": "driver_route",
+                    "screen": "assigned_cabs",
                 },
             )
 
-        # =========================================================
-        # 7. ADMIN FCM
-        # =========================================================
-
-        NotificationService.notify_admins(
-            (
-                f"{trip.trip_type.capitalize()} trip "
-                f"cancelled by "
-                f"{trip.employee.username}. "
-                f"Reason: {reason}."
-            ),
-            title="❌ Employee Trip Cancelled",
-            push_data={
-                "type": "TRIP_CANCELLED",
-                "trip_id": str(trip.id),
-                "trip_type": trip.trip_type,
-                "reason": reason,
-                "employee_id": str(
-                    trip.employee_id
-                ),
-                "screen": "assigned_cabs",
-            },
-        )
+        except Exception as e:
+            print(
+                "ADMIN CANCELLATION FCM ERROR:",
+                e,
+            )
 
         # =========================================================
         # 8. EMPLOYEE CONFIRMATION FCM
         # =========================================================
 
-        NotificationService.send_notification(
-            request.user,
-            (
-                f"Your {trip.trip_type.lower()} cab "
-                "has been cancelled successfully. "
-                "This cancellation cannot be undone "
-                "for today."
-            ),
-            title=(
-                f"❌ {trip.trip_type.capitalize()} "
-                "Cab Cancelled"
-            ),
-            push_data={
-                "type": "MY_TRIP_CANCELLED",
-                "trip_id": str(trip.id),
-                "trip_type": trip.trip_type,
-                "reason": reason,
-                "screen": "employee_home",
-            },
-        )
+        try:
+            NotificationService.send_notification(
+                request.user,
+                (
+                    f"Your {trip.trip_type.lower()} cab "
+                    "has been cancelled successfully. "
+                    "This cancellation cannot be undone "
+                    "for today."
+                ),
+                title=(
+                    f"❌ {trip.trip_type.capitalize()} "
+                    "Cab Cancelled"
+                ),
+                push_data={
+                    "type": "MY_TRIP_CANCELLED",
+                    "trip_id": str(trip.id),
+                    "trip_type": trip.trip_type,
+                    "reason": reason,
+                    "screen": "employee_home",
+                },
+            )
+
+        except Exception as e:
+            print(
+                "EMPLOYEE CANCELLATION FCM ERROR:",
+                e,
+            )
 
         # =========================================================
-        # 9. RESPONSE
+        # 9. SUCCESS RESPONSE
         # =========================================================
 
         return Response(
