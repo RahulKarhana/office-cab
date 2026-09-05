@@ -208,11 +208,18 @@ class TripSerializer(serializers.ModelSerializer):
             return location.longitude
         return None
 
-
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = "_all_"
+        fields = "__all__"
+        read_only_fields = ["employee", "created_at"]
+
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError(
+                "Rating must be between 1 and 5."
+            )
+        return value
 
 
 class NotificationSerializer(serializers.ModelSerializer):
