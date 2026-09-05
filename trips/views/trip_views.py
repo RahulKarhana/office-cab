@@ -1065,77 +1065,269 @@ class TripViewSet(ModelViewSet):
 
         return Response({"message": "Leave marked successfully.", "leave_date": leave_date, "cancelled_trips": cancelled_count, "started_trips_not_cancelled": started_trips_count, "driver_fcm_sent": False}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=["post"], url_path="employee-cancel")
+    @action(
+    detail=True,
+    methods=["post"],
+    url_path="employee-cancel",
+)
     def cancel_trip(self, request, pk=None):
         trip = self.get_object()
-        SELF_TRAVEL_REASON = "I will come office by self"
+
+        PICKUP_SELF_REASON = "I will come office by self"
+        DROP_SELF_REASON = "I will go home by self"
+        LEAVE_REASON = "I am on leave today"
+
+        # =========================================================
+        # 1. PERMISSION / STATUS CHECKS
+        # =========================================================
 
         if request.user.role != "EMPLOYEE":
-            return Response({"error": "Only employee can cancel trip"}, status=status.HTTP_403_FORBIDDEN)
-        if trip.employee != request.user:
-            return Response({"error": "You can cancel only your own trip"}, status=status.HTTP_403_FORBIDDEN)
-        if trip.status == Trip.STATUS_STARTED:
-            return Response({"error": "You can't cancel the cab after trip started."}, status=status.HTTP_400_BAD_REQUEST)
-        if trip.status == Trip.STATUS_COMPLETED:
-            return Response({"error": "Completed trip cannot be cancelled."}, status=status.HTTP_400_BAD_REQUEST)
-        if trip.status == Trip.STATUS_CANCELLED:
-            return Response({"error": "Trip is already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Only employee can cancel trip."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
-        reason = request.data.get("reason", "").strip()
-        declaration_accepted = request.data.get("declaration_accepted", False)
+        if trip.employee != request.user:
+            return Response(
+                {
+                    "error": "You can cancel only your own trip."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if trip.status == Trip.STATUS_STARTED:
+            return Response(
+                {
+                    "error": (
+                        "You can't cancel the cab "
+                        "after trip started."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if trip.status == Trip.STATUS_COMPLETED:
+            return Response(
+                {
+                    "error": (
+                        "Completed trip cannot be cancelled."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if trip.status == Trip.STATUS_CANCELLED:
+            return Response(
+                {
+                    "error": (
+                        "Trip is already cancelled. "
+                        "A cancelled cab cannot be restored "
+                        "for today."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # =========================================================
+        # 2. GET CANCELLATION DATA
+        # =========================================================
+
+        reason = (
+            request.data
+            .get("reason", "")
+            .strip()
+        )
+
+        declaration_accepted = request.data.get(
+            "declaration_accepted",
+            False,
+        )
+
         if not reason:
-            return Response({"error": "Cancellation reason is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": (
+                        "Cancellation reason is required."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # =========================================================
+        # 3. SELF DECLARATION RULE
+        # =========================================================
 
         declaration_required = False
-        if trip.trip_type == Trip.TRIP_TYPE_DROP:
-            pickup_trip = Trip.objects.filter(employee=request.user, trip_type=Trip.TRIP_TYPE_PICKUP, trip_date=trip.trip_date).order_by("-created_at").first()
-            if pickup_trip and pickup_trip.status != Trip.STATUS_CANCELLED:
-                return Response({"error": "First cancel your today's pickup."}, status=status.HTTP_400_BAD_REQUEST)
-            if pickup_trip and pickup_trip.status == Trip.STATUS_CANCELLED:
-                pickup_cancellation = TripCancellation.objects.filter(trip=pickup_trip, cancelled_by=request.user).order_by("-cancelled_at").first()
-                if pickup_cancellation and pickup_cancellation.reason.lower() == SELF_TRAVEL_REASON.lower():
-                    declaration_required = True
-
-        if declaration_required and not declaration_accepted:
-            return Response({
-                "error": "Self declaration is required for drop cancellation.",
-                "declaration_required": True,
-                "declaration_text": "I confirm that I came to office by myself and I am cancelling my drop cab by my own choice. I will manage my return travel myself.",
-            }, status=status.HTTP_400_BAD_REQUEST)
-
         declaration_text = ""
-        if declaration_required:
-            declaration_text = "I confirm that I came to office by myself and I am cancelling my drop cab by my own choice. I will manage my return travel myself."
+
+        if trip.trip_type == Trip.TRIP_TYPE_DROP:
+
+            # Leave is the ONLY exception.
+            if reason.lower() == LEAVE_REASON.lower():
+                declaration_required = False
+                declaration_text = ""
+
+            else:
+                # Any other Drop cancellation reason
+                # requires self declaration.
+                declaration_required = True
+
+                declaration_text = (
+                    "I confirm that I am cancelling my drop cab "
+                    "by my own choice and I will manage my travel "
+                    "home by myself."
+                )        
+                # Pickup does not need this Drop declaration.
+        
+        # =========================================================
+        # 4. REQUIRE DECLARATION WHEN APPLICABLE
+        # =========================================================
+
+        if (
+            declaration_required
+            and not declaration_accepted
+        ):
+            return Response(
+                {
+                    "error": (
+                        "Self declaration is required "
+                        "for drop cancellation."
+                    ),
+                    "declaration_required": True,
+                    "declaration_text": declaration_text,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # =========================================================
+        # 5. CANCEL TRIP
+        # =========================================================
 
         with transaction.atomic():
+
             trip.cancel()
+
+            # Remove employee from active route flow.
             if trip.route_run_id:
-                RouteRunStop.objects.filter(route_run=trip.route_run, employee=trip.employee).update(is_no_show=True, no_show_at=timezone.now())
+                RouteRunStop.objects.filter(
+                    route_run=trip.route_run,
+                    employee=trip.employee,
+                ).update(
+                    is_no_show=True,
+                    no_show_at=timezone.now(),
+                )
+
             TripCancellation.objects.create(
                 trip=trip,
                 cancelled_by=request.user,
                 reason=reason,
-                declaration_accepted=bool(declaration_accepted),
+                declaration_accepted=bool(
+                    declaration_accepted
+                ),
                 declaration_text=declaration_text,
                 cancelled_by_role=request.user.role,
             )
 
+        # =========================================================
+        # 6. DRIVER FCM
+        # =========================================================
+
         if trip.driver:
             NotificationService.send_notification(
                 trip.driver,
-                f"{trip.trip_type.capitalize()} trip cancelled by {trip.employee.username}. Reason: {reason}",
+                (
+                    f"{trip.trip_type.capitalize()} trip "
+                    f"cancelled by "
+                    f"{trip.employee.username}. "
+                    f"Reason: {reason}"
+                ),
                 title="❌ Trip Cancelled",
-                push_data={"type": "TRIP_CANCELLED", "trip_id": str(trip.id), "trip_type": trip.trip_type, "reason": reason, "screen": "driver_route"},
+                push_data={
+                    "type": "TRIP_CANCELLED",
+                    "trip_id": str(trip.id),
+                    "trip_type": trip.trip_type,
+                    "reason": reason,
+                    "employee_id": str(
+                        trip.employee_id
+                    ),
+                    "screen": "driver_route",
+                },
             )
 
+        # =========================================================
+        # 7. ADMIN FCM
+        # =========================================================
+
         NotificationService.notify_admins(
-            f"{trip.trip_type.capitalize()} trip cancelled by {trip.employee.username}. Reason: {reason}.",
+            (
+                f"{trip.trip_type.capitalize()} trip "
+                f"cancelled by "
+                f"{trip.employee.username}. "
+                f"Reason: {reason}."
+            ),
             title="❌ Employee Trip Cancelled",
-            push_data={"type": "TRIP_CANCELLED", "trip_id": str(trip.id), "trip_type": trip.trip_type, "reason": reason, "screen": "assigned_cabs"},
+            push_data={
+                "type": "TRIP_CANCELLED",
+                "trip_id": str(trip.id),
+                "trip_type": trip.trip_type,
+                "reason": reason,
+                "employee_id": str(
+                    trip.employee_id
+                ),
+                "screen": "assigned_cabs",
+            },
         )
 
-        return Response({"message": "Trip cancelled successfully.", "trip_id": trip.id, "trip_type": trip.trip_type, "reason": reason, "declaration_required": declaration_required, "declaration_accepted": bool(declaration_accepted)}, status=status.HTTP_200_OK)
+        # =========================================================
+        # 8. EMPLOYEE CONFIRMATION FCM
+        # =========================================================
 
+        NotificationService.send_notification(
+            request.user,
+            (
+                f"Your {trip.trip_type.lower()} cab "
+                "has been cancelled successfully. "
+                "This cancellation cannot be undone "
+                "for today."
+            ),
+            title=(
+                f"❌ {trip.trip_type.capitalize()} "
+                "Cab Cancelled"
+            ),
+            push_data={
+                "type": "MY_TRIP_CANCELLED",
+                "trip_id": str(trip.id),
+                "trip_type": trip.trip_type,
+                "reason": reason,
+                "screen": "employee_home",
+            },
+        )
+
+        # =========================================================
+        # 9. RESPONSE
+        # =========================================================
+
+        return Response(
+            {
+                "message": (
+                    f"{trip.trip_type.capitalize()} "
+                    "trip cancelled successfully. "
+                    "This cancellation cannot be undone."
+                ),
+                "trip_id": trip.id,
+                "trip_type": trip.trip_type,
+                "reason": reason,
+                "declaration_required": (
+                    declaration_required
+                ),
+                "declaration_accepted": bool(
+                    declaration_accepted
+                ),
+            },
+            status=status.HTTP_200_OK,
+        )
     @action(detail=True, methods=["post"])
     def start_trip(self, request, pk=None):
         trip = self.get_object()
