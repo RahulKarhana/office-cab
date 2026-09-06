@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from trips.models import Vehicle
+from .models import PickupLocationChangeRequest
 
 User = get_user_model()
 
@@ -131,3 +132,40 @@ class UpdatePickupLocationSerializer(serializers.Serializer):
             )
 
         return attrs
+
+class PickupLocationChangeRequestSerializer(serializers.ModelSerializer):
+    employee_name = serializers.CharField(
+        source="employee.username",
+        read_only=True,
+    )
+
+    class Meta:
+        model = PickupLocationChangeRequest
+        fields = [
+            "id",
+            "employee",
+            "employee_name",
+            "old_pickup_location",
+            "old_pickup_latitude",
+            "old_pickup_longitude",
+            "requested_pickup_location",
+            "requested_pickup_latitude",
+            "requested_pickup_longitude",
+            "status",
+            "requested_at",
+            "reviewed_at",
+            "reviewed_by",
+            "admin_note",
+        ]
+
+        read_only_fields = [
+            "employee",
+            "old_pickup_location",
+            "old_pickup_latitude",
+            "old_pickup_longitude",
+            "status",
+            "requested_at",
+            "reviewed_at",
+            "reviewed_by",
+            "admin_note",
+        ]

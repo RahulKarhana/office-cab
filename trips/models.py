@@ -147,6 +147,7 @@ class Review(models.Model):
         return f"Review for Trip {self.trip_id} by {self.employee.username}"
 
 
+
 class Notification(models.Model):
     PRIORITY_LOW = "LOW"
     PRIORITY_MEDIUM = "MEDIUM"
