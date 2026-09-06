@@ -1,0 +1,288 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Requests | CabMate Admin{% endblock %}
+
+{% block content %}
+
+<style>
+    .requests-page {
+        padding: 18px 0 28px;
+    }
+
+    .requests-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+        padding: 20px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #ffffff, #f8fbff);
+        border: 1px solid #dbeafe;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+    }
+
+    .requests-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .requests-header-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        font-size: 26px;
+        background: linear-gradient(135deg, #1e3a8a, #2563eb);
+        color: white;
+        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+    }
+
+    .requests-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 900;
+        color: #14213d;
+    }
+
+    .requests-header p {
+        margin: 5px 0 0;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .total-pending {
+        min-width: 110px;
+        padding: 12px 16px;
+        border-radius: 18px;
+        background: #fff1f2;
+        border: 1px solid #fecaca;
+        text-align: center;
+    }
+
+    .total-pending strong {
+        display: block;
+        font-size: 26px;
+        color: #b91c1c;
+        font-weight: 900;
+    }
+
+    .total-pending span {
+        font-size: 12px;
+        color: #7f1d1d;
+        font-weight: 700;
+    }
+
+    .request-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .request-card {
+        position: relative;
+        display: block;
+        text-decoration: none;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 22px;
+        padding: 20px;
+        min-height: 170px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        transition: 0.2s ease;
+        color: #111827;
+    }
+
+    .request-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.10);
+    }
+
+    .request-card.active {
+        border-color: #93c5fd;
+        background: linear-gradient(135deg, #ffffff, #eff6ff);
+    }
+
+    .request-card.disabled {
+        opacity: 0.62;
+        cursor: not-allowed;
+    }
+
+    .request-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: #eff6ff;
+        font-size: 23px;
+        margin-bottom: 15px;
+    }
+
+    .request-card h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 900;
+        color: #14213d;
+    }
+
+    .request-card p {
+        margin: 7px 0 0;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .request-count {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 7px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #dc2626;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 900;
+        border: 3px solid #fff;
+    }
+
+    .coming-soon {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #6b7280;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    @media (max-width: 1000px) {
+        .request-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 650px) {
+        .requests-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .request-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="requests-page">
+
+    <section class="requests-header">
+        <div class="requests-header-left">
+            <div class="requests-header-icon">📥</div>
+
+            <div>
+                <h1>Requests</h1>
+                <p>
+                    Manage employee and driver requests from one place.
+                </p>
+            </div>
+        </div>
+
+        <div class="total-pending">
+            <strong>{{ total_pending_requests }}</strong>
+            <span>Total Pending</span>
+        </div>
+    </section>
+
+    <section class="request-grid">
+
+        <!-- LOCATION CHANGE -->
+        <a
+            href="{% url 'admin_web:location_requests' %}"
+            class="request-card active"
+        >
+            {% if pending_location_requests > 0 %}
+                <div class="request-count">
+                    {% if pending_location_requests > 99 %}
+                        99+
+                    {% else %}
+                        {{ pending_location_requests }}
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <div class="request-icon">📍</div>
+
+            <h3>Location Change Requests</h3>
+
+            <p>
+                Review employee pickup location change requests.
+            </p>
+        </a>
+
+        <!-- CHANGE DRIVER -->
+        <div class="request-card disabled">
+            <div class="request-icon">🚕</div>
+
+            <h3>Change Driver Requests</h3>
+
+            <p>
+                Employee requests for driver reassignment.
+            </p>
+
+            <span class="coming-soon">Coming Later</span>
+        </div>
+
+        <!-- CHANGE ROUTE -->
+        <div class="request-card disabled">
+            <div class="request-icon">🛣️</div>
+
+            <h3>Change Route Requests</h3>
+
+            <p>
+                Requests to move an employee to another cab route.
+            </p>
+
+            <span class="coming-soon">Coming Later</span>
+        </div>
+
+        <!-- EMPLOYEE ACCOUNT APPROVAL -->
+        <div class="request-card disabled">
+            <div class="request-icon">👤</div>
+
+            <h3>Employee Account Approval</h3>
+
+            <p>
+                Approve employee accounts before cab access is allowed.
+            </p>
+
+            <span class="coming-soon">Coming Later</span>
+        </div>
+
+        <!-- DRIVER ACCOUNT APPROVAL -->
+        <div class="request-card disabled">
+            <div class="request-icon">🚖</div>
+
+            <h3>Driver Account Approval</h3>
+
+            <p>
+                Approve driver accounts before operational access is allowed.
+            </p>
+
+            <span class="coming-soon">Coming Later</span>
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

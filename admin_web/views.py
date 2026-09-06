@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.db import transaction
 import math
+from accounts.models import PickupLocationChangeRequest
 from trips.utils.notification import send_push_notification
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -242,7 +243,22 @@ def dashboard(request):
 
     unread_notifications = Notification.objects.filter(is_read=False).count()
     unread_emergency_alerts = EmergencyAlert.objects.filter(status="ACTIVE").count()
+    pending_location_requests = (
+        PickupLocationChangeRequest.objects
+        .filter(
+            status=PickupLocationChangeRequest.STATUS_PENDING
+        )
+        .count()
+    )
 
+    # This will later include:
+    # location requests
+    # driver change requests
+    # route change requests
+    # employee account approvals
+    # driver account approvals
+
+    pending_requests_count = pending_location_requests
     # =========================
     # TODAY DASHBOARD ANALYTICS
     # =========================
@@ -319,7 +335,8 @@ def dashboard(request):
 
         "unread_notifications": unread_notifications,
         "unread_emergency_alerts": unread_emergency_alerts,
-
+        "pending_location_requests": pending_location_requests,
+        "pending_requests_count": pending_requests_count,
         "started_cabs": started_cabs,
         "completed_cabs": completed_cabs,
         "late_cabs": late_cabs,
@@ -338,7 +355,292 @@ def dashboard(request):
 
     return render(request, "admin_web/dashboard.html", context)
 
+# =========================================================
+# REQUEST MANAGEMENT
+# =========================================================
 
+@login_required
+@admin_required
+@require_GET
+def requests_page(request):
+    """
+    Main Requests hub.
+
+    Later this page will contain:
+    - Location Change Requests
+    - Change Driver Requests
+    - Change Route Requests
+    - Employee Account Approvals
+    - Driver Account Approvals
+    """
+
+    pending_location_requests = (
+        PickupLocationChangeRequest.objects
+        .filter(
+            status=PickupLocationChangeRequest.STATUS_PENDING
+        )
+        .count()
+    )
+
+    total_pending_requests = pending_location_requests
+
+    context = {
+        "pending_location_requests": pending_location_requests,
+        "total_pending_requests": total_pending_requests,
+    }
+
+    return render(
+        request,
+        "admin_web/requests.html",
+        context,
+    )
+
+
+@login_required
+@admin_required
+@require_GET
+def location_requests_page(request):
+
+    location_requests = (
+        PickupLocationChangeRequest.objects
+        .select_related(
+            "employee",
+            "reviewed_by",
+        )
+        .order_by(
+            "-requested_at"
+        )
+    )
+
+    pending_count = location_requests.filter(
+        status=PickupLocationChangeRequest.STATUS_PENDING
+    ).count()
+
+    approved_count = location_requests.filter(
+        status=PickupLocationChangeRequest.STATUS_APPROVED
+    ).count()
+
+    rejected_count = location_requests.filter(
+        status=PickupLocationChangeRequest.STATUS_REJECTED
+    ).count()
+
+    context = {
+        "location_requests": location_requests,
+        "pending_count": pending_count,
+        "approved_count": approved_count,
+        "rejected_count": rejected_count,
+    }
+
+    return render(
+        request,
+        "admin_web/location_requests.html",
+        context,
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+def approve_location_request(request, request_id):
+
+    location_request = get_object_or_404(
+        PickupLocationChangeRequest.objects.select_related(
+            "employee"
+        ),
+        id=request_id,
+    )
+
+    if (
+        location_request.status
+        != PickupLocationChangeRequest.STATUS_PENDING
+    ):
+        messages.warning(
+            request,
+            "This location request has already been reviewed.",
+        )
+
+        return redirect(
+            "admin_web:location_requests"
+        )
+
+    employee = location_request.employee
+
+    # ---------------------------------------------------------
+    # Update employee's approved pickup location
+    # ---------------------------------------------------------
+
+    employee.pickup_location = (
+        location_request.requested_pickup_location
+    )
+
+    employee.pickup_latitude = (
+        location_request.requested_pickup_latitude
+    )
+
+    employee.pickup_longitude = (
+        location_request.requested_pickup_longitude
+    )
+
+    employee.save(
+        update_fields=[
+            "pickup_location",
+            "pickup_latitude",
+            "pickup_longitude",
+        ]
+    )
+
+    # ---------------------------------------------------------
+    # Mark request approved
+    # ---------------------------------------------------------
+
+    location_request.status = (
+        PickupLocationChangeRequest.STATUS_APPROVED
+    )
+
+    location_request.reviewed_at = timezone.now()
+    location_request.reviewed_by = request.user
+
+    location_request.admin_note = (
+        request.POST.get(
+            "admin_note",
+            "",
+        ).strip()
+    )
+
+    location_request.save(
+        update_fields=[
+            "status",
+            "reviewed_at",
+            "reviewed_by",
+            "admin_note",
+        ]
+    )
+
+    # ---------------------------------------------------------
+    # Notify employee
+    # ---------------------------------------------------------
+
+    try:
+        send_push_notification(
+            user=employee,
+            title="Pickup Location Approved ✅",
+            body=(
+                "Your pickup location change request "
+                "has been approved."
+            ),
+            data={
+                "type": "PICKUP_LOCATION_CHANGE_APPROVED",
+                "request_id": str(location_request.id),
+            },
+        )
+
+    except Exception as e:
+        print(
+            "LOCATION APPROVAL FCM ERROR:",
+            e,
+        )
+
+    messages.success(
+        request,
+        (
+            f"{employee.username}'s pickup location "
+            "change request has been approved."
+        ),
+    )
+
+    return redirect(
+        "admin_web:location_requests"
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+def reject_location_request(request, request_id):
+
+    location_request = get_object_or_404(
+        PickupLocationChangeRequest.objects.select_related(
+            "employee"
+        ),
+        id=request_id,
+    )
+
+    if (
+        location_request.status
+        != PickupLocationChangeRequest.STATUS_PENDING
+    ):
+        messages.warning(
+            request,
+            "This location request has already been reviewed.",
+        )
+
+        return redirect(
+            "admin_web:location_requests"
+        )
+
+    employee = location_request.employee
+
+    # IMPORTANT:
+    # We DO NOT modify employee pickup location on rejection.
+
+    location_request.status = (
+        PickupLocationChangeRequest.STATUS_REJECTED
+    )
+
+    location_request.reviewed_at = timezone.now()
+    location_request.reviewed_by = request.user
+
+    location_request.admin_note = (
+        request.POST.get(
+            "admin_note",
+            "",
+        ).strip()
+    )
+
+    location_request.save(
+        update_fields=[
+            "status",
+            "reviewed_at",
+            "reviewed_by",
+            "admin_note",
+        ]
+    )
+
+    # ---------------------------------------------------------
+    # Notify employee
+    # ---------------------------------------------------------
+
+    try:
+        send_push_notification(
+            user=employee,
+            title="Pickup Location Request Rejected",
+            body=(
+                "Your pickup location change request "
+                "was not approved."
+            ),
+            data={
+                "type": "PICKUP_LOCATION_CHANGE_REJECTED",
+                "request_id": str(location_request.id),
+            },
+        )
+
+    except Exception as e:
+        print(
+            "LOCATION REJECTION FCM ERROR:",
+            e,
+        )
+
+    messages.success(
+        request,
+        (
+            f"{employee.username}'s pickup location "
+            "change request has been rejected."
+        ),
+    )
+
+    return redirect(
+        "admin_web:location_requests"
+    )
 # =========================
 # EMPLOYEES
 # =========================

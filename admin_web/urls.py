@@ -5,6 +5,29 @@ app_name = "admin_web"
 
 urlpatterns = [
     path("dashboard/", views.dashboard, name="dashboard"),
+    path(
+        "requests/",
+        views.requests_page,
+        name="requests",
+    ),
+
+    path(
+        "requests/location/",
+        views.location_requests_page,
+        name="location_requests",
+    ),
+
+    path(
+        "requests/location/<int:request_id>/approve/",
+        views.approve_location_request,
+        name="approve_location_request",
+    ),
+
+    path(
+        "requests/location/<int:request_id>/reject/",
+        views.reject_location_request,
+        name="reject_location_request",
+    ),
     path("employees/", views.employees_page, name="employees"),
     path("drivers/", views.drivers_page, name="drivers"),
     path("login/", views.admin_login_page, name="admin_login"),
@@ -49,6 +72,7 @@ urlpatterns = [
         views.assign_employee_to_route,
         name="assign_employee_to_route",
     ),
+    
     path("tracking/", views.live_tracking, name="tracking"),
     path(
         "live-cab-cards/",
@@ -58,5 +82,5 @@ urlpatterns = [
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/", views.assigned_trips_page, name="assigned_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
-    path("assigned-trips/cancel-route-run/<int:route_run_id>/", views.cancel_route_run_trips, name="    cancel_route_run_trips      "),
+    path("assigned-trips/cancel-route-run/<int:route_run_id>/", views.cancel_route_run_trips, name="cancel_route_run_trips"),
 ]   

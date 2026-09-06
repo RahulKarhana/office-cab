@@ -486,6 +486,48 @@
         box-shadow: 0 10px 20px rgba(220,38,38,0.08);
     }
 
+    /* REQUEST NOTIFICATION BADGE */
+
+    .request-action-card {
+        position: relative;
+    }
+
+    .request-badge {
+        position: absolute;
+        top: 9px;
+        right: 9px;
+
+        min-width: 24px;
+        height: 24px;
+        padding: 0 7px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 999px;
+
+        background: #dc2626;
+        color: #ffffff;
+
+        border: 3px solid #ffffff;
+
+        font-size: 11px;
+        font-weight: 950;
+        line-height: 1;
+
+        box-shadow: 0 5px 12px rgba(220,38,38,0.30);
+    }
+
+    .request-action-card.has-request {
+        border-color: #fca5a5;
+        background:
+            linear-gradient(
+                135deg,
+                #ffffff,
+                #fff1f2
+            );
+    }
     .quick-action-card:hover {
         transform: translateY(-3px);
         background: #fff1f2;
@@ -912,6 +954,24 @@
             <a href="{% url 'admin_web:reports' %}" class="quick-action-card">
                 <span>📊</span>
                 Reports
+            </a>
+            <a
+                href="{% url 'admin_web:requests' %}"
+                class="quick-action-card request-action-card
+                    {% if pending_requests_count > 0 %}has-request{% endif %}"
+            >
+                {% if pending_requests_count > 0 %}
+                    <div class="request-badge">
+                        {% if pending_requests_count > 99 %}
+                            99+
+                        {% else %}
+                            {{ pending_requests_count }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <span>📥</span>
+                Requests
             </a>
         </div>
     </section>
