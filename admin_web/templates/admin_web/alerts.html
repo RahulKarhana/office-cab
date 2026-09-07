@@ -887,17 +887,167 @@ async function refreshAlertDriverLocation() {
         );
     }
 }
-window.addEventListener("load", () => {
-    const newestActiveRow = document.querySelector('tr[data-alert-status="ACTIVE"]');
-    if(newestActiveRow && !autoPopupAlreadyShown){
-        autoPopupAlreadyShown = true;
-        lastKnownActiveAlertId = newestActiveRow.getAttribute("data-alert-id") || lastKnownActiveAlertId;
-    }
-});
 
+async function refreshAlertsTableLive() {
+    try {
+        const response = await fetch(
+            "/admin-web/alerts/data/"
+        );
+
+        if (!response.ok) {
+            console.warn(
+                "Alert table refresh failed:",
+                response.status
+            );
+            return;
+        }
+
+        const payload = await response.json();
+        const alerts = payload.results || [];
+
+        // ==========================================
+        // UPDATE DASHBOARD COUNTS
+        // ==========================================
+
+        document.getElementById(
+            "totalAlertsCount"
+        ).innerText =
+            payload.total_alerts ?? 0;
+
+        document.getElementById(
+            "activeAlertsCount"
+        ).innerText =
+            payload.active_alerts ?? 0;
+
+        document.getElementById(
+            "resolvedAlertsCount"
+        ).innerText =
+            payload.resolved_alerts ?? 0;
+
+        // ==========================================
+        // UPDATE ALERT TABLE
+        // ==========================================
+
+        const tableBody =
+            document.getElementById(
+                "alertsTableBody"
+            );
+
+        if (!alerts.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td
+                        colspan="6"
+                        class="empty-state"
+                    >
+                        No alerts found
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML =
+            alerts
+                .map(
+                    alert =>
+                        buildAlertRow(alert)
+                )
+                .join("");
+
+        // ==========================================
+        // UPDATE MODAL DATA
+        // ==========================================
+
+        alerts.forEach(alert => {
+            alertModalData[
+                String(alert.id)
+            ] = alert;
+        });
+
+        // ==========================================
+        // FIND NEWEST ACTIVE SOS
+        // ==========================================
+
+        const newestActive =
+            alerts
+                .filter(
+                    alert =>
+                        alert.status ===
+                        "ACTIVE"
+                )
+                .sort(
+                    (a, b) =>
+                        Number(b.id) -
+                        Number(a.id)
+                )[0];
+
+        if (newestActive) {
+
+            const newestId =
+                String(newestActive.id);
+
+            if (
+                !lastKnownActiveAlertId
+            ) {
+                lastKnownActiveAlertId =
+                    newestId;
+            }
+
+            else if (
+                Number(newestId) >
+                Number(
+                    lastKnownActiveAlertId
+                )
+            ) {
+                lastKnownActiveAlertId =
+                    newestId;
+
+                playAlertSound();
+
+                // Automatically open new SOS
+                openAlertModal(
+                    newestId
+                );
+            }
+        }
+
+    } catch (error) {
+        console.error(
+            "Auto alert refresh failed:",
+            error
+        );
+    }
+}
+window.addEventListener(
+    "load",
+    () => {
+        const newestActiveRow =
+            document.querySelector(
+                'tr[data-alert-status="ACTIVE"]'
+            );
+
+        if (
+            newestActiveRow &&
+            !autoPopupAlreadyShown
+        ) {
+            autoPopupAlreadyShown = true;
+
+            lastKnownActiveAlertId =
+                newestActiveRow.getAttribute(
+                    "data-alert-id"
+                ) ||
+                lastKnownActiveAlertId;
+        }
+    }
+);
+
+
+// Refresh SOS table every 5 seconds
 setInterval(() => {
     refreshAlertsTableLive();
 }, 5000);
+
 </script>
 
 {% endblock %}
