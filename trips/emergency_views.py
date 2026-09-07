@@ -127,62 +127,76 @@ class EmergencyAlertViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @action(detail=True, methods=["post"], url_path="mark_as_read")
+    @action(
+    detail=True,
+    methods=["post"],
+    url_path="mark_as_read",
+)
     def mark_as_read(self, request, pk=None):
         if request.user.role != "ADMIN":
             return Response(
-                {"error": "Only admin can mark emergency alert as read."},
+                {
+                    "error":
+                    "Only admin can mark emergency notification as read."
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         alert = self.get_object()
-        alert.mark_as_read()
 
         Notification.objects.filter(
             user=request.user,
             is_read=False,
             title__icontains="emergency",
             message=alert.message,
-        ).update(is_read=True)
+        ).update(
+            is_read=True
+        )
 
         return Response(
-            {"message": "Emergency alert marked as read."},
+            {
+                "message":
+                "Emergency notification marked as read."
+            },
             status=status.HTTP_200_OK,
         )
 
-    @action(detail=False, methods=["post"], url_path="mark_all_as_read")
+    @action(
+    detail=False,
+    methods=["post"],
+    url_path="mark_all_as_read",
+)
     def mark_all_as_read(self, request):
         if request.user.role != "ADMIN":
             return Response(
-                {"error": "Only admin can mark all emergency alerts as read."},
+                {
+                    "error":
+                    "Only admin can mark emergency notifications as read."
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        pending_alerts = EmergencyAlert.objects.filter(
-            status=EmergencyAlert.STATUS_PENDING
+        updated_count = Notification.objects.filter(
+            user=request.user,
+            is_read=False,
+            title__icontains="emergency",
+        ).update(
+            is_read=True
         )
-
-        messages = list(pending_alerts.values_list("message", flat=True))
-
-        pending_alerts.update(
-            status=EmergencyAlert.STATUS_READ,
-            read_at=timezone.now(),
-        )
-
-        if messages:
-            Notification.objects.filter(
-                user=request.user,
-                is_read=False,
-                title__icontains="emergency",
-                message__in=messages,
-            ).update(is_read=True)
 
         return Response(
-            {"message": "All emergency alerts marked as read."},
+            {
+                "message":
+                "All emergency notifications marked as read.",
+                "updated_count": updated_count,
+            },
             status=status.HTTP_200_OK,
         )
-
-    @action(detail=False, methods=["get"], url_path="unread_count")
+    @action(
+    detail=False,
+    methods=["get"],
+    url_path="unread_count",
+)
     def unread_count(self, request):
         if request.user.role != "ADMIN":
             return Response(
@@ -190,8 +204,13 @@ class EmergencyAlertViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_200_OK,
             )
 
-        count = EmergencyAlert.objects.filter(
-            status=EmergencyAlert.STATUS_PENDING
+        count = Notification.objects.filter(
+            user=request.user,
+            is_read=False,
+            title__icontains="emergency",
         ).count()
 
-        return Response({"count": count}, status=status.HTTP_200_OK)
+        return Response(
+            {"count": count},
+            status=status.HTTP_200_OK,
+        )

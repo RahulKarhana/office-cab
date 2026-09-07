@@ -1585,10 +1585,25 @@ def alerts_data_api(request):
 @admin_required
 @require_POST
 def resolve_alert(request, alert_id):
-    alert = get_object_or_404(EmergencyAlert, id=alert_id)
-    alert.status = "RESOLVED"
-    alert.save(update_fields=["status"])
-    messages.success(request, "Alert resolved successfully.")
+    alert = get_object_or_404(
+        EmergencyAlert,
+        id=alert_id,
+    )
+
+    if alert.status == EmergencyAlert.STATUS_RESOLVED:
+        messages.info(
+            request,
+            "This emergency alert is already resolved.",
+        )
+        return redirect("admin_web:alerts")
+
+    alert.resolve()
+
+    messages.success(
+        request,
+        "Emergency alert resolved successfully.",
+    )
+
     return redirect("admin_web:alerts")
 
 

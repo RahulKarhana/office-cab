@@ -582,12 +582,12 @@ class DeviceToken(models.Model):
         return f"{self.user.username} - {self.device_type}"
     
 class EmergencyAlert(models.Model):
-    STATUS_PENDING = "PENDING"
-    STATUS_READ = "READ"
+    STATUS_ACTIVE = "ACTIVE"
+    STATUS_RESOLVED = "RESOLVED"
 
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pending"),
-        (STATUS_READ, "Read"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_RESOLVED, "Resolved"),
     ]
 
     employee = models.ForeignKey(
@@ -596,6 +596,7 @@ class EmergencyAlert(models.Model):
         related_name="emergency_alerts",
         limit_choices_to={"role": "EMPLOYEE"},
     )
+
     trip = models.ForeignKey(
         Trip,
         on_delete=models.SET_NULL,
@@ -603,6 +604,7 @@ class EmergencyAlert(models.Model):
         blank=True,
         related_name="emergency_alerts",
     )
+
     route_run = models.ForeignKey(
         "RouteRun",
         on_delete=models.SET_NULL,
@@ -611,31 +613,68 @@ class EmergencyAlert(models.Model):
         related_name="emergency_alerts",
     )
 
-    title = models.CharField(max_length=255, default="Emergency Alert")
+    title = models.CharField(
+        max_length=255,
+        default="Emergency Alert",
+    )
+
     message = models.TextField()
 
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    pickup_location = models.CharField(max_length=255, blank=True, default="")
-    drop_location = models.CharField(max_length=255, blank=True, default="")
+    latitude = models.FloatField(
+        null=True,
+        blank=True,
+    )
+
+    longitude = models.FloatField(
+        null=True,
+        blank=True,
+    )
+
+    pickup_location = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    drop_location = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
 
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
+        default=STATUS_ACTIVE,
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    def mark_as_read(self):
-        self.status = self.STATUS_READ
-        self.read_at = timezone.now()
-        self.save(update_fields=["status", "read_at"])
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    def resolve(self):
+        if self.status != self.STATUS_RESOLVED:
+            self.status = self.STATUS_RESOLVED
+            self.resolved_at = timezone.now()
+
+            self.save(
+                update_fields=[
+                    "status",
+                    "resolved_at",
+                ]
+            )
 
     def __str__(self):
-        return f"EmergencyAlert #{self.id} - {self.employee.username}"
-
+        return (
+            f"EmergencyAlert #{self.id} - "
+            f"{self.employee.username} - "
+            f"{self.status}"
+        )
 
 class DriverLocationHistory(models.Model):
     driver = models.ForeignKey(

@@ -815,51 +815,100 @@ function buildAlertRow(alert){
     `;
 }
 
-async function refreshAlertsTableLive(){
-    try{
-        const response = await fetch("/admin-web/alerts/data/");
-        const payload = await response.json();
-        const alerts = payload.results || [];
+async function refreshAlertDriverLocation() {
+    if (!selectedAlertId) return;
 
-        document.getElementById("totalAlertsCount").innerText = payload.total_alerts ?? 0;
-        document.getElementById("activeAlertsCount").innerText = payload.active_alerts ?? 0;
-        document.getElementById("resolvedAlertsCount").innerText = payload.resolved_alerts ?? 0;
+    const data = alertModalData[String(selectedAlertId)];
 
-        const tableBody = document.getElementById("alertsTableBody");
+    if (!data) {
+        console.warn("Alert data not found:", selectedAlertId);
+        return;
+    }
 
-        if(!alerts.length){
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="empty-state">No alerts found</td>
-                </tr>
-            `;
+    try {
+        const response = await fetch(
+            `/admin-web/alerts/${selectedAlertId}/driver-location/`
+        );
+
+        if (!response.ok) {
+            console.warn(
+                "Driver location request failed:",
+                response.status
+            );
             return;
         }
 
-        tableBody.innerHTML = alerts.map(alert => buildAlertRow(alert)).join("");
+        const payload = await response.json();
 
-        alerts.forEach(alert => {
-            alertModalData[String(alert.id)] = alert;
-        });
-
-        const newestActive = alerts
-            .filter(alert => alert.status === "ACTIVE")
-            .sort((a,b) => b.id - a.id)[0];
-
-        if(newestActive){
-            if(!lastKnownActiveAlertId){
-                lastKnownActiveAlertId = String(newestActive.id);
-            }else if(Number(newestActive.id) > Number(lastKnownActiveAlertId)){
-                lastKnownActiveAlertId = String(newestActive.id);
-                playAlertSound();
-                openAlertModal(String(newestActive.id));
-            }
+        if (
+            !payload.success ||
+            payload.latitude == null ||
+            payload.longitude == null
+        ) {
+            return;
         }
-    }catch(error){
-        console.error("Auto alert refresh failed:", error);
+
+        const newPosition = validLatLng(
+            payload.latitude,
+            payload.longitude
+        );
+
+        if (!newPosition) return;
+
+        // Update stored data
+        data.driver_live_lat = newPosition.lat;
+        data.driver_live_lng = newPosition.lng;
+        data.driver_updated_at = payload.updated_at || "";
+
+        // Update last-update text
+        document.getElementById(
+            "alertDriverUpdatedAt"
+        ).innerText = data.driver_updated_at || "--";
+
+        // Update/create driver marker
+        if (alertDriverMarker) {
+            animateAlertDriverMarker(newPosition);
+        } else if (alertMap) {
+            alertDriverMarker = new google.maps.Marker({
+                position: newPosition,
+                map: alertMap,
+                title: data.driver_name || "Driver",
+                icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            });
+        }
+
+        // Update line between driver and SOS
+        const sosPosition = validLatLng(
+            data.alert_lat,
+            data.alert_lng
+        );
+
+        if (sosPosition && alertMap) {
+
+            if (alertLine) {
+                alertLine.setMap(null);
+            }
+
+            alertLine = new google.maps.Polyline({
+                path: [
+                    newPosition,
+                    sosPosition
+                ],
+                geodesic: true,
+                strokeColor: "#DC2626",
+                strokeOpacity: 1,
+                strokeWeight: 4,
+                map: alertMap,
+            });
+        }
+
+    } catch (error) {
+        console.error(
+            "Failed to refresh SOS driver location:",
+            error
+        );
     }
 }
-
 window.addEventListener("load", () => {
     const newestActiveRow = document.querySelector('tr[data-alert-status="ACTIVE"]');
     if(newestActiveRow && !autoPopupAlreadyShown){
