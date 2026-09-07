@@ -747,63 +747,39 @@ function animateAlertDriverMarker(newPosition){
 }
 
 async function refreshAlertDriverLocation(){
-    if(!selectedAlertId) return;
+    const response = await fetch(
+        `/admin-web/alerts/${selectedAlertId}/driver-location/`
+    );
 
-    const data = alertModalData[selectedAlertId];
-    if(!data || !data.driver_id) return;
-
-    try{
-        const response = await fetch("/api/trips/locations/");
-        const payload = await response.json();
-
-        let locations = [];
-        if(Array.isArray(payload)){
-            locations = payload;
-        }else if(payload.results && Array.isArray(payload.results)){
-            locations = payload.results;
-        }
-
-        const match = locations.find(item => String(item.driver) === String(data.driver_id));
-        if(!match || match.latitude == null || match.longitude == null) return;
-
-        const newPosition = validLatLng(match.latitude, match.longitude);
-        if(!newPosition) return;
-
-        data.driver_live_lat = newPosition.lat;
-        data.driver_live_lng = newPosition.lng;
-        data.driver_updated_at = match.updated_at || "";
-
-        document.getElementById("alertDriverUpdatedAt").innerText = data.driver_updated_at || "--";
-
-        if(alertDriverMarker){
-            animateAlertDriverMarker(newPosition);
-        }else if(alertMap){
-            alertDriverMarker = new google.maps.Marker({
-                position:newPosition,
-                map:alertMap,
-                title:data.driver_name || "Driver",
-                icon:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-            });
-        }
-
-        const sos = validLatLng(data.alert_lat, data.alert_lng);
-        if(alertLine){
-            alertLine.setMap(null);
-        }
-        if(sos && newPosition){
-            alertLine = new google.maps.Polyline({
-                path:[newPosition,sos],
-                geodesic:true,
-                strokeColor:"#DC2626",
-                strokeOpacity:1,
-                strokeWeight:4,
-            });
-            alertLine.setMap(alertMap);
-        }
-    }catch(error){
-        console.error("Alert driver refresh failed:", error);
+    if (!response.ok) {
+        console.warn(
+            "Driver location request failed:",
+            response.status
+        );
+        return;
     }
-}
+
+    const payload = await response.json();
+
+    if (
+        !payload.success ||
+        payload.latitude == null ||
+        payload.longitude == null
+    ) {
+        return;
+    }
+
+    const newPosition = validLatLng(
+        payload.latitude,
+        payload.longitude
+    );
+
+    if (!newPosition) return;
+
+    data.driver_live_lat = newPosition.lat;
+    data.driver_live_lng = newPosition.lng;
+    data.driver_updated_at = payload.updated_at || "";
+
 
 function formatStatusPill(status){
     if(status === "ACTIVE"){

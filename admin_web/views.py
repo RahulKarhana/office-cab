@@ -1450,7 +1450,65 @@ def alerts_page(request):
     }
     return render(request, "admin_web/alerts.html", context)
 
+@login_required
+@admin_required
+@require_GET
+def alert_driver_location_api(request, alert_id):
+    alert = get_object_or_404(
+        EmergencyAlert.objects.select_related(
+            "trip",
+            "trip__driver",
+            "route_run",
+            "route_run__driver",
+        ),
+        id=alert_id,
+    )
 
+    trip = alert.trip
+    route_run = alert.route_run
+
+    driver = None
+
+    if trip and trip.driver:
+        driver = trip.driver
+    elif route_run and route_run.driver:
+        driver = route_run.driver
+
+    if not driver:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Driver not available.",
+            },
+            status=404,
+        )
+
+    latest_locations = _get_latest_driver_locations_map()
+    location = latest_locations.get(driver.id)
+
+    if not location:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Driver location not available.",
+            },
+            status=404,
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "driver_id": driver.id,
+            "driver_name": driver.username,
+            "latitude": _safe_float(location.latitude),
+            "longitude": _safe_float(location.longitude),
+            "updated_at": (
+                location.updated_at.isoformat()
+                if location.updated_at
+                else ""
+            ),
+        }
+    )
 @login_required
 @admin_required
 @require_GET

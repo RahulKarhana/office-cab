@@ -79,6 +79,11 @@ urlpatterns = [
         views.live_cab_cards_api,
         name="live_cab_cards_api"
     ),
+    path(
+        "alerts/<int:alert_id>/driver-location/",
+        views.alert_driver_location_api,
+        name="alert_driver_location_api",
+    ),
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/", views.assigned_trips_page, name="assigned_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
