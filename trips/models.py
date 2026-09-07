@@ -453,7 +453,9 @@ class RouteRunStop(models.Model):
 
     arrival_time = models.DateTimeField(null=True, blank=True)
     waiting_started_at = models.DateTimeField(null=True, blank=True)
-
+    employee_late_seconds = models.PositiveIntegerField(
+        default=0
+    )
     waiting_minutes = models.IntegerField(default=10)
     keep_waiting_count = models.IntegerField(default=0)
 

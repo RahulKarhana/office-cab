@@ -515,63 +515,7 @@ class RouteService:
 
         return current_stop
 
-    # ============================================================
-    # KEEP WAITING
-    # ============================================================
-
-    @staticmethod
-    def keep_waiting(route_run):
-        current_stop = RouteService.get_current_stop(route_run)
-
-        if not current_stop:
-            return None
-
-        current_stop.waiting_started_at = timezone.now()
-
-        update_fields = ["waiting_started_at"]
-
-        if hasattr(current_stop, "keep_waiting_count"):
-            current_stop.keep_waiting_count += 1
-            update_fields.append("keep_waiting_count")
-
-        if hasattr(current_stop, "waiting_minutes"):
-            current_stop.waiting_minutes += 10
-            update_fields.append("waiting_minutes")
-
-        current_stop.save(update_fields=update_fields)
-
-        route_word = (
-            "drop"
-            if route_run.trip_type == Trip.TRIP_TYPE_DROP
-            else "pickup"
-        )
-
-        NotificationService.send_notification(
-            current_stop.employee,
-            (
-                f"The driver is still waiting at your "
-                f"{route_word} location.\n"
-                "Please come to the cab as soon as possible."
-            ),
-            title="Driver Waiting ⏳",
-            push_data={
-                "type": "KEEP_WAITING",
-                "route_run_id": str(route_run.id),
-                "stop_id": str(current_stop.id),
-                "trip_type": route_run.trip_type,
-                "waiting_minutes": str(
-                    getattr(
-                        current_stop,
-                        "waiting_minutes",
-                        10,
-                    )
-                ),
-                "screen": "pickup_chat",
-            },
-        )
-
-        return current_stop
-
+    
     # ============================================================
     # NO SHOW
     # ============================================================
@@ -676,6 +620,73 @@ class RouteService:
             route_completed,
         )
 
+    # ============================================================
+    # PICKUP WAITING TIMER
+    # ============================================================
+
+    @staticmethod
+    def get_waiting_timer_data(stop):
+        """
+        Employee gets 10 free minutes after Driver Arrived.
+
+        00:00 - 10:00 = GREEN
+        After 10:00     = RED / employee late
+
+        No button is required to start late time.
+        Late time starts automatically after the free 10 minutes.
+        """
+
+        if not stop or not stop.waiting_started_at:
+            return {
+                "timer_started": False,
+                "phase": "NOT_STARTED",
+                "elapsed_seconds": 0,
+                "free_seconds_remaining": 600,
+                "late_seconds": 0,
+                "late_minutes": 0,
+                "is_late": False,
+            }
+
+        # If pickup is already completed, freeze timer at picked_at.
+        end_time = stop.picked_at or timezone.now()
+
+        elapsed_seconds = max(
+            0,
+            int(
+                (
+                    end_time - stop.waiting_started_at
+                ).total_seconds()
+            ),
+        )
+
+        free_wait_seconds = 10 * 60
+
+        if elapsed_seconds < free_wait_seconds:
+            free_seconds_remaining = (
+                free_wait_seconds - elapsed_seconds
+            )
+
+            return {
+                "timer_started": True,
+                "phase": "FREE_WAIT",
+                "elapsed_seconds": elapsed_seconds,
+                "free_seconds_remaining": free_seconds_remaining,
+                "late_seconds": 0,
+                "late_minutes": 0,
+                "is_late": False,
+            }
+
+        late_seconds = elapsed_seconds - free_wait_seconds
+
+        return {
+            "timer_started": True,
+            "phase": "LATE",
+            "elapsed_seconds": elapsed_seconds,
+            "free_seconds_remaining": 0,
+            "late_seconds": late_seconds,
+            "late_minutes": late_seconds // 60,
+            "is_late": True,
+        }
     # ============================================================
     # OFFICE DEADLINE / LATE MINUTES
     # Monday-Thursday: 5:30 PM

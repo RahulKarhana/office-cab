@@ -147,16 +147,38 @@ class ETAService:
                 previous_lat = stop.pickup_latitude
                 previous_lng = stop.pickup_longitude
 
-            waiting_minutes = getattr(stop, "waiting_minutes", 10) or 10
-            countdown_seconds = None
-            driver_has_arrived = bool(getattr(stop, "arrival_time", None))
+            driver_has_arrived = bool(
+                getattr(stop, "arrival_time", None)
+            )
+
             chat_enabled = driver_has_arrived
 
-            if getattr(stop, "waiting_started_at", None):
-                from django.utils import timezone
+            arrival_time = getattr(
+                stop,
+                "arrival_time",
+                None,
+            )
 
-                elapsed = int((timezone.now() - stop.waiting_started_at).total_seconds())
-                countdown_seconds = max(0, (waiting_minutes * 60) - elapsed)
+            timer_data = RouteService.get_waiting_timer_data(
+                stop
+            )
+
+            waiting_phase = timer_data.get(
+                "phase",
+                "NOT_STARTED",
+            )
+
+            countdown_seconds = timer_data.get(
+                "free_seconds_remaining",
+                600,
+            )
+
+            late_seconds = timer_data.get(
+                "late_seconds",
+                0,
+            )
+
+            
 
             chat = None
 
@@ -175,31 +197,64 @@ class ETAService:
                 "pickup_location": stop.pickup_location,
                 "pickup_latitude": stop.pickup_latitude,
                 "pickup_longitude": stop.pickup_longitude,
-                "is_current_stop": bool(current_stop and stop.id == current_stop.id),
-                "is_next_stop": bool(next_stop and stop.id == next_stop.id),
+
+                "is_current_stop": bool(
+                    current_stop and
+                    stop.id == current_stop.id
+                ),
+
+                "is_next_stop": bool(
+                    next_stop and
+                    stop.id == next_stop.id
+                ),
+
                 "show_chat_option": chat_enabled,
                 "chat_id": chat.id if chat else None,
+
                 "driver_has_arrived": driver_has_arrived,
                 "chat_enabled": chat_enabled,
-                "waiting_started_at": getattr(stop, "waiting_started_at", None),
+
+                "arrival_time": arrival_time,
+                "waiting_started_at": getattr(
+                    stop,
+                    "waiting_started_at",
+                    None,
+                ),
+
+                "waiting_phase": waiting_phase,
                 "countdown_seconds": countdown_seconds,
+                "late_seconds": late_seconds,
+
                 "is_picked": stop.is_picked,
                 "is_no_show": stop.is_no_show,
+
                 "status": stop_status,
-                "distance_km": round(distance_km, 2) if distance_km is not None else None,
+
+                "distance_km": (
+                    round(distance_km, 2)
+                    if distance_km is not None
+                    else None
+                ),
+
                 "distance_text": distance_text,
                 "eta_minutes": eta_minutes,
-                "eta_text": ETAService.format_eta_text(eta_minutes),
+                "eta_text": ETAService.format_eta_text(
+                    eta_minutes
+                ),
+
                 "eta_display_text": (
                     "Pickup Done"
                     if stop.is_picked
                     else "No Show"
                     if stop.is_no_show
-                    else ETAService.format_eta_text(eta_minutes)
+                    else ETAService.format_eta_text(
+                        eta_minutes
+                    )
                 ),
+            })
                 
 
-            })
+            
 
         current_stop_data = next((x for x in live_stops if current_stop and x["id"] == current_stop.id), None)
         next_stop_data = next((x for x in live_stops if next_stop and x["id"] == next_stop.id), None)
@@ -284,9 +339,34 @@ class ETAService:
             "driver_distance_text": my_stop.get("distance_text"),
             "current_stop_name": current_stop.get("employee_name"),
             "next_stop_name": next_stop.get("employee_name"),
-            "driver_has_arrived": my_stop.get("driver_has_arrived", False),
+            "driver_has_arrived": my_stop.get(
+                "driver_has_arrived",
+                False,
+            ),
+
             "chat_id": my_stop.get("chat_id"),
-            "chat_enabled": my_stop.get("chat_enabled", False),
-            "countdown_seconds": my_stop.get("countdown_seconds"),
+
+            "chat_enabled": my_stop.get(
+                "chat_enabled",
+                False,
+            ),
+
+            "waiting_phase": my_stop.get(
+                "waiting_phase",
+                "NOT_ARRIVED",
+            ),
+
+            "countdown_seconds": my_stop.get(
+                "countdown_seconds"
+            ),
+
+            "late_seconds": my_stop.get(
+                "late_seconds",
+                0,
+            ),
+
+            "arrival_time": my_stop.get(
+                "arrival_time"
+            ),
         })
         return data
