@@ -746,40 +746,6 @@ function animateAlertDriverMarker(newPosition){
     }, 35);
 }
 
-async function refreshAlertDriverLocation(){
-    const response = await fetch(
-        `/admin-web/alerts/${selectedAlertId}/driver-location/`
-    );
-
-    if (!response.ok) {
-        console.warn(
-            "Driver location request failed:",
-            response.status
-        );
-        return;
-    }
-
-    const payload = await response.json();
-
-    if (
-        !payload.success ||
-        payload.latitude == null ||
-        payload.longitude == null
-    ) {
-        return;
-    }
-
-    const newPosition = validLatLng(
-        payload.latitude,
-        payload.longitude
-    );
-
-    if (!newPosition) return;
-
-    data.driver_live_lat = newPosition.lat;
-    data.driver_live_lng = newPosition.lng;
-    data.driver_updated_at = payload.updated_at || "";
-
 
 function formatStatusPill(status){
     if(status === "ACTIVE"){
@@ -821,7 +787,10 @@ async function refreshAlertDriverLocation() {
     const data = alertModalData[String(selectedAlertId)];
 
     if (!data) {
-        console.warn("Alert data not found:", selectedAlertId);
+        console.warn(
+            "Alert data not found:",
+            selectedAlertId
+        );
         return;
     }
 
@@ -855,51 +824,60 @@ async function refreshAlertDriverLocation() {
 
         if (!newPosition) return;
 
-        // Update stored data
         data.driver_live_lat = newPosition.lat;
         data.driver_live_lng = newPosition.lng;
-        data.driver_updated_at = payload.updated_at || "";
+        data.driver_updated_at =
+            payload.updated_at || "";
 
-        // Update last-update text
         document.getElementById(
             "alertDriverUpdatedAt"
-        ).innerText = data.driver_updated_at || "--";
+        ).innerText =
+            data.driver_updated_at || "--";
 
-        // Update/create driver marker
         if (alertDriverMarker) {
-            animateAlertDriverMarker(newPosition);
+            animateAlertDriverMarker(
+                newPosition
+            );
         } else if (alertMap) {
-            alertDriverMarker = new google.maps.Marker({
-                position: newPosition,
-                map: alertMap,
-                title: data.driver_name || "Driver",
-                icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-            });
+            alertDriverMarker =
+                new google.maps.Marker({
+                    position: newPosition,
+                    map: alertMap,
+                    title:
+                        data.driver_name ||
+                        "Driver",
+                    icon:
+                        "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                });
         }
 
-        // Update line between driver and SOS
         const sosPosition = validLatLng(
             data.alert_lat,
             data.alert_lng
         );
 
-        if (sosPosition && alertMap) {
+        if (alertLine) {
+            alertLine.setMap(null);
+            alertLine = null;
+        }
 
-            if (alertLine) {
-                alertLine.setMap(null);
-            }
-
-            alertLine = new google.maps.Polyline({
-                path: [
-                    newPosition,
-                    sosPosition
-                ],
-                geodesic: true,
-                strokeColor: "#DC2626",
-                strokeOpacity: 1,
-                strokeWeight: 4,
-                map: alertMap,
-            });
+        if (
+            sosPosition &&
+            newPosition &&
+            alertMap
+        ) {
+            alertLine =
+                new google.maps.Polyline({
+                    path: [
+                        newPosition,
+                        sosPosition
+                    ],
+                    geodesic: true,
+                    strokeColor: "#DC2626",
+                    strokeOpacity: 1,
+                    strokeWeight: 4,
+                    map: alertMap,
+                });
         }
 
     } catch (error) {
