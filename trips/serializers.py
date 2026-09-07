@@ -130,6 +130,7 @@ class TripSerializer(serializers.ModelSerializer):
     route_run = RouteRunSerializer(read_only=True)
     driver_latitude = serializers.SerializerMethodField()
     driver_longitude = serializers.SerializerMethodField()
+    has_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Trip
@@ -159,6 +160,7 @@ class TripSerializer(serializers.ModelSerializer):
             "route_run",
             "driver_latitude",
             "driver_longitude",
+            "has_review",
         ]
         read_only_fields = [
             "trip_date",
@@ -207,6 +209,12 @@ class TripSerializer(serializers.ModelSerializer):
         if location:
             return location.longitude
         return None
+
+    def get_has_review(self, obj):
+        return Review.objects.filter(
+            trip=obj,
+            employee=obj.employee,
+        ).exists()
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
