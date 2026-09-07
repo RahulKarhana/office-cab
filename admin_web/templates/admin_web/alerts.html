@@ -107,9 +107,16 @@
                             </button>
 
                             {% if alert.status == "ACTIVE" %}
-                                <a href="{% url 'admin_web:resolve_alert' alert.id %}" class="sos-btn resolve">
-                                    ✅ Resolve
-                                </a>
+                                <form
+                                    method="post"
+                                    action="{% url 'admin_web:resolve_alert' alert.id %}"
+                                    style="display:inline;"
+                                >
+                                    {% csrf_token %}
+                                    <button type="submit" class="sos-btn resolve">
+                                        ✅ Resolve
+                                    </button>
+                                </form>
                             {% endif %}
 
                             <a href="{% url 'admin_web:tracking' %}" class="sos-btn track">
@@ -194,7 +201,13 @@
             <div id="alertMap" class="alert-map"></div>
 
             <div class="modal-actions">
-                <a id="resolveAlertBtn" href="#" class="sos-btn resolve">✅ Resolve Alert</a>
+                <button
+                    id="resolveAlertBtn"
+                    type="button"
+                    class="sos-btn resolve"
+                >
+                    ✅ Resolve Alert
+                </button>
                 <a href="{% url 'admin_web:tracking' %}" class="sos-btn track">📍 Jump to Live Tracking</a>
             </div>
         </div>
@@ -633,7 +646,18 @@ function openAlertModal(alertId){
     document.getElementById("alertDrop").innerText = data.drop_location || "--";
     document.getElementById("alertRouteName").innerText = data.route_name || "--";
     document.getElementById("alertDriverUpdatedAt").innerText = data.driver_updated_at || "--";
-    document.getElementById("resolveAlertBtn").href = data.resolve_url || "#";
+    const resolveBtn =
+        document.getElementById("resolveAlertBtn");
+
+    if (data.status === "ACTIVE") {
+        resolveBtn.style.display = "inline-flex";
+
+        resolveBtn.onclick = function () {
+            resolveAlertLive(data.id);
+        };
+    } else {
+        resolveBtn.style.display = "none";
+    }
 
     document.getElementById("alertModal").style.display = "flex";
 
@@ -754,9 +778,76 @@ function formatStatusPill(status){
     return `<span class="sos-status resolved">🟢 RESOLVED</span>`;
 }
 
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+
+            if (cookie.startsWith(name + "=")) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+
+async function resolveAlertLive(alertId) {
+    try {
+        const response = await fetch(
+            `/admin-web/alerts/${alertId}/resolve/`,
+            {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken"),
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            }
+        );
+
+        if (!response.ok) {
+            console.error(
+                "Resolve failed:",
+                response.status
+            );
+            return;
+        }
+
+        // Close modal if this alert is currently open
+        if (
+            selectedAlertId &&
+            String(selectedAlertId) === String(alertId)
+        ) {
+            closeAlertModal();
+        }
+
+        await refreshAlertsTableLive();
+
+    } catch (error) {
+        console.error(
+            "Failed to resolve SOS:",
+            error
+        );
+    }
+}
+
 function buildAlertRow(alert){
     const resolveButton = alert.status === "ACTIVE"
-        ? `<a href="${alert.resolve_url || '#'}" class="sos-btn resolve">✅ Resolve</a>`
+        ? `<button
+                type="button"
+                class="sos-btn resolve"
+                onclick="resolveAlertLive('${alert.id}')"
+        >
+                ✅ Resolve
+        </button>`
         : "";
 
     return `
