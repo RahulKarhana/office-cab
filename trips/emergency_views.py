@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from trips.models import EmergencyAlert, Notification, Trip
+from trips.models import EmergencyAlert, Trip
 from trips.serializers import EmergencyAlertSerializer
 from trips.utils.notification import send_push_notification
 
@@ -95,122 +95,46 @@ class EmergencyAlertViewSet(viewsets.ModelViewSet):
             drop_location=drop_location,
         )
 
-        admins = User.objects.filter(role="ADMIN", is_active=True)
+        admins = User.objects.filter(
+            role="ADMIN",
+            is_active=True,
+        )
 
         for admin in admins:
-            Notification.objects.create(
-                user=admin,
-                title="🚨 Emergency SOS Alert",
-                message=message,
-                is_read=False,
-            )
-
             try:
                 send_push_notification(
                     user=admin,
                     title="🚨 Emergency SOS Alert",
-                    body=f"{user.username} needs urgent help. Open emergency alerts now.",
+                    body=(
+                        f"{user.username} needs urgent help. "
+                        "Open emergency alerts now."
+                    ),
                     data={
                         "type": "SOS_ALERT",
                         "alert_id": str(alert.id),
                         "employee_id": str(user.id),
-                        "trip_id": str(active_trip.id) if active_trip else "",
-                        "route_run_id": str(route_run.id) if route_run else "",
+                        "trip_id": (
+                            str(active_trip.id)
+                            if active_trip
+                            else ""
+                        ),
+                        "route_run_id": (
+                            str(route_run.id)
+                            if route_run
+                            else ""
+                        ),
                         "screen": "emergency_alerts",
                     },
                 )
-            except Exception as e:
-                print("SOS ADMIN FCM ERROR:", e)
 
+            except Exception as e:
+                print(
+                    "SOS ADMIN FCM ERROR:",
+                    e,
+                )
         return Response(
             EmergencyAlertSerializer(alert).data,
             status=status.HTTP_201_CREATED,
         )
 
-    @action(
-    detail=True,
-    methods=["post"],
-    url_path="mark_as_read",
-)
-    def mark_as_read(self, request, pk=None):
-        if request.user.role != "ADMIN":
-            return Response(
-                {
-                    "error":
-                    "Only admin can mark emergency notification as read."
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        alert = self.get_object()
-
-        Notification.objects.filter(
-            user=request.user,
-            is_read=False,
-            title__icontains="emergency",
-            message=alert.message,
-        ).update(
-            is_read=True
-        )
-
-        return Response(
-            {
-                "message":
-                "Emergency notification marked as read."
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    @action(
-    detail=False,
-    methods=["post"],
-    url_path="mark_all_as_read",
-)
-    def mark_all_as_read(self, request):
-        if request.user.role != "ADMIN":
-            return Response(
-                {
-                    "error":
-                    "Only admin can mark emergency notifications as read."
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        updated_count = Notification.objects.filter(
-            user=request.user,
-            is_read=False,
-            title__icontains="emergency",
-        ).update(
-            is_read=True
-        )
-
-        return Response(
-            {
-                "message":
-                "All emergency notifications marked as read.",
-                "updated_count": updated_count,
-            },
-            status=status.HTTP_200_OK,
-        )
-    @action(
-    detail=False,
-    methods=["get"],
-    url_path="unread_count",
-)
-    def unread_count(self, request):
-        if request.user.role != "ADMIN":
-            return Response(
-                {"count": 0},
-                status=status.HTTP_200_OK,
-            )
-
-        count = Notification.objects.filter(
-            user=request.user,
-            is_read=False,
-            title__icontains="emergency",
-        ).count()
-
-        return Response(
-            {"count": count},
-            status=status.HTTP_200_OK,
-        )
+    

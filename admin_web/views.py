@@ -976,21 +976,55 @@ def drivers_page(request):
 @admin_required
 @require_GET
 def notifications_page(request):
-    notifications = Notification.objects.select_related(
-        "user",
-        "driver",
-        "employee",
-        "trip",
-        "route_run",
-    ).order_by("-created_at")
 
-    unread_count = notifications.filter(is_read=False).count()
+    # =========================================================
+    # ADMIN NOTIFICATION CENTER
+    #
+    # Show only notifications actually belonging to this Admin
+    # and only Route Start / Route Completed notifications.
+    # =========================================================
 
-    return render(request, "admin_web/notifications.html", {
-        "notifications": notifications,
-        "unread_count": unread_count,
-    })
+    notifications = (
+        Notification.objects
+        .select_related(
+            "user",
+            "driver",
+            "employee",
+            "trip",
+            "route_run",
+        )
+        .filter(
+            user=request.user,
+            title__in=[
+                "Pickup Route Started 🚕",
+                "Drop Trip Started 🚕",
+                "✅ Route Completed",
+            ],
+        )
+        .order_by(
+            "-created_at"
+        )
+    )
 
+    unread_count = (
+        notifications
+        .filter(
+            is_read=False
+        )
+        .count()
+    )
+
+    return render(
+        request,
+        "admin_web/notifications.html",
+        {
+            "notifications":
+                notifications,
+
+            "unread_count":
+                unread_count,
+        },
+    )
 # =========================
 # ROUTES
 # =========================
