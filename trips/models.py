@@ -458,6 +458,7 @@ class RouteRunStop(models.Model):
     )
     waiting_minutes = models.IntegerField(default=10)
     keep_waiting_count = models.IntegerField(default=0)
+    late_seconds = models.PositiveIntegerField(default=0)
 
     is_no_show = models.BooleanField(default=False)
     no_show_at = models.DateTimeField(null=True, blank=True)

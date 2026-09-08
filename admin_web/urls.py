@@ -80,12 +80,16 @@ urlpatterns = [
         name="live_cab_cards_api"
     ),
     path(
+        "late-report/",
+        views.late_report_page,
+        name="late_report",
+    ),
+    path(
         "alerts/<int:alert_id>/driver-location/",
         views.alert_driver_location_api,
         name="alert_driver_location_api",
     ),
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
-    path("assigned-trips/", views.assigned_trips_page, name="assigned_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-route-run/<int:route_run_id>/", views.cancel_route_run_trips, name="cancel_route_run_trips"),
 ]   

@@ -295,10 +295,33 @@ class RouteService:
 
         completed_time = timezone.now()
 
+        # ========================================================
+        # CALCULATE FINAL EMPLOYEE LATE TIME
+        # ========================================================
+        # get_waiting_timer_data() uses:
+        # waiting_started_at -> first 10 minutes free -> late time
+        #
+        # We temporarily use completed_time as picked_at so the
+        # calculation freezes at the exact Pickup Done time.
+        # ========================================================
+
         current_stop.is_picked = True
         current_stop.picked_at = completed_time
 
-        update_fields = ["is_picked", "picked_at"]
+        waiting_data = RouteService.get_waiting_timer_data(
+            current_stop
+        )
+
+        current_stop.late_seconds = waiting_data.get(
+            "late_seconds",
+            0,
+        )
+
+        update_fields = [
+            "is_picked",
+            "picked_at",
+            "late_seconds",
+        ]
 
         if hasattr(
             current_stop,
@@ -532,7 +555,51 @@ class RouteService:
         current_stop.is_no_show = True
         current_stop.no_show_at = now
 
-        update_fields = ["is_no_show", "no_show_at"]
+        # ========================================================
+        # FREEZE FINAL EMPLOYEE LATE TIME
+        # ========================================================
+        # For No Show, there is no picked_at.
+        # So temporarily calculate using the No Show time.
+        # ========================================================
+
+        started_at = (
+            current_stop.waiting_started_at
+            or current_stop.arrival_time
+        )
+
+        late_seconds = 0
+
+        if started_at:
+            elapsed_seconds = max(
+                0,
+                int(
+                    (
+                        now - started_at
+                    ).total_seconds()
+                ),
+            )
+
+            free_wait_seconds = (
+                getattr(
+                    current_stop,
+                    "waiting_minutes",
+                    10,
+                )
+                * 60
+            )
+
+            late_seconds = max(
+                0,
+                elapsed_seconds - free_wait_seconds,
+            )
+
+        current_stop.late_seconds = late_seconds
+
+        update_fields = [
+            "is_no_show",
+            "no_show_at",
+            "late_seconds",
+        ]
 
         should_notify_employee = True
 

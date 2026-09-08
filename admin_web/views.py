@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.db import transaction
 import math
+from trips.models import RouteRunStop
 from accounts.models import PickupLocationChangeRequest
 from trips.utils.notification import send_push_notification
 from django.http import JsonResponse
@@ -355,6 +356,215 @@ def dashboard(request):
 
     return render(request, "admin_web/dashboard.html", context)
 
+@login_required
+@admin_required
+@require_GET
+def late_report_page(request):
+    query = request.GET.get("q", "").strip()
+    date_filter = request.GET.get("date", "").strip()
+    result_filter = request.GET.get("result", "").strip().upper()
+
+    stops = (
+        RouteRunStop.objects
+        .select_related(
+            "employee",
+            "route_run",
+            "route_run__driver",
+            "route_run__vehicle",
+            "route_run__route_template",
+        )
+        .filter(
+            late_seconds__gt=0,
+        )
+        .order_by(
+            "-route_run__run_date",
+            "-late_seconds",
+        )
+    )
+
+    # ============================================================
+    # SEARCH
+    # ============================================================
+
+    if query:
+        stops = stops.filter(
+            Q(
+                employee__username__icontains=query
+            )
+            |
+            Q(
+                route_run__driver__username__icontains=query
+            )
+            |
+            Q(
+                route_run__vehicle__vehicle_number__icontains=query
+            )
+            |
+            Q(
+                route_run__route_template__name__icontains=query
+            )
+        )
+
+    # ============================================================
+    # DATE FILTER
+    # ============================================================
+
+    parsed_date = (
+        parse_date(date_filter)
+        if date_filter
+        else None
+    )
+
+    if parsed_date:
+        stops = stops.filter(
+            route_run__run_date=parsed_date
+        )
+
+    # ============================================================
+    # RESULT FILTER
+    # ============================================================
+
+    if result_filter == "PICKED":
+        stops = stops.filter(
+            is_picked=True,
+            is_no_show=False,
+        )
+
+    elif result_filter == "NO_SHOW":
+        stops = stops.filter(
+            is_no_show=True,
+        )
+
+    # ============================================================
+    # BUILD REPORT
+    # ============================================================
+
+    rows = []
+
+    total_late_seconds = 0
+    pickup_late_count = 0
+    no_show_late_count = 0
+
+    for stop in stops:
+        late_seconds = (
+            stop.late_seconds or 0
+        )
+
+        total_late_seconds += late_seconds
+
+        minutes = late_seconds // 60
+        seconds = late_seconds % 60
+
+        late_text = (
+            f"{minutes:02d}:{seconds:02d}"
+        )
+
+        if stop.is_no_show:
+            result = "NO SHOW"
+            finished_at = stop.no_show_at
+            no_show_late_count += 1
+
+        elif stop.is_picked:
+            result = "PICKED"
+            finished_at = stop.picked_at
+            pickup_late_count += 1
+
+        else:
+            result = "WAITING"
+            finished_at = None
+
+        route_run = stop.route_run
+
+        rows.append(
+            {
+                "id": stop.id,
+
+                "date": (
+                    route_run.run_date
+                    if route_run
+                    else None
+                ),
+
+                "employee":
+                    stop.employee.username,
+
+                "route_name": (
+                    route_run.route_template.name
+                    if route_run
+                    and route_run.route_template
+                    else "Manual Route"
+                ),
+
+                "driver": (
+                    route_run.driver.username
+                    if route_run
+                    and route_run.driver
+                    else "--"
+                ),
+
+                "vehicle": (
+                    route_run.vehicle.vehicle_number
+                    if route_run
+                    and route_run.vehicle
+                    else "--"
+                ),
+
+                "trip_type": (
+                    route_run.trip_type
+                    if route_run
+                    else "--"
+                ),
+
+                "result": result,
+
+                "arrival_time":
+                    stop.arrival_time,
+
+                "finished_at":
+                    finished_at,
+
+                "late_seconds":
+                    late_seconds,
+
+                "late_text":
+                    late_text,
+            }
+        )
+
+    # ============================================================
+    # SUMMARY
+    # ============================================================
+
+    total_late_minutes = round(
+        total_late_seconds / 60,
+        1,
+    )
+
+    context = {
+        "rows": rows,
+
+        "query": query,
+        "date_filter": date_filter,
+        "result_filter": result_filter,
+
+        "total_late_employees":
+            len(rows),
+
+        "pickup_late_count":
+            pickup_late_count,
+
+        "no_show_late_count":
+            no_show_late_count,
+
+        "total_late_minutes":
+            total_late_minutes,
+    }
+
+    return render(
+        request,
+        "admin_web/late_report.html",
+        context,
+    )
 # =========================================================
 # REQUEST MANAGEMENT
 # =========================================================

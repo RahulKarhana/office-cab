@@ -1034,10 +1034,11 @@
             <small>Ratings and comments</small>
         </a>
 
-        <a class="report-tab tab-teal {% if active_report == 'late' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=late">
-            <span class="icon">⏱️</span>
-            <strong>Late Employees</strong>
-            <small>Waiting/delay data</small>
+        <a class="report-tab tab-teal"
+            href="{% url 'admin_web:late_report' %}">
+                <span class="icon">⏱️</span>
+                <strong>Late Employees</strong>
+                <small>Waiting/delay data</small>
         </a>
 
         <a class="report-tab tab-green" href="{% url 'admin_web:driver_performance' %}?date={{ start_date }}">           

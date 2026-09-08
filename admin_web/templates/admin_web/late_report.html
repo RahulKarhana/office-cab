@@ -1,0 +1,601 @@
+{% extends "admin_web/base.html" %}
+
+{% block title %}Employee Late Report{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+
+    <!-- ===================================================== -->
+    <!-- PAGE HEADER -->
+    <!-- ===================================================== -->
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                Employee Late Report
+            </h2>
+
+            <p class="text-muted mb-0">
+                Employee waiting time after the 10-minute free waiting period.
+            </p>
+        </div>
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- SUMMARY CARDS -->
+    <!-- ===================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <!-- TOTAL LATE EMPLOYEES -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+
+                        <div
+                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="
+                                width:52px;
+                                height:52px;
+                                background:#fff7ed;
+                                color:#ea580c;
+                            "
+                        >
+                            <i class="bi bi-clock-history fs-4"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted small">
+                                Late Employees
+                            </div>
+
+                            <div class="fs-3 fw-bold">
+                                {{ total_late_employees }}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- PICKED AFTER LATE -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+
+                        <div
+                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="
+                                width:52px;
+                                height:52px;
+                                background:#ecfdf3;
+                                color:#15803d;
+                            "
+                        >
+                            <i class="bi bi-check-circle fs-4"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted small">
+                                Late + Picked
+                            </div>
+
+                            <div class="fs-3 fw-bold">
+                                {{ pickup_late_count }}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- NO SHOW -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+
+                        <div
+                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="
+                                width:52px;
+                                height:52px;
+                                background:#fef2f2;
+                                color:#dc2626;
+                            "
+                        >
+                            <i class="bi bi-x-circle fs-4"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted small">
+                                Late + No Show
+                            </div>
+
+                            <div class="fs-3 fw-bold">
+                                {{ no_show_late_count }}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- TOTAL LATE TIME -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+
+                        <div
+                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
+                            style="
+                                width:52px;
+                                height:52px;
+                                background:#eff6ff;
+                                color:#2563eb;
+                            "
+                        >
+                            <i class="bi bi-stopwatch fs-4"></i>
+                        </div>
+
+                        <div>
+                            <div class="text-muted small">
+                                Total Late Time
+                            </div>
+
+                            <div class="fs-3 fw-bold">
+                                {{ total_late_minutes }}
+                                <span class="fs-6 fw-normal text-muted">
+                                    min
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- FILTERS -->
+    <!-- ===================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="get">
+
+                <div class="row g-3 align-items-end">
+
+                    <!-- SEARCH -->
+                    <div class="col-lg-5">
+
+                        <label class="form-label fw-semibold">
+                            Search
+                        </label>
+
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ query }}"
+                            class="form-control"
+                            placeholder="Employee, driver, vehicle or route"
+                        >
+
+                    </div>
+
+
+                    <!-- DATE -->
+                    <div class="col-lg-3">
+
+                        <label class="form-label fw-semibold">
+                            Date
+                        </label>
+
+                        <input
+                            type="date"
+                            name="date"
+                            value="{{ date_filter }}"
+                            class="form-control"
+                        >
+
+                    </div>
+
+
+                    <!-- RESULT -->
+                    <div class="col-lg-2">
+
+                        <label class="form-label fw-semibold">
+                            Result
+                        </label>
+
+                        <select
+                            name="result"
+                            class="form-select"
+                        >
+
+                            <option
+                                value=""
+                                {% if not result_filter %}selected{% endif %}
+                            >
+                                All
+                            </option>
+
+                            <option
+                                value="PICKED"
+                                {% if result_filter == "PICKED" %}selected{% endif %}
+                            >
+                                Picked
+                            </option>
+
+                            <option
+                                value="NO_SHOW"
+                                {% if result_filter == "NO_SHOW" %}selected{% endif %}
+                            >
+                                No Show
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- FILTER BUTTON -->
+                    <div class="col-lg-2">
+
+                        <div class="d-grid">
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                <i class="bi bi-funnel me-1"></i>
+                                Filter
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {% if query or date_filter or result_filter %}
+
+                    <div class="mt-3">
+
+                        <a
+                            href="{% url 'admin_web:late_report' %}"
+                            class="btn btn-sm btn-outline-secondary"
+                        >
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>
+                            Clear Filters
+                        </a>
+
+                    </div>
+
+                {% endif %}
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- REPORT TABLE -->
+    <!-- ===================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-header bg-white border-0 pt-4 px-4">
+
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div>
+                    <h5 class="fw-bold mb-1">
+                        Late Employee Details
+                    </h5>
+
+                    <div class="text-muted small">
+                        First 10 minutes after driver arrival are excluded.
+                    </div>
+                </div>
+
+                <span class="badge bg-light text-dark border">
+                    {{ total_late_employees }} record{{ total_late_employees|pluralize }}
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+
+                        <tr>
+                            <th class="ps-4">
+                                Date
+                            </th>
+
+                            <th>
+                                Employee
+                            </th>
+
+                            <th>
+                                Route
+                            </th>
+
+                            <th>
+                                Driver
+                            </th>
+
+                            <th>
+                                Vehicle
+                            </th>
+
+                            <th>
+                                Trip
+                            </th>
+
+                            <th>
+                                Result
+                            </th>
+
+                            <th>
+                                Driver Arrived
+                            </th>
+
+                            <th>
+                                Finished
+                            </th>
+
+                            <th class="text-end pe-4">
+                                Late Time
+                            </th>
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for row in rows %}
+
+                            <tr>
+
+                                <!-- DATE -->
+                                <td class="ps-4 text-nowrap">
+
+                                    {% if row.date %}
+                                        {{ row.date|date:"d M Y" }}
+                                    {% else %}
+                                        --
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- EMPLOYEE -->
+                                <td>
+
+                                    <div class="fw-semibold">
+                                        {{ row.employee }}
+                                    </div>
+
+                                </td>
+
+
+                                <!-- ROUTE -->
+                                <td>
+
+                                    {{ row.route_name }}
+
+                                </td>
+
+
+                                <!-- DRIVER -->
+                                <td>
+
+                                    {{ row.driver }}
+
+                                </td>
+
+
+                                <!-- VEHICLE -->
+                                <td>
+
+                                    <span class="badge bg-light text-dark border">
+                                        {{ row.vehicle }}
+                                    </span>
+
+                                </td>
+
+
+                                <!-- TRIP TYPE -->
+                                <td>
+
+                                    {% if row.trip_type == "PICKUP" %}
+
+                                        <span class="badge bg-primary">
+                                            Pickup
+                                        </span>
+
+                                    {% elif row.trip_type == "DROP" %}
+
+                                        <span class="badge bg-info text-dark">
+                                            Drop
+                                        </span>
+
+                                    {% else %}
+
+                                        {{ row.trip_type }}
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- RESULT -->
+                                <td>
+
+                                    {% if row.result == "PICKED" %}
+
+                                        <span
+                                            class="badge"
+                                            style="
+                                                background:#dcfce7;
+                                                color:#166534;
+                                            "
+                                        >
+                                            <i class="bi bi-check-circle me-1"></i>
+                                            Picked
+                                        </span>
+
+                                    {% elif row.result == "NO SHOW" %}
+
+                                        <span
+                                            class="badge"
+                                            style="
+                                                background:#fee2e2;
+                                                color:#991b1b;
+                                            "
+                                        >
+                                            <i class="bi bi-x-circle me-1"></i>
+                                            No Show
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge bg-secondary">
+                                            {{ row.result }}
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- ARRIVAL TIME -->
+                                <td class="text-nowrap">
+
+                                    {% if row.arrival_time %}
+
+                                        {{ row.arrival_time|date:"h:i:s A" }}
+
+                                    {% else %}
+
+                                        --
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- FINISHED TIME -->
+                                <td class="text-nowrap">
+
+                                    {% if row.finished_at %}
+
+                                        {{ row.finished_at|date:"h:i:s A" }}
+
+                                    {% else %}
+
+                                        --
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <!-- LATE TIME -->
+                                <td class="text-end pe-4">
+
+                                    <span
+                                        class="badge rounded-pill"
+                                        style="
+                                            background:#fee2e2;
+                                            color:#b91c1c;
+                                            font-size:13px;
+                                            padding:8px 12px;
+                                        "
+                                    >
+                                        <i class="bi bi-clock me-1"></i>
+
+                                        {{ row.late_text }}
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+
+                                <td
+                                    colspan="10"
+                                    class="text-center py-5"
+                                >
+
+                                    <div class="mb-2">
+
+                                        <i
+                                            class="bi bi-check-circle"
+                                            style="
+                                                font-size:42px;
+                                                color:#16a34a;
+                                            "
+                                        ></i>
+
+                                    </div>
+
+                                    <h6 class="fw-bold mb-1">
+                                        No Late Employees
+                                    </h6>
+
+                                    <div class="text-muted">
+                                        No employee late records were found for the selected filters.
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

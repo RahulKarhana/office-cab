@@ -810,6 +810,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
                 ),
                 "completed_stop_id": current_stop.id,
                 "completed_employee": current_stop.employee.username,
+                "late_seconds": current_stop.late_seconds,
 
                 "next_stop_id": (
                     next_stop.id
