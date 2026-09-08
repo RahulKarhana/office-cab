@@ -3598,6 +3598,277 @@ def trip_history_page(request):
 
 @login_required
 @admin_required
+@require_GET
+def cancelled_trips_page(request):
+    query = request.GET.get("q", "").strip()
+    date_filter = request.GET.get("date", "").strip()
+    trip_type_filter = request.GET.get(
+        "trip_type",
+        "",
+    ).strip().upper()
+
+    cancelled_by_filter = request.GET.get(
+        "cancelled_by",
+        "",
+    ).strip().upper()
+
+    declaration_filter = request.GET.get(
+        "declaration",
+        "",
+    ).strip().upper()
+
+    # ============================================================
+    # BASE QUERY
+    # ============================================================
+
+    cancellations = (
+        TripCancellation.objects
+        .select_related(
+            "trip",
+            "trip__employee",
+            "trip__driver",
+            "trip__vehicle",
+            "trip__route_run",
+            "trip__route_run__route_template",
+            "cancelled_by",
+        )
+        .filter(
+            trip__status=Trip.STATUS_CANCELLED,
+        )
+        .order_by(
+            "-cancelled_at",
+        )
+    )
+
+    # ============================================================
+    # SEARCH
+    # ============================================================
+
+    if query:
+        cancellations = cancellations.filter(
+            Q(
+                trip__employee__username__icontains=query
+            )
+            |
+            Q(
+                trip__driver__username__icontains=query
+            )
+            |
+            Q(
+                trip__vehicle__vehicle_number__icontains=query
+            )
+            |
+            Q(
+                trip__route_run__route_template__name__icontains=query
+            )
+            |
+            Q(
+                reason__icontains=query
+            )
+        )
+
+    # ============================================================
+    # DATE FILTER
+    # ============================================================
+
+    parsed_date = (
+        parse_date(date_filter)
+        if date_filter
+        else None
+    )
+
+    if parsed_date:
+        cancellations = cancellations.filter(
+            trip__trip_date=parsed_date,
+        )
+
+    # ============================================================
+    # TRIP TYPE FILTER
+    # ============================================================
+
+    if trip_type_filter in [
+        Trip.TRIP_TYPE_PICKUP,
+        Trip.TRIP_TYPE_DROP,
+    ]:
+        cancellations = cancellations.filter(
+            trip__trip_type=trip_type_filter,
+        )
+
+    # ============================================================
+    # CANCELLED BY FILTER
+    # ============================================================
+
+    if cancelled_by_filter in [
+        "EMPLOYEE",
+        "ADMIN",
+        "DRIVER",
+    ]:
+        cancellations = cancellations.filter(
+            cancelled_by_role=cancelled_by_filter,
+        )
+
+    # ============================================================
+    # DECLARATION FILTER
+    # ============================================================
+
+    if declaration_filter == "SUBMITTED":
+        cancellations = cancellations.filter(
+            declaration_accepted=True,
+        )
+
+    elif declaration_filter == "NOT_SUBMITTED":
+        cancellations = cancellations.filter(
+            declaration_accepted=False,
+        )
+
+    # ============================================================
+    # SUMMARY COUNTS
+    # These are based on all cancellation records.
+    # ============================================================
+
+    today = timezone.localdate()
+
+    all_cancellations = TripCancellation.objects.filter(
+        trip__status=Trip.STATUS_CANCELLED,
+    )
+
+    total_cancelled = all_cancellations.count()
+
+    today_cancelled = all_cancellations.filter(
+        cancelled_at__date=today,
+    ).count()
+
+    employee_cancelled = all_cancellations.filter(
+        cancelled_by_role="EMPLOYEE",
+    ).count()
+
+    admin_cancelled = all_cancellations.filter(
+        cancelled_by_role="ADMIN",
+    ).count()
+
+    declarations_submitted = all_cancellations.filter(
+        declaration_accepted=True,
+    ).count()
+
+    # ============================================================
+    # BUILD ROWS
+    # ============================================================
+
+    rows = []
+
+    for cancellation in cancellations:
+        trip = cancellation.trip
+        route_run = trip.route_run
+
+        route_name = "Manual Route"
+
+        if (
+            route_run
+            and route_run.route_template
+        ):
+            route_name = (
+                route_run.route_template.name
+            )
+
+        rows.append(
+            {
+                "id": cancellation.id,
+
+                "trip_id": trip.id,
+
+                "employee_name": (
+                    trip.employee.username
+                    if trip.employee
+                    else "--"
+                ),
+
+                "trip_type": trip.trip_type,
+
+                "trip_date": trip.trip_date,
+
+                "route_name": route_name,
+
+                "driver_name": (
+                    trip.driver.username
+                    if trip.driver
+                    else "--"
+                ),
+
+                "vehicle_number": (
+                    trip.vehicle.vehicle_number
+                    if trip.vehicle
+                    else "--"
+                ),
+
+                "pickup_location": (
+                    trip.pickup_location
+                    or "--"
+                ),
+
+                "drop_location": (
+                    trip.drop_location
+                    or "--"
+                ),
+
+                "cancelled_by": (
+                    cancellation.cancelled_by.username
+                    if cancellation.cancelled_by
+                    else "--"
+                ),
+
+                "cancelled_by_role": (
+                    cancellation.cancelled_by_role
+                    or "--"
+                ),
+
+                "reason": (
+                    cancellation.reason
+                    or "No reason provided"
+                ),
+
+                "cancelled_at": (
+                    cancellation.cancelled_at
+                ),
+
+                "declaration_accepted": (
+                    cancellation.declaration_accepted
+                ),
+
+                "declaration_text": (
+                    cancellation.declaration_text
+                    or ""
+                ),
+            }
+        )
+
+    # ============================================================
+    # CONTEXT
+    # ============================================================
+
+    context = {
+        "rows": rows,
+
+        "query": query,
+        "date_filter": date_filter,
+        "trip_type_filter": trip_type_filter,
+        "cancelled_by_filter": cancelled_by_filter,
+        "declaration_filter": declaration_filter,
+
+        "total_cancelled": total_cancelled,
+        "today_cancelled": today_cancelled,
+        "employee_cancelled": employee_cancelled,
+        "admin_cancelled": admin_cancelled,
+        "declarations_submitted": declarations_submitted,
+    }
+
+    return render(
+        request,
+        "admin_web/cancelled_trips.html",
+        context,
+    )
+
+@login_required
+@admin_required
 @require_POST
 def start_trip(request, trip_id):
     trip = get_object_or_404(Trip, id=trip_id)

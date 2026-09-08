@@ -1004,7 +1004,10 @@
             <small>Driver-wise trip summary</small>
         </a>
 
-        <a class="report-tab tab-red {% if active_report == 'cancelled' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=cancelled">
+        <a
+            class="report-tab tab-red"
+            href="{% url 'admin_web:cancelled_trips' %}"
+        >
             <span class="icon">❌</span>
             <strong>Cancelled Trips</strong>
             <small>Employee/admin cancellations</small>
