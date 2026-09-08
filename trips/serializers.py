@@ -534,10 +534,22 @@ class AssignedCabGroupSerializer(serializers.Serializer):
     employees = AssignedCabEmployeeSerializer(many=True)
 
 class EmergencyAlertSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source="employee.username", read_only=True)
-    trip_type = serializers.CharField(source="trip.trip_type", read_only=True)
-    route_name = serializers.CharField(source="route_run.route_template.name", read_only=True)
-    vehicle_number = serializers.CharField(source="trip.vehicle.vehicle_number", read_only=True)
+    employee_name = serializers.CharField(
+        source="employee.username",
+        read_only=True,
+    )
+    trip_type = serializers.CharField(
+        source="trip.trip_type",
+        read_only=True,
+    )
+    route_name = serializers.CharField(
+        source="route_run.route_template.name",
+        read_only=True,
+    )
+    vehicle_number = serializers.CharField(
+        source="trip.vehicle.vehicle_number",
+        read_only=True,
+    )
 
     class Meta:
         model = EmergencyAlert
@@ -558,8 +570,9 @@ class EmergencyAlertSerializer(serializers.ModelSerializer):
             "drop_location",
             "status",
             "created_at",
-            "read_at",
+            "resolved_at",
         ]
+        
 class RouteTemplateSerializer(serializers.ModelSerializer):
     driver_name = serializers.CharField(source="driver.username", read_only=True)
     vehicle_number = serializers.CharField(source="vehicle.vehicle_number", read_only=True)
