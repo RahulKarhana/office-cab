@@ -1857,131 +1857,397 @@ def calculate_distance_km(lat1, lon1, lat2, lon2):
 @require_GET
 def live_cab_cards_api(request):
     now = timezone.now()
+    today = timezone.localdate()
 
-    active_runs = RouteRun.objects.select_related(
-        "driver",
-        "vehicle",
-        "route_template",
-    ).prefetch_related(
-        "stops",
-    ).filter(
-        completed_at__isnull=True,
-    ).order_by("-started_at", "-created_at")
+    # =========================================================
+    # TODAY'S ACTIVE CAB RUNS ONLY
+    # =========================================================
+
+    active_runs = (
+        RouteRun.objects
+        .select_related(
+            "driver",
+            "vehicle",
+            "route_template",
+        )
+        .prefetch_related(
+            "stops",
+            "stops__employee",
+        )
+        .filter(
+            run_date=today,
+            completed_at__isnull=True,
+        )
+        .order_by(
+            "route_template_id",
+            "trip_type",
+            "-created_at",
+        )
+    )
 
     latest_locations = _get_latest_driver_locations_map()
 
     data = []
 
+    # =========================================================
+    # DUPLICATE PROTECTION
+    #
+    # Same:
+    # route + driver + vehicle + trip type
+    #
+    # will appear only once.
+    #
+    # PICKUP and DROP remain separate.
+    # =========================================================
+
+    seen_runs = set()
+
     for run in active_runs:
-        location = latest_locations.get(run.driver_id)
+
+        duplicate_key = (
+            run.route_template_id,
+            run.driver_id,
+            run.vehicle_id,
+            run.trip_type,
+        )
+
+        if duplicate_key in seen_runs:
+            continue
+
+        seen_runs.add(duplicate_key)
+
+        # =====================================================
+        # DRIVER LOCATION
+        # =====================================================
+
+        location = latest_locations.get(
+            run.driver_id
+        )
+
+        # =====================================================
+        # STOP COUNTS
+        # =====================================================
 
         total_stops = run.stops.count()
-        completed_stops = run.stops.filter(is_picked=True).count()
-        pending_stops = total_stops - completed_stops
+
+        completed_stops = run.stops.filter(
+            is_picked=True
+        ).count()
+
+        pending_stops = (
+            total_stops -
+            completed_stops
+        )
+
+        # =====================================================
+        # ONLINE / OFFLINE STATUS
+        # =====================================================
 
         online_status = "OFFLINE"
         minutes_ago = None
 
         if location and location.updated_at:
-            diff_minutes = (now - location.updated_at).total_seconds() / 60
-            minutes_ago = round(diff_minutes)
+
+            diff_minutes = (
+                now -
+                location.updated_at
+            ).total_seconds() / 60
+
+            minutes_ago = round(
+                diff_minutes
+            )
 
             if diff_minutes <= 2:
                 online_status = "ONLINE"
+
             elif diff_minutes <= 5:
                 online_status = "IDLE"
+
             else:
                 online_status = "OFFLINE"
 
-        latest_speed = DriverLocationHistory.objects.filter(
-            driver=run.driver,
-            route_run=run,
-        ).order_by("-recorded_at").first()
+        # =====================================================
+        # DRIVER SPEED
+        # =====================================================
 
-        speed = latest_speed.speed_kmph if latest_speed else 0
-        moving_status = "MOVING" if speed and speed > 5 else "STOPPED"
+        latest_speed = (
+            DriverLocationHistory.objects
+            .filter(
+                driver=run.driver,
+                route_run=run,
+            )
+            .order_by(
+                "-recorded_at"
+            )
+            .first()
+        )
 
-        avg_speed = speed if speed and speed > 10 else 25
+        speed = (
+            latest_speed.speed_kmph
+            if latest_speed
+            else 0
+        )
 
-        remaining_stops_qs = run.stops.filter(
-            is_picked=False
-        ).order_by("stop_order")
+        moving_status = (
+            "MOVING"
+            if speed and speed > 5
+            else "STOPPED"
+        )
 
-        next_stop = remaining_stops_qs.first()
+        # Used only for approximate ETA fallback.
+        avg_speed = (
+            speed
+            if speed and speed > 10
+            else 25
+        )
+
+        # =====================================================
+        # NEXT STOP
+        # =====================================================
+
+        remaining_stops_qs = (
+            run.stops
+            .filter(
+                is_picked=False
+            )
+            .order_by(
+                "stop_order"
+            )
+        )
+
+        next_stop = (
+            remaining_stops_qs
+            .first()
+        )
 
         eta_minutes = None
-        eta_label = "Location unavailable"
+        eta_label = (
+            "Location unavailable"
+        )
+
         next_stop_name = "--"
         next_stop_location = "--"
 
         if next_stop:
-            next_stop_name = next_stop.employee.username if next_stop.employee else "--"
-            next_stop_location = next_stop.pickup_location or "--"
+
+            next_stop_name = (
+                next_stop.employee.username
+                if next_stop.employee
+                else "--"
+            )
+
+            next_stop_location = (
+                next_stop.pickup_location
+                or "--"
+            )
 
             if (
                 location
-                and location.latitude
-                and location.longitude
-                and next_stop.pickup_latitude
-                and next_stop.pickup_longitude
+                and location.latitude is not None
+                and location.longitude is not None
+                and next_stop.pickup_latitude is not None
+                and next_stop.pickup_longitude is not None
             ):
-                distance_km = calculate_distance_km(
-                    location.latitude,
-                    location.longitude,
-                    next_stop.pickup_latitude,
-                    next_stop.pickup_longitude,
+
+                distance_km = (
+                    calculate_distance_km(
+                        location.latitude,
+                        location.longitude,
+                        next_stop.pickup_latitude,
+                        next_stop.pickup_longitude,
+                    )
                 )
 
-                eta_minutes = max(1, round((distance_km / avg_speed) * 60))
-                eta_label = f"{eta_minutes} mins to next stop"
+                eta_minutes = max(
+                    1,
+                    round(
+                        (
+                            distance_km /
+                            avg_speed
+                        ) * 60
+                    )
+                )
+
+                eta_label = (
+                    f"{eta_minutes} mins "
+                    "to next stop"
+                )
+
+        # =====================================================
+        # ESTIMATED COMPLETION
+        # =====================================================
 
         estimated_completion_minutes = None
         estimated_completion_time = "--"
 
         if pending_stops > 0:
-            base_minutes = eta_minutes or 0
-            stop_buffer_minutes = pending_stops * 6
-            estimated_completion_minutes = base_minutes + stop_buffer_minutes
+
+            base_minutes = (
+                eta_minutes or 0
+            )
+
+            # Existing rule:
+            # approx 6 minutes per remaining stop.
+            stop_buffer_minutes = (
+                pending_stops * 6
+            )
+
+            estimated_completion_minutes = (
+                base_minutes +
+                stop_buffer_minutes
+            )
+
             estimated_completion_time = (
-                now + timezone.timedelta(minutes=estimated_completion_minutes)
-            ).strftime("%I:%M %p")
+                now +
+                timezone.timedelta(
+                    minutes=(
+                        estimated_completion_minutes
+                    )
+                )
+            ).strftime(
+                "%I:%M %p"
+            )
+
         else:
+
             estimated_completion_minutes = 0
-            estimated_completion_time = "Almost completed"
 
-        data.append({
-            "route_run_id": run.id,
-            "driver_id": run.driver_id,
-            "driver_name": run.driver.username if run.driver else "--",
-            "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
-            "vehicle_model": run.vehicle.vehicle_model if run.vehicle else "--",
-            "route_name": run.route_template.name if run.route_template else "--",
-            "trip_type": run.trip_type,
-            "run_date": str(run.run_date),
-            "online_status": online_status,
-            "moving_status": moving_status,
-            "speed_kmph": round(speed or 0, 1),
-            "total_stops": total_stops,
-            "completed_stops": completed_stops,
-            "pending_stops": pending_stops,
-            "progress_percent": round((completed_stops / total_stops) * 100) if total_stops else 0,
-            "latitude": location.latitude if location else None,
-            "longitude": location.longitude if location else None,
-            "last_updated": location.updated_at.isoformat() if location and location.updated_at else "",
-            "minutes_ago": minutes_ago,
+            estimated_completion_time = (
+                "Almost completed"
+            )
 
-            "next_stop_name": next_stop_name,
-            "next_stop_location": next_stop_location,
-            "eta_minutes": eta_minutes,
-            "eta_label": eta_label,
-            "estimated_completion_minutes": estimated_completion_minutes,
-            "estimated_completion_time": estimated_completion_time,
-        })
+        # =====================================================
+        # RESPONSE ROW
+        # =====================================================
 
-    return JsonResponse({
-        "results": data,
-        "count": len(data),
-    })
+        data.append(
+            {
+                "route_run_id":
+                    run.id,
+
+                "driver_id":
+                    run.driver_id,
+
+                "driver_name": (
+                    run.driver.username
+                    if run.driver
+                    else "--"
+                ),
+
+                "vehicle_number": (
+                    run.vehicle.vehicle_number
+                    if run.vehicle
+                    else "--"
+                ),
+
+                "vehicle_model": (
+                    run.vehicle.vehicle_model
+                    if run.vehicle
+                    else "--"
+                ),
+
+                "route_name": (
+                    run.route_template.name
+                    if run.route_template
+                    else "--"
+                ),
+
+                "trip_type":
+                    run.trip_type,
+
+                "run_date":
+                    str(run.run_date),
+
+                "online_status":
+                    online_status,
+
+                "moving_status":
+                    moving_status,
+
+                "speed_kmph":
+                    round(
+                        speed or 0,
+                        1,
+                    ),
+
+                "total_stops":
+                    total_stops,
+
+                "completed_stops":
+                    completed_stops,
+
+                "pending_stops":
+                    pending_stops,
+
+                "progress_percent": (
+                    round(
+                        (
+                            completed_stops /
+                            total_stops
+                        ) * 100
+                    )
+                    if total_stops
+                    else 0
+                ),
+
+                "latitude": (
+                    location.latitude
+                    if location
+                    else None
+                ),
+
+                "longitude": (
+                    location.longitude
+                    if location
+                    else None
+                ),
+
+                "last_updated": (
+                    location.updated_at.isoformat()
+                    if (
+                        location
+                        and location.updated_at
+                    )
+                    else ""
+                ),
+
+                "minutes_ago":
+                    minutes_ago,
+
+                "next_stop_name":
+                    next_stop_name,
+
+                "next_stop_location":
+                    next_stop_location,
+
+                "eta_minutes":
+                    eta_minutes,
+
+                "eta_label":
+                    eta_label,
+
+                "estimated_completion_minutes":
+                    estimated_completion_minutes,
+
+                "estimated_completion_time":
+                    estimated_completion_time,
+            }
+        )
+
+    # =========================================================
+    # FINAL RESPONSE
+    # =========================================================
+
+    return JsonResponse(
+        {
+            "results": data,
+            "count": len(data),
+            "date": str(today),
+        }
+    )
+
+
+
 # =========================
 # REPORTS
 # =========================
