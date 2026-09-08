@@ -1,0 +1,1031 @@
+{% extends "admin_web/base.html" %}
+
+{% block title %}No-show Report{% endblock %}
+
+{% block nav_reports %}active{% endblock %}
+
+{% block page_heading %}No-show Report{% endblock %}
+
+{% block page_subheading %}
+Driver waiting details for employees marked as No Show
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+    /* ============================================================
+       NO SHOW REPORT
+       ============================================================ */
+
+    .ns-page {
+        width: 100%;
+    }
+
+    /* ============================================================
+       TOP HEADER
+       ============================================================ */
+
+    .ns-header {
+        background: linear-gradient(
+            135deg,
+            #fff7ed,
+            #ffffff
+        );
+        border: 1px solid #fed7aa;
+        border-radius: 22px;
+        padding: 22px 24px;
+        margin-bottom: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .ns-header-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .ns-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .ns-title-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: #fff1f2;
+        color: #dc2626;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        border: 1px solid #fecaca;
+    }
+
+    .ns-title {
+        margin: 0;
+        color: #0f172a;
+        font-size: 24px;
+        font-weight: 950;
+    }
+
+    .ns-subtitle {
+        margin: 5px 0 0;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .back-report-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        text-decoration: none;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        border-radius: 12px;
+        padding: 10px 15px;
+        font-size: 13px;
+        font-weight: 900;
+        transition: 0.2s ease;
+    }
+
+    .back-report-btn:hover {
+        background: #f8fafc;
+        transform: translateY(-1px);
+    }
+
+    /* ============================================================
+       SUMMARY CARDS
+       ============================================================ */
+
+    .ns-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .ns-summary-card {
+        position: relative;
+        overflow: hidden;
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 18px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+    }
+
+    .ns-summary-card::after {
+        content: "";
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        right: -25px;
+        top: -30px;
+        background: rgba(255, 255, 255, 0.22);
+    }
+
+    .summary-red {
+        background: linear-gradient(135deg, #dc2626, #991b1b);
+        color: #ffffff;
+        border: none;
+    }
+
+    .summary-orange {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #ffffff;
+        border: none;
+    }
+
+    .summary-green {
+        background: linear-gradient(135deg, #16a34a, #15803d);
+        color: #ffffff;
+        border: none;
+    }
+
+    .summary-blue {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        border: none;
+    }
+
+    .summary-label {
+        display: block;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+        opacity: 0.88;
+        margin-bottom: 7px;
+    }
+
+    .summary-value {
+        display: block;
+        font-size: 27px;
+        font-weight: 950;
+        line-height: 1;
+    }
+
+    .summary-description {
+        display: block;
+        margin-top: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0.85;
+    }
+
+    /* ============================================================
+       FILTER SECTION
+       ============================================================ */
+
+    .ns-filter-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        padding: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+    }
+
+    .filter-title {
+        color: #0f172a;
+        font-size: 15px;
+        font-weight: 950;
+        margin-bottom: 13px;
+    }
+
+    .ns-filter-form {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto auto;
+        gap: 12px;
+        align-items: end;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .filter-control {
+        width: 100%;
+        height: 42px;
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        padding: 0 12px;
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 13px;
+        font-weight: 700;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    .filter-control:focus {
+        border-color: #2563eb;
+        background: #ffffff;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    }
+
+    .filter-btn {
+        height: 42px;
+        border: none;
+        border-radius: 12px;
+        padding: 0 18px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 950;
+        cursor: pointer;
+    }
+
+    .reset-btn {
+        height: 42px;
+        border-radius: 12px;
+        padding: 0 18px;
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 950;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* ============================================================
+       REPORT TABLE
+       ============================================================ */
+
+    .ns-table-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .table-card-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .table-card-header h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 950;
+        color: #0f172a;
+    }
+
+    .table-card-header p {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .record-count {
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 950;
+    }
+
+    .ns-table-scroll {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .ns-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1250px;
+    }
+
+    .ns-table thead th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 13px 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .ns-table tbody td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #edf2f7;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+        vertical-align: middle;
+    }
+
+    .ns-table tbody tr:hover {
+        background: #fafcff;
+    }
+
+    .employee-name {
+        color: #0f172a;
+        font-weight: 950;
+    }
+
+    /* ============================================================
+       TIME BADGES
+       ============================================================ */
+
+    .time-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 66px;
+        padding: 7px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .free-time {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .late-time {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .late-zero {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+
+    .total-time {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+    }
+
+    /* ============================================================
+       STATUS BADGES
+       ============================================================ */
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .status-late {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .status-free {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .no-show-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #fff1f2;
+        color: #be123c;
+        border: 1px solid #fecdd3;
+        padding: 7px 10px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 950;
+    }
+
+    /* ============================================================
+       WAITING FLOW
+       ============================================================ */
+
+    .waiting-flow {
+        padding: 15px 20px;
+        background: linear-gradient(135deg, #f8fafc, #ffffff);
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .waiting-flow-title {
+        color: #475569;
+        font-size: 11px;
+        font-weight: 950;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .flow-items {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        flex-wrap: wrap;
+    }
+
+    .flow-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 11px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .flow-arrived {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .flow-free {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .flow-late {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .flow-noshow {
+        background: #fff1f2;
+        color: #be123c;
+    }
+
+    .flow-arrow {
+        color: #94a3b8;
+        font-weight: 950;
+    }
+
+    /* ============================================================
+       EMPTY STATE
+       ============================================================ */
+
+    .empty-state {
+        padding: 55px 20px;
+        text-align: center;
+    }
+
+    .empty-icon {
+        width: 68px;
+        height: 68px;
+        margin: 0 auto 14px;
+        border-radius: 20px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 31px;
+    }
+
+    .empty-state h3 {
+        margin: 0 0 7px;
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 950;
+    }
+
+    .empty-state p {
+        margin: 0;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+       ============================================================ */
+
+    @media (max-width: 1100px) {
+        .ns-summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .ns-filter-form {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 650px) {
+        .ns-summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .ns-filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .ns-header {
+            padding: 18px;
+        }
+    }
+</style>
+
+
+<div class="ns-page">
+
+    <!-- =========================================================
+         HEADER
+         ========================================================= -->
+
+    <div class="ns-header">
+        <div class="ns-header-top">
+
+            <div class="ns-title-wrap">
+
+                <div class="ns-title-icon">
+                    🚫
+                </div>
+
+                <div>
+                    <h2 class="ns-title">
+                        Employee No-show Report
+                    </h2>
+
+                    <p class="ns-subtitle">
+                        Complete driver waiting history for employees
+                        marked as No Show.
+                    </p>
+                </div>
+
+            </div>
+
+            <a
+                href="{% url 'admin_web:reports' %}"
+                class="back-report-btn"
+            >
+                ← Back to Reports
+            </a>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         SUMMARY
+         ========================================================= -->
+
+    <div class="ns-summary-grid">
+
+        <div class="ns-summary-card summary-red">
+            <span class="summary-label">
+                🚫 Total No Shows
+            </span>
+
+            <strong class="summary-value">
+                {{ total_no_shows }}
+            </strong>
+
+            <span class="summary-description">
+                Employees marked No Show
+            </span>
+        </div>
+
+
+        <div class="ns-summary-card summary-orange">
+            <span class="summary-label">
+                🔴 Late No Shows
+            </span>
+
+            <strong class="summary-value">
+                {{ late_no_show_count }}
+            </strong>
+
+            <span class="summary-description">
+                No Show after free waiting
+            </span>
+        </div>
+
+
+        <div class="ns-summary-card summary-green">
+            <span class="summary-label">
+                🟢 Within Free Time
+            </span>
+
+            <strong class="summary-value">
+                {{ within_free_count }}
+            </strong>
+
+            <span class="summary-description">
+                No Show before late timer
+            </span>
+        </div>
+
+
+        <div class="ns-summary-card summary-blue">
+            <span class="summary-label">
+                ⏱ Total Driver Waiting
+            </span>
+
+            <strong class="summary-value">
+                {{ total_waiting_minutes }} min
+            </strong>
+
+            <span class="summary-description">
+                Combined waiting duration
+            </span>
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         FILTERS
+         ========================================================= -->
+
+    <div class="ns-filter-card">
+
+        <div class="filter-title">
+            Search & Filter
+        </div>
+
+        <form
+            method="get"
+            class="ns-filter-form"
+        >
+
+            <div class="filter-group">
+                <label>
+                    Search
+                </label>
+
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    class="filter-control"
+                    placeholder="Employee, driver, vehicle or route"
+                >
+            </div>
+
+
+            <div class="filter-group">
+                <label>
+                    Date
+                </label>
+
+                <input
+                    type="date"
+                    name="date"
+                    value="{{ date_filter }}"
+                    class="filter-control"
+                >
+            </div>
+
+
+            <div class="filter-group">
+                <label>
+                    Trip Type
+                </label>
+
+                <select
+                    name="trip_type"
+                    class="filter-control"
+                >
+                    <option value="">
+                        All Trips
+                    </option>
+
+                    <option
+                        value="PICKUP"
+                        {% if trip_type_filter == "PICKUP" %}
+                        selected
+                        {% endif %}
+                    >
+                        Pickup
+                    </option>
+
+                    <option
+                        value="DROP"
+                        {% if trip_type_filter == "DROP" %}
+                        selected
+                        {% endif %}
+                    >
+                        Drop
+                    </option>
+
+                </select>
+            </div>
+
+
+            <button
+                type="submit"
+                class="filter-btn"
+            >
+                Apply Filter
+            </button>
+
+
+            <a
+                href="{% url 'admin_web:no_show_report' %}"
+                class="reset-btn"
+            >
+                Reset
+            </a>
+
+        </form>
+
+    </div>
+
+
+    <!-- =========================================================
+         TABLE
+         ========================================================= -->
+
+    <div class="ns-table-card">
+
+        <div class="table-card-header">
+
+            <div>
+                <h3>
+                    🚫 No-show Details
+                </h3>
+
+                <p>
+                    Free waiting + employee late waiting until
+                    the driver pressed No Show.
+                </p>
+            </div>
+
+            <div class="record-count">
+                {{ total_no_shows }} record{{ total_no_shows|pluralize }}
+            </div>
+
+        </div>
+
+
+        {% if rows %}
+
+        <div class="ns-table-scroll">
+
+            <table class="ns-table">
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Employee</th>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Trip</th>
+                        <th>Driver Arrived</th>
+                        <th>Free Waiting</th>
+                        <th>Late Waiting</th>
+                        <th>Total Wait</th>
+                        <th>No Show At</th>
+                        <th>Waiting Status</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in rows %}
+
+                    <tr>
+
+                        <td>
+                            {% if row.date %}
+                                {{ row.date|date:"d M Y" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+
+
+                        <td>
+                            <span class="employee-name">
+                                {{ row.employee }}
+                            </span>
+                        </td>
+
+
+                        <td>
+                            {{ row.route_name }}
+                        </td>
+
+
+                        <td>
+                            {{ row.driver }}
+                        </td>
+
+
+                        <td>
+                            {{ row.vehicle }}
+                        </td>
+
+
+                        <td>
+                            <strong>
+                                {{ row.trip_type }}
+                            </strong>
+                        </td>
+
+
+                        <td>
+                            {% if row.waiting_started_at %}
+                                {{ row.waiting_started_at|date:"h:i:s A" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+
+
+                        <!-- FREE WAIT -->
+
+                        <td>
+                            <span class="time-badge free-time">
+                                🟢 {{ row.free_wait_text }}
+                            </span>
+                        </td>
+
+
+                        <!-- LATE WAIT -->
+
+                        <td>
+
+                            {% if row.late_seconds > 0 %}
+
+                                <span class="time-badge late-time">
+                                    🔴 {{ row.late_wait_text }}
+                                </span>
+
+                            {% else %}
+
+                                <span class="time-badge late-zero">
+                                    00:00
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- TOTAL WAIT -->
+
+                        <td>
+                            <span class="time-badge total-time">
+                                ⏱ {{ row.total_wait_text }}
+                            </span>
+                        </td>
+
+
+                        <!-- NO SHOW TIME -->
+
+                        <td>
+                            {% if row.no_show_at %}
+                                <strong>
+                                    {{ row.no_show_at|date:"h:i:s A" }}
+                                </strong>
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+
+
+                        <!-- WAITING STATUS -->
+
+                        <td>
+
+                            {% if row.waiting_status == "LATE" %}
+
+                                <span class="status-badge status-late">
+                                    🔴 Employee Late
+                                </span>
+
+                            {% else %}
+
+                                <span class="status-badge status-free">
+                                    🟢 Within Free Time
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- RESULT -->
+
+                        <td>
+                            <span class="no-show-badge">
+                                🚫 NO SHOW
+                            </span>
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- =====================================================
+             EXPLANATION
+             ===================================================== -->
+
+        <div class="waiting-flow">
+
+            <div class="waiting-flow-title">
+                How waiting time is calculated
+            </div>
+
+            <div class="flow-items">
+
+                <span class="flow-item flow-arrived">
+                    🚕 Driver Arrived
+                </span>
+
+                <span class="flow-arrow">
+                    →
+                </span>
+
+                <span class="flow-item flow-free">
+                    🟢 First 10 Minutes Free
+                </span>
+
+                <span class="flow-arrow">
+                    →
+                </span>
+
+                <span class="flow-item flow-late">
+                    🔴 Employee Late Time
+                </span>
+
+                <span class="flow-arrow">
+                    →
+                </span>
+
+                <span class="flow-item flow-noshow">
+                    🚫 Driver Presses No Show
+                </span>
+
+            </div>
+
+        </div>
+
+
+        {% else %}
+
+        <!-- =====================================================
+             EMPTY STATE
+             ===================================================== -->
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                🚫
+            </div>
+
+            <h3>
+                No No-show Records
+            </h3>
+
+            <p>
+                No employees were marked as No Show for the
+                selected filters.
+            </p>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

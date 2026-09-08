@@ -85,6 +85,11 @@ urlpatterns = [
         name="late_report",
     ),
     path(
+        "no-show-report/",
+        views.no_show_report_page,
+        name="no_show_report",
+    ),
+    path(
         "alerts/<int:alert_id>/driver-location/",
         views.alert_driver_location_api,
         name="alert_driver_location_api",

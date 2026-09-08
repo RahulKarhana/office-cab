@@ -1013,10 +1013,11 @@
             <small>Employee/admin cancellations</small>
         </a>
 
-        <a class="report-tab tab-orange {% if active_report == 'no_show' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=no_show">
+        <a class="report-tab tab-orange"
+            href="{% url 'admin_web:no_show_report' %}">
             <span class="icon">🚫</span>
             <strong>No-show Report</strong>
-            <small>Missed pickup/drop stops</small>
+            <small>Driver waiting & No-show details</small>
         </a>
 
         <a class="report-tab tab-yellow {% if active_report == 'leave' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=leave">

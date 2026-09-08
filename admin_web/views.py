@@ -565,6 +565,415 @@ def late_report_page(request):
         "admin_web/late_report.html",
         context,
     )
+
+# ============================================================
+# NO SHOW REPORT
+# Shows:
+# - Driver arrival time
+# - Free waiting time (maximum 10 minutes)
+# - Late/red waiting time
+# - Total waiting time
+# - Exact No Show time
+# ============================================================
+
+@login_required
+@admin_required
+@require_GET
+def no_show_report_page(request):
+    query = request.GET.get("q", "").strip()
+    date_filter = request.GET.get("date", "").strip()
+    trip_type_filter = (
+        request.GET.get("trip_type", "")
+        .strip()
+        .upper()
+    )
+
+    # ========================================================
+    # GET ALL NO-SHOW STOPS
+    # IMPORTANT:
+    # Do NOT use late_seconds__gt=0 here.
+    #
+    # An employee can be marked No Show even when late_seconds
+    # is 0, so every is_no_show=True record must appear.
+    # ========================================================
+
+    stops = (
+        RouteRunStop.objects
+        .select_related(
+            "employee",
+            "route_run",
+            "route_run__driver",
+            "route_run__vehicle",
+            "route_run__route_template",
+        )
+        .filter(
+            is_no_show=True,
+        )
+        .order_by(
+            "-route_run__run_date",
+            "-no_show_at",
+        )
+    )
+
+    # ========================================================
+    # SEARCH
+    # Employee / Driver / Vehicle / Route
+    # ========================================================
+
+    if query:
+        stops = stops.filter(
+            Q(
+                employee__username__icontains=query
+            )
+            |
+            Q(
+                route_run__driver__username__icontains=query
+            )
+            |
+            Q(
+                route_run__vehicle__vehicle_number__icontains=query
+            )
+            |
+            Q(
+                route_run__route_template__name__icontains=query
+            )
+        )
+
+    # ========================================================
+    # DATE FILTER
+    # ========================================================
+
+    parsed_date = (
+        parse_date(date_filter)
+        if date_filter
+        else None
+    )
+
+    if parsed_date:
+        stops = stops.filter(
+            route_run__run_date=parsed_date
+        )
+
+    # ========================================================
+    # TRIP TYPE FILTER
+    # PICKUP / DROP
+    # ========================================================
+
+    if trip_type_filter in ["PICKUP", "DROP"]:
+        stops = stops.filter(
+            route_run__trip_type=trip_type_filter
+        )
+
+    # ========================================================
+    # BUILD REPORT ROWS
+    # ========================================================
+
+    rows = []
+
+    total_waiting_seconds_all = 0
+    total_free_seconds_all = 0
+    total_late_seconds_all = 0
+
+    no_show_with_late_count = 0
+    no_show_within_free_count = 0
+
+    for stop in stops:
+
+        route_run = stop.route_run
+
+        # ----------------------------------------------------
+        # Waiting started when Driver presses ARRIVED.
+        # Your RouteService sets both:
+        #
+        # arrival_time
+        # waiting_started_at
+        #
+        # at that point.
+        # ----------------------------------------------------
+
+        waiting_started_at = (
+            stop.waiting_started_at
+            or stop.arrival_time
+        )
+
+        no_show_at = stop.no_show_at
+
+        # ----------------------------------------------------
+        # TOTAL WAITING TIME
+        #
+        # Driver Arrived -> Driver pressed No Show
+        # ----------------------------------------------------
+
+        total_waiting_seconds = 0
+
+        if waiting_started_at and no_show_at:
+            total_waiting_seconds = max(
+                0,
+                int(
+                    (
+                        no_show_at
+                        - waiting_started_at
+                    ).total_seconds()
+                ),
+            )
+
+        # ----------------------------------------------------
+        # FREE WAITING
+        #
+        # Use waiting_minutes from RouteRunStop.
+        # Your current default is 10 minutes.
+        # ----------------------------------------------------
+
+        free_limit_seconds = (
+            getattr(
+                stop,
+                "waiting_minutes",
+                10,
+            )
+            or 10
+        ) * 60
+
+        free_wait_seconds = min(
+            total_waiting_seconds,
+            free_limit_seconds,
+        )
+
+        # ----------------------------------------------------
+        # RED / LATE WAITING
+        #
+        # Anything after free waiting becomes late waiting.
+        # ----------------------------------------------------
+
+        calculated_late_seconds = max(
+            0,
+            total_waiting_seconds
+            - free_limit_seconds,
+        )
+
+        # Prefer stored late_seconds because RouteService
+        # freezes it when No Show is pressed.
+        stored_late_seconds = (
+            stop.late_seconds or 0
+        )
+
+        late_seconds = max(
+            stored_late_seconds,
+            calculated_late_seconds,
+        )
+
+        # ----------------------------------------------------
+        # FORMAT TIME HELPER
+        # 754 seconds -> 12:34
+        # ----------------------------------------------------
+
+        def format_duration(seconds):
+            seconds = max(
+                0,
+                int(seconds or 0),
+            )
+
+            hours = seconds // 3600
+            minutes = (
+                seconds % 3600
+            ) // 60
+            secs = seconds % 60
+
+            if hours > 0:
+                return (
+                    f"{hours:02d}:"
+                    f"{minutes:02d}:"
+                    f"{secs:02d}"
+                )
+
+            return (
+                f"{minutes:02d}:"
+                f"{secs:02d}"
+            )
+
+        free_wait_text = format_duration(
+            free_wait_seconds
+        )
+
+        late_wait_text = format_duration(
+            late_seconds
+        )
+
+        total_wait_text = format_duration(
+            total_waiting_seconds
+        )
+
+        # ----------------------------------------------------
+        # WAITING RESULT
+        # ----------------------------------------------------
+
+        if late_seconds > 0:
+            waiting_status = "LATE"
+            no_show_with_late_count += 1
+        else:
+            waiting_status = "WITHIN FREE TIME"
+            no_show_within_free_count += 1
+
+        # ----------------------------------------------------
+        # SUMMARY TOTALS
+        # ----------------------------------------------------
+
+        total_waiting_seconds_all += (
+            total_waiting_seconds
+        )
+
+        total_free_seconds_all += (
+            free_wait_seconds
+        )
+
+        total_late_seconds_all += (
+            late_seconds
+        )
+
+        # ----------------------------------------------------
+        # BUILD ROW
+        # ----------------------------------------------------
+
+        rows.append(
+            {
+                "id": stop.id,
+
+                "date": (
+                    route_run.run_date
+                    if route_run
+                    else None
+                ),
+
+                "employee": (
+                    stop.employee.username
+                    if stop.employee
+                    else "--"
+                ),
+
+                "route_name": (
+                    route_run.route_template.name
+                    if (
+                        route_run
+                        and route_run.route_template
+                    )
+                    else "Manual Route"
+                ),
+
+                "driver": (
+                    route_run.driver.username
+                    if (
+                        route_run
+                        and route_run.driver
+                    )
+                    else "--"
+                ),
+
+                "vehicle": (
+                    route_run.vehicle.vehicle_number
+                    if (
+                        route_run
+                        and route_run.vehicle
+                    )
+                    else "--"
+                ),
+
+                "trip_type": (
+                    route_run.trip_type
+                    if route_run
+                    else "--"
+                ),
+
+                "arrival_time":
+                    stop.arrival_time,
+
+                "waiting_started_at":
+                    waiting_started_at,
+
+                "no_show_at":
+                    no_show_at,
+
+                "free_wait_seconds":
+                    free_wait_seconds,
+
+                "free_wait_text":
+                    free_wait_text,
+
+                "late_seconds":
+                    late_seconds,
+
+                "late_wait_text":
+                    late_wait_text,
+
+                "total_waiting_seconds":
+                    total_waiting_seconds,
+
+                "total_wait_text":
+                    total_wait_text,
+
+                "waiting_status":
+                    waiting_status,
+
+                "result":
+                    "NO SHOW",
+            }
+        )
+
+    # ========================================================
+    # SUMMARY
+    # ========================================================
+
+    total_no_shows = len(rows)
+
+    def summary_minutes(seconds):
+        return round(
+            seconds / 60,
+            1,
+        )
+
+    context = {
+        "rows":
+            rows,
+
+        "query":
+            query,
+
+        "date_filter":
+            date_filter,
+
+        "trip_type_filter":
+            trip_type_filter,
+
+        "total_no_shows":
+            total_no_shows,
+
+        "late_no_show_count":
+            no_show_with_late_count,
+
+        "within_free_count":
+            no_show_within_free_count,
+
+        "total_waiting_minutes":
+            summary_minutes(
+                total_waiting_seconds_all
+            ),
+
+        "total_free_minutes":
+            summary_minutes(
+                total_free_seconds_all
+            ),
+
+        "total_late_minutes":
+            summary_minutes(
+                total_late_seconds_all
+            ),
+    }
+
+    return render(
+        request,
+        "admin_web/no_show_report.html",
+        context,
+    )
+
+
 # =========================================================
 # REQUEST MANAGEMENT
 # =========================================================
