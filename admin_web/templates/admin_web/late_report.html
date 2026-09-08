@@ -4,593 +4,1163 @@
 
 {% block content %}
 
-<div class="container-fluid py-4">
+<style>
+    /* =========================================================
+       EMPLOYEE LATE REPORT
+       Scoped styles - does not require Bootstrap
+       ========================================================= */
 
-    <!-- ===================================================== -->
-    <!-- PAGE HEADER -->
-    <!-- ===================================================== -->
+    .late-page {
+        padding: 22px 24px 32px;
+        width: 100%;
+        box-sizing: border-box;
+    }
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="fw-bold mb-1">
-                Employee Late Report
-            </h2>
+    /* =========================================================
+       HEADER
+       ========================================================= */
 
-            <p class="text-muted mb-0">
-                Employee waiting time after the 10-minute free waiting period.
+    .late-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .late-header-left {
+        min-width: 0;
+    }
+
+    .late-title {
+        margin: 0;
+        font-size: 26px;
+        line-height: 1.2;
+        font-weight: 900;
+        color: #132238;
+    }
+
+    .late-subtitle {
+        margin: 6px 0 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #718096;
+    }
+
+    .late-back-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+
+        padding: 10px 15px;
+
+        background: #ffffff;
+        border: 1px solid #dce4ef;
+        border-radius: 11px;
+
+        color: #334155;
+        text-decoration: none;
+
+        font-size: 13px;
+        font-weight: 800;
+
+        transition: 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .late-back-btn:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+    }
+
+    /* =========================================================
+       INFO BANNER
+       ========================================================= */
+
+    .late-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        padding: 14px 16px;
+        margin-bottom: 20px;
+
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 14px;
+    }
+
+    .late-info-icon {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: #ffedd5;
+        color: #ea580c;
+
+        font-size: 19px;
+    }
+
+    .late-info-title {
+        margin: 0 0 2px;
+        color: #9a3412;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .late-info-text {
+        margin: 0;
+        color: #9a3412;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* =========================================================
+       SUMMARY CARDS
+       ========================================================= */
+
+    .late-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .late-summary-card {
+        position: relative;
+        overflow: hidden;
+
+        min-height: 112px;
+
+        padding: 18px;
+
+        background: #ffffff;
+        border: 1px solid #e6ebf2;
+        border-radius: 16px;
+
+        box-shadow: 0 5px 16px rgba(15, 23, 42, 0.05);
+    }
+
+    .late-summary-content {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        height: 100%;
+    }
+
+    .late-summary-icon {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 13px;
+
+        font-size: 21px;
+        font-weight: 900;
+    }
+
+    .late-icon-orange {
+        background: #fff7ed;
+        color: #ea580c;
+    }
+
+    .late-icon-green {
+        background: #ecfdf5;
+        color: #16a34a;
+    }
+
+    .late-icon-red {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .late-icon-blue {
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    .late-summary-label {
+        margin-bottom: 5px;
+
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .late-summary-value {
+        color: #0f172a;
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 900;
+    }
+
+    .late-summary-unit {
+        margin-left: 3px;
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    /* =========================================================
+       FILTER BOX
+       ========================================================= */
+
+    .late-filter-box {
+        margin-bottom: 20px;
+        padding: 17px;
+
+        background: #ffffff;
+        border: 1px solid #e5eaf1;
+        border-radius: 16px;
+
+        box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
+    }
+
+    .late-filter-title {
+        margin: 0 0 13px;
+
+        color: #172033;
+        font-size: 15px;
+        font-weight: 900;
+    }
+
+    .late-filter-form {
+        display: grid;
+        grid-template-columns: minmax(220px, 2fr) minmax(150px, 1fr) minmax(145px, 1fr) auto auto;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .late-field {
+        min-width: 0;
+    }
+
+    .late-field label {
+        display: block;
+        margin: 0 0 6px;
+
+        color: #475569;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .late-input,
+    .late-select {
+        width: 100%;
+        height: 42px;
+
+        padding: 0 12px;
+
+        box-sizing: border-box;
+
+        background: #ffffff;
+        border: 1px solid #dce3ec;
+        border-radius: 10px;
+
+        color: #1e293b;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 600;
+
+        outline: none;
+    }
+
+    .late-input:focus,
+    .late-select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+    }
+
+    .late-filter-btn {
+        height: 42px;
+        padding: 0 18px;
+
+        border: 0;
+        border-radius: 10px;
+
+        background: #2458c6;
+        color: #ffffff;
+
+        cursor: pointer;
+
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 900;
+
+        white-space: nowrap;
+    }
+
+    .late-filter-btn:hover {
+        background: #1e4db2;
+    }
+
+    .late-clear-btn {
+        height: 40px;
+
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        padding: 0 15px;
+
+        border: 1px solid #dce3ec;
+        border-radius: 10px;
+
+        background: #f8fafc;
+        color: #475569;
+
+        text-decoration: none;
+
+        font-size: 12px;
+        font-weight: 800;
+
+        white-space: nowrap;
+    }
+
+    .late-clear-btn:hover {
+        background: #eef2f7;
+    }
+
+    /* =========================================================
+       TABLE CARD
+       ========================================================= */
+
+    .late-table-card {
+        overflow: hidden;
+
+        background: #ffffff;
+        border: 1px solid #e5eaf1;
+        border-radius: 17px;
+
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+
+    .late-table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+
+        padding: 17px 18px;
+
+        border-bottom: 1px solid #e8edf3;
+    }
+
+    .late-table-title {
+        margin: 0 0 4px;
+
+        color: #172033;
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .late-table-subtitle {
+        margin: 0;
+
+        color: #7c8798;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .late-record-count {
+        display: inline-flex;
+        align-items: center;
+
+        padding: 7px 11px;
+
+        background: #f1f5f9;
+        border-radius: 20px;
+
+        color: #475569;
+        font-size: 11px;
+        font-weight: 900;
+
+        white-space: nowrap;
+    }
+
+    .late-table-scroll {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .late-table {
+        width: 100%;
+        min-width: 1050px;
+
+        border-collapse: collapse;
+    }
+
+    .late-table th {
+        padding: 12px 13px;
+
+        background: #f7f9fc;
+        border-bottom: 1px solid #e6ebf1;
+
+        color: #64748b;
+
+        text-align: left;
+        white-space: nowrap;
+
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .late-table td {
+        padding: 13px;
+
+        border-bottom: 1px solid #edf1f5;
+
+        color: #334155;
+
+        font-size: 12px;
+        font-weight: 600;
+
+        vertical-align: middle;
+    }
+
+    .late-table tbody tr:hover {
+        background: #fafcff;
+    }
+
+    .late-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .late-employee {
+        color: #172033;
+        font-weight: 900;
+    }
+
+    .late-vehicle {
+        display: inline-block;
+
+        padding: 6px 9px;
+
+        background: #f1f5f9;
+        border-radius: 8px;
+
+        color: #334155;
+
+        font-size: 11px;
+        font-weight: 800;
+
+        white-space: nowrap;
+    }
+
+    /* =========================================================
+       BADGES
+       ========================================================= */
+
+    .late-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+
+        padding: 6px 9px;
+
+        border-radius: 20px;
+
+        font-size: 10px;
+        font-weight: 900;
+
+        white-space: nowrap;
+    }
+
+    .late-badge-pickup {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .late-badge-drop {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+
+    .late-badge-picked {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .late-badge-noshow {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .late-badge-other {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .late-time-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+
+        min-width: 68px;
+
+        padding: 7px 10px;
+
+        background: #fee2e2;
+        border: 1px solid #fecaca;
+        border-radius: 20px;
+
+        color: #b91c1c;
+
+        font-size: 12px;
+        font-weight: 900;
+
+        white-space: nowrap;
+    }
+
+    /* =========================================================
+       EMPTY STATE
+       ========================================================= */
+
+    .late-empty {
+        padding: 55px 20px !important;
+        text-align: center;
+    }
+
+    .late-empty-icon {
+        width: 58px;
+        height: 58px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        margin: 0 auto 13px;
+
+        border-radius: 50%;
+
+        background: #ecfdf5;
+        color: #16a34a;
+
+        font-size: 27px;
+    }
+
+    .late-empty-title {
+        margin: 0 0 5px;
+
+        color: #172033;
+        font-size: 15px;
+        font-weight: 900;
+    }
+
+    .late-empty-text {
+        margin: 0;
+
+        color: #8490a1;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 1100px) {
+        .late-summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .late-filter-form {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .late-page {
+            padding: 16px 12px 25px;
+        }
+
+        .late-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .late-summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .late-filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .late-filter-btn,
+        .late-clear-btn {
+            width: 100%;
+        }
+
+        .late-table-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+
+
+<div class="late-page">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <div class="late-header">
+
+        <div class="late-header-left">
+
+            <h1 class="late-title">
+                ⏱️ Employee Late Report
+            </h1>
+
+            <p class="late-subtitle">
+                Track employee waiting time after the free waiting period.
             </p>
+
         </div>
+
+        <a
+            href="{% url 'admin_web:reports' %}"
+            class="late-back-btn"
+        >
+            ← Back to Reports
+        </a>
+
     </div>
 
 
-    <!-- ===================================================== -->
-    <!-- SUMMARY CARDS -->
-    <!-- ===================================================== -->
+    <!-- =====================================================
+         INFORMATION
+         ===================================================== -->
 
-    <div class="row g-3 mb-4">
+    <div class="late-info">
 
-        <!-- TOTAL LATE EMPLOYEES -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
+        <div class="late-info-icon">
+            ⏱
+        </div>
 
-                        <div
-                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="
-                                width:52px;
-                                height:52px;
-                                background:#fff7ed;
-                                color:#ea580c;
-                            "
-                        >
-                            <i class="bi bi-clock-history fs-4"></i>
-                        </div>
+        <div>
 
-                        <div>
-                            <div class="text-muted small">
-                                Late Employees
-                            </div>
+            <p class="late-info-title">
+                10-Minute Free Waiting Policy
+            </p>
 
-                            <div class="fs-3 fw-bold">
-                                {{ total_late_employees }}
-                            </div>
-                        </div>
+            <p class="late-info-text">
+                The first 10 minutes after driver arrival are free.
+                Only additional waiting time is counted as employee late time.
+            </p>
 
-                    </div>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUMMARY
+         ===================================================== -->
+
+    <div class="late-summary-grid">
+
+        <!-- TOTAL LATE -->
+
+        <div class="late-summary-card">
+
+            <div class="late-summary-content">
+
+                <div class="late-summary-icon late-icon-orange">
+                    ⏱
                 </div>
+
+                <div>
+
+                    <div class="late-summary-label">
+                        Late Employees
+                    </div>
+
+                    <div class="late-summary-value">
+                        {{ total_late_employees }}
+                    </div>
+
+                </div>
+
             </div>
+
         </div>
 
 
-        <!-- PICKED AFTER LATE -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
+        <!-- LATE + PICKED -->
 
-                        <div
-                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="
-                                width:52px;
-                                height:52px;
-                                background:#ecfdf3;
-                                color:#15803d;
-                            "
-                        >
-                            <i class="bi bi-check-circle fs-4"></i>
-                        </div>
+        <div class="late-summary-card">
 
-                        <div>
-                            <div class="text-muted small">
-                                Late + Picked
-                            </div>
+            <div class="late-summary-content">
 
-                            <div class="fs-3 fw-bold">
-                                {{ pickup_late_count }}
-                            </div>
-                        </div>
-
-                    </div>
+                <div class="late-summary-icon late-icon-green">
+                    ✓
                 </div>
+
+                <div>
+
+                    <div class="late-summary-label">
+                        Late + Picked
+                    </div>
+
+                    <div class="late-summary-value">
+                        {{ pickup_late_count }}
+                    </div>
+
+                </div>
+
             </div>
+
         </div>
 
 
-        <!-- NO SHOW -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
+        <!-- LATE + NO SHOW -->
 
-                        <div
-                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="
-                                width:52px;
-                                height:52px;
-                                background:#fef2f2;
-                                color:#dc2626;
-                            "
-                        >
-                            <i class="bi bi-x-circle fs-4"></i>
-                        </div>
+        <div class="late-summary-card">
 
-                        <div>
-                            <div class="text-muted small">
-                                Late + No Show
-                            </div>
+            <div class="late-summary-content">
 
-                            <div class="fs-3 fw-bold">
-                                {{ no_show_late_count }}
-                            </div>
-                        </div>
-
-                    </div>
+                <div class="late-summary-icon late-icon-red">
+                    ✕
                 </div>
+
+                <div>
+
+                    <div class="late-summary-label">
+                        Late + No Show
+                    </div>
+
+                    <div class="late-summary-value">
+                        {{ no_show_late_count }}
+                    </div>
+
+                </div>
+
             </div>
+
         </div>
 
 
         <!-- TOTAL LATE TIME -->
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
 
-                        <div
-                            class="rounded-circle d-flex align-items-center justify-content-center me-3"
-                            style="
-                                width:52px;
-                                height:52px;
-                                background:#eff6ff;
-                                color:#2563eb;
-                            "
-                        >
-                            <i class="bi bi-stopwatch fs-4"></i>
-                        </div>
+        <div class="late-summary-card">
 
-                        <div>
-                            <div class="text-muted small">
-                                Total Late Time
-                            </div>
+            <div class="late-summary-content">
 
-                            <div class="fs-3 fw-bold">
-                                {{ total_late_minutes }}
-                                <span class="fs-6 fw-normal text-muted">
-                                    min
-                                </span>
-                            </div>
-                        </div>
-
-                    </div>
+                <div class="late-summary-icon late-icon-blue">
+                    ◷
                 </div>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- ===================================================== -->
-    <!-- FILTERS -->
-    <!-- ===================================================== -->
-
-    <div class="card border-0 shadow-sm mb-4">
-
-        <div class="card-body">
-
-            <form method="get">
-
-                <div class="row g-3 align-items-end">
-
-                    <!-- SEARCH -->
-                    <div class="col-lg-5">
-
-                        <label class="form-label fw-semibold">
-                            Search
-                        </label>
-
-                        <input
-                            type="text"
-                            name="q"
-                            value="{{ query }}"
-                            class="form-control"
-                            placeholder="Employee, driver, vehicle or route"
-                        >
-
-                    </div>
-
-
-                    <!-- DATE -->
-                    <div class="col-lg-3">
-
-                        <label class="form-label fw-semibold">
-                            Date
-                        </label>
-
-                        <input
-                            type="date"
-                            name="date"
-                            value="{{ date_filter }}"
-                            class="form-control"
-                        >
-
-                    </div>
-
-
-                    <!-- RESULT -->
-                    <div class="col-lg-2">
-
-                        <label class="form-label fw-semibold">
-                            Result
-                        </label>
-
-                        <select
-                            name="result"
-                            class="form-select"
-                        >
-
-                            <option
-                                value=""
-                                {% if not result_filter %}selected{% endif %}
-                            >
-                                All
-                            </option>
-
-                            <option
-                                value="PICKED"
-                                {% if result_filter == "PICKED" %}selected{% endif %}
-                            >
-                                Picked
-                            </option>
-
-                            <option
-                                value="NO_SHOW"
-                                {% if result_filter == "NO_SHOW" %}selected{% endif %}
-                            >
-                                No Show
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <!-- FILTER BUTTON -->
-                    <div class="col-lg-2">
-
-                        <div class="d-grid">
-
-                            <button
-                                type="submit"
-                                class="btn btn-primary"
-                            >
-                                <i class="bi bi-funnel me-1"></i>
-                                Filter
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                {% if query or date_filter or result_filter %}
-
-                    <div class="mt-3">
-
-                        <a
-                            href="{% url 'admin_web:late_report' %}"
-                            class="btn btn-sm btn-outline-secondary"
-                        >
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>
-                            Clear Filters
-                        </a>
-
-                    </div>
-
-                {% endif %}
-
-            </form>
-
-        </div>
-
-    </div>
-
-
-    <!-- ===================================================== -->
-    <!-- REPORT TABLE -->
-    <!-- ===================================================== -->
-
-    <div class="card border-0 shadow-sm">
-
-        <div class="card-header bg-white border-0 pt-4 px-4">
-
-            <div class="d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold mb-1">
-                        Late Employee Details
-                    </h5>
 
-                    <div class="text-muted small">
-                        First 10 minutes after driver arrival are excluded.
+                    <div class="late-summary-label">
+                        Total Late Time
                     </div>
-                </div>
 
-                <span class="badge bg-light text-dark border">
-                    {{ total_late_employees }} record{{ total_late_employees|pluralize }}
-                </span>
+                    <div class="late-summary-value">
+                        {{ total_late_minutes }}
+                        <span class="late-summary-unit">
+                            min
+                        </span>
+                    </div>
+
+                </div>
 
             </div>
 
         </div>
 
+    </div>
 
-        <div class="card-body p-0">
 
-            <div class="table-responsive">
+    <!-- =====================================================
+         FILTERS
+         ===================================================== -->
 
-                <table class="table table-hover align-middle mb-0">
+    <div class="late-filter-box">
 
-                    <thead class="table-light">
+        <h3 class="late-filter-title">
+            Search & Filter
+        </h3>
 
-                        <tr>
-                            <th class="ps-4">
-                                Date
-                            </th>
+        <form
+            method="get"
+            class="late-filter-form"
+        >
 
-                            <th>
-                                Employee
-                            </th>
+            <!-- SEARCH -->
 
-                            <th>
-                                Route
-                            </th>
+            <div class="late-field">
 
-                            <th>
-                                Driver
-                            </th>
+                <label>
+                    SEARCH
+                </label>
 
-                            <th>
-                                Vehicle
-                            </th>
-
-                            <th>
-                                Trip
-                            </th>
-
-                            <th>
-                                Result
-                            </th>
-
-                            <th>
-                                Driver Arrived
-                            </th>
-
-                            <th>
-                                Finished
-                            </th>
-
-                            <th class="text-end pe-4">
-                                Late Time
-                            </th>
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        {% for row in rows %}
-
-                            <tr>
-
-                                <!-- DATE -->
-                                <td class="ps-4 text-nowrap">
-
-                                    {% if row.date %}
-                                        {{ row.date|date:"d M Y" }}
-                                    {% else %}
-                                        --
-                                    {% endif %}
-
-                                </td>
-
-
-                                <!-- EMPLOYEE -->
-                                <td>
-
-                                    <div class="fw-semibold">
-                                        {{ row.employee }}
-                                    </div>
-
-                                </td>
-
-
-                                <!-- ROUTE -->
-                                <td>
-
-                                    {{ row.route_name }}
-
-                                </td>
-
-
-                                <!-- DRIVER -->
-                                <td>
-
-                                    {{ row.driver }}
-
-                                </td>
-
-
-                                <!-- VEHICLE -->
-                                <td>
-
-                                    <span class="badge bg-light text-dark border">
-                                        {{ row.vehicle }}
-                                    </span>
-
-                                </td>
-
-
-                                <!-- TRIP TYPE -->
-                                <td>
-
-                                    {% if row.trip_type == "PICKUP" %}
-
-                                        <span class="badge bg-primary">
-                                            Pickup
-                                        </span>
-
-                                    {% elif row.trip_type == "DROP" %}
-
-                                        <span class="badge bg-info text-dark">
-                                            Drop
-                                        </span>
-
-                                    {% else %}
-
-                                        {{ row.trip_type }}
-
-                                    {% endif %}
-
-                                </td>
-
-
-                                <!-- RESULT -->
-                                <td>
-
-                                    {% if row.result == "PICKED" %}
-
-                                        <span
-                                            class="badge"
-                                            style="
-                                                background:#dcfce7;
-                                                color:#166534;
-                                            "
-                                        >
-                                            <i class="bi bi-check-circle me-1"></i>
-                                            Picked
-                                        </span>
-
-                                    {% elif row.result == "NO SHOW" %}
-
-                                        <span
-                                            class="badge"
-                                            style="
-                                                background:#fee2e2;
-                                                color:#991b1b;
-                                            "
-                                        >
-                                            <i class="bi bi-x-circle me-1"></i>
-                                            No Show
-                                        </span>
-
-                                    {% else %}
-
-                                        <span class="badge bg-secondary">
-                                            {{ row.result }}
-                                        </span>
-
-                                    {% endif %}
-
-                                </td>
-
-
-                                <!-- ARRIVAL TIME -->
-                                <td class="text-nowrap">
-
-                                    {% if row.arrival_time %}
-
-                                        {{ row.arrival_time|date:"h:i:s A" }}
-
-                                    {% else %}
-
-                                        --
-
-                                    {% endif %}
-
-                                </td>
-
-
-                                <!-- FINISHED TIME -->
-                                <td class="text-nowrap">
-
-                                    {% if row.finished_at %}
-
-                                        {{ row.finished_at|date:"h:i:s A" }}
-
-                                    {% else %}
-
-                                        --
-
-                                    {% endif %}
-
-                                </td>
-
-
-                                <!-- LATE TIME -->
-                                <td class="text-end pe-4">
-
-                                    <span
-                                        class="badge rounded-pill"
-                                        style="
-                                            background:#fee2e2;
-                                            color:#b91c1c;
-                                            font-size:13px;
-                                            padding:8px 12px;
-                                        "
-                                    >
-                                        <i class="bi bi-clock me-1"></i>
-
-                                        {{ row.late_text }}
-                                    </span>
-
-                                </td>
-
-                            </tr>
-
-                        {% empty %}
-
-                            <tr>
-
-                                <td
-                                    colspan="10"
-                                    class="text-center py-5"
-                                >
-
-                                    <div class="mb-2">
-
-                                        <i
-                                            class="bi bi-check-circle"
-                                            style="
-                                                font-size:42px;
-                                                color:#16a34a;
-                                            "
-                                        ></i>
-
-                                    </div>
-
-                                    <h6 class="fw-bold mb-1">
-                                        No Late Employees
-                                    </h6>
-
-                                    <div class="text-muted">
-                                        No employee late records were found for the selected filters.
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    class="late-input"
+                    placeholder="Employee, driver, vehicle or route"
+                >
 
             </div>
+
+
+            <!-- DATE -->
+
+            <div class="late-field">
+
+                <label>
+                    DATE
+                </label>
+
+                <input
+                    type="date"
+                    name="date"
+                    value="{{ date_filter }}"
+                    class="late-input"
+                >
+
+            </div>
+
+
+            <!-- RESULT -->
+
+            <div class="late-field">
+
+                <label>
+                    RESULT
+                </label>
+
+                <select
+                    name="result"
+                    class="late-select"
+                >
+
+                    <option
+                        value=""
+                        {% if not result_filter %}selected{% endif %}
+                    >
+                        All Results
+                    </option>
+
+                    <option
+                        value="PICKED"
+                        {% if result_filter == "PICKED" %}selected{% endif %}
+                    >
+                        Picked
+                    </option>
+
+                    <option
+                        value="NO_SHOW"
+                        {% if result_filter == "NO_SHOW" %}selected{% endif %}
+                    >
+                        No Show
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- FILTER -->
+
+            <button
+                type="submit"
+                class="late-filter-btn"
+            >
+                🔍 Apply Filter
+            </button>
+
+
+            <!-- CLEAR -->
+
+            {% if query or date_filter or result_filter %}
+
+                <a
+                    href="{% url 'admin_web:late_report' %}"
+                    class="late-clear-btn"
+                >
+                    Clear
+                </a>
+
+            {% endif %}
+
+        </form>
+
+    </div>
+
+
+    <!-- =====================================================
+         REPORT TABLE
+         ===================================================== -->
+
+    <div class="late-table-card">
+
+        <div class="late-table-header">
+
+            <div>
+
+                <h2 class="late-table-title">
+                    Late Employee Details
+                </h2>
+
+                <p class="late-table-subtitle">
+                    Final late time is recorded when Pickup Done or No Show is completed.
+                </p>
+
+            </div>
+
+            <div class="late-record-count">
+                {{ total_late_employees }}
+                record{{ total_late_employees|pluralize }}
+            </div>
+
+        </div>
+
+
+        <div class="late-table-scroll">
+
+            <table class="late-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Date</th>
+
+                        <th>Employee</th>
+
+                        <th>Route</th>
+
+                        <th>Driver</th>
+
+                        <th>Vehicle</th>
+
+                        <th>Trip</th>
+
+                        <th>Result</th>
+
+                        <th>Driver Arrived</th>
+
+                        <th>Finished</th>
+
+                        <th>Late Time</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for row in rows %}
+
+                        <tr>
+
+                            <!-- DATE -->
+
+                            <td>
+
+                                {% if row.date %}
+
+                                    {{ row.date|date:"d M Y" }}
+
+                                {% else %}
+
+                                    --
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- EMPLOYEE -->
+
+                            <td>
+
+                                <span class="late-employee">
+                                    {{ row.employee }}
+                                </span>
+
+                            </td>
+
+
+                            <!-- ROUTE -->
+
+                            <td>
+                                {{ row.route_name }}
+                            </td>
+
+
+                            <!-- DRIVER -->
+
+                            <td>
+                                {{ row.driver }}
+                            </td>
+
+
+                            <!-- VEHICLE -->
+
+                            <td>
+
+                                <span class="late-vehicle">
+                                    {{ row.vehicle }}
+                                </span>
+
+                            </td>
+
+
+                            <!-- TRIP -->
+
+                            <td>
+
+                                {% if row.trip_type == "PICKUP" %}
+
+                                    <span class="late-badge late-badge-pickup">
+                                        🚕 Pickup
+                                    </span>
+
+                                {% elif row.trip_type == "DROP" %}
+
+                                    <span class="late-badge late-badge-drop">
+                                        🚗 Drop
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="late-badge late-badge-other">
+                                        {{ row.trip_type }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- RESULT -->
+
+                            <td>
+
+                                {% if row.result == "PICKED" %}
+
+                                    <span class="late-badge late-badge-picked">
+                                        ✓ Picked
+                                    </span>
+
+                                {% elif row.result == "NO SHOW" %}
+
+                                    <span class="late-badge late-badge-noshow">
+                                        ✕ No Show
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="late-badge late-badge-other">
+                                        {{ row.result }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ARRIVAL -->
+
+                            <td>
+
+                                {% if row.arrival_time %}
+
+                                    {{ row.arrival_time|date:"h:i:s A" }}
+
+                                {% else %}
+
+                                    --
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- FINISHED -->
+
+                            <td>
+
+                                {% if row.finished_at %}
+
+                                    {{ row.finished_at|date:"h:i:s A" }}
+
+                                {% else %}
+
+                                    --
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- LATE TIME -->
+
+                            <td>
+
+                                <span class="late-time-badge">
+                                    ⏱ {{ row.late_text }}
+                                </span>
+
+                            </td>
+
+                        </tr>
+
+
+                    {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="10"
+                                class="late-empty"
+                            >
+
+                                <div class="late-empty-icon">
+                                    ✓
+                                </div>
+
+                                <h3 class="late-empty-title">
+                                    No Late Employees
+                                </h3>
+
+                                <p class="late-empty-text">
+                                    No employee late records were found for the selected filters.
+                                </p>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
 
         </div>
 
