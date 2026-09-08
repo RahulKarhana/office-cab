@@ -9,15 +9,45 @@
 {% block content %}
 
 <style>
-    .live-cab-section {
-        grid-column: 1 / -1;
-    }
+    .live-cab-section { grid-column: 1 / -1; }
 
     .live-cab-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 16px;
+        gap: 14px;
         margin-top: 14px;
+    }
+
+    .stats-row { gap: 12px; }
+
+    .mini-stat-card {
+        min-height: 84px !important;
+        padding: 13px 16px !important;
+        border-radius: 18px !important;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .mini-stat-card p {
+        margin: 0 0 5px !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        color: #64748b !important;
+    }
+
+    .mini-stat-card h3 {
+        margin: 0 !important;
+        font-size: 27px !important;
+        line-height: 1 !important;
+        font-weight: 950 !important;
+        color: #0f172a !important;
+    }
+
+    .mini-stat-card span {
+        display: block;
+        margin-top: 7px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: #94a3b8 !important;
     }
 
     .cab-filter-row {
@@ -64,52 +94,26 @@
         color: #ffffff;
     }
 
-    .eta-highlight-box {
-        grid-column: 1 / -1;
-        background: linear-gradient(135deg, #eef2ff, #ecfeff);
-        border: 1px solid #c7d2fe;
-        border-radius: 16px;
-        padding: 12px;
-    }
-
-    .eta-highlight-box span {
-        display: block;
-        color: #475569;
-        font-size: 11px;
-        font-weight: 950;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-    }
-
-    .eta-highlight-box strong {
-        display: block;
-        color: #1e1b4b;
-        font-size: 15px;
-        font-weight: 950;
-    }
-
     .live-cab-card {
         background: #ffffff;
-        border-radius: 22px;
-        padding: 18px;
+        border-radius: 18px;
+        padding: 14px;
         border: 1px solid #e5e7eb;
-        box-shadow: 0 16px 36px rgba(15,23,42,0.08);
+        box-shadow: 0 12px 28px rgba(15,23,42,0.07);
         overflow: hidden;
         position: relative;
         transition: 0.2s ease;
     }
 
-    .live-cab-card.online {
-        border-top: 5px solid #22c55e;
-    }
+    .live-cab-card.online { border-top: 4px solid #22c55e; }
 
     .live-cab-card.offline {
-        border-top: 5px solid #94a3b8;
-        opacity: 0.88;
+        border-top: 4px solid #94a3b8;
+        opacity: 0.9;
     }
 
     .live-cab-card.overspeed {
-        border-top: 5px solid #dc2626;
+        border-top: 4px solid #dc2626;
         box-shadow: 0 18px 45px rgba(220,38,38,0.18);
     }
 
@@ -120,8 +124,68 @@
     .live-cab-head {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         gap: 12px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
+    }
+
+    .live-cab-head-left { min-width: 0; }
+
+    .live-cab-head h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 900;
+        color: #111827;
+    }
+
+    .live-cab-head p {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .live-cab-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .driver-status-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        align-items: flex-end;
+    }
+
+    .cab-arrow-btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 10px;
+        background: #f1f5f9;
+        color: #334155;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: 900;
+        transition: 0.2s ease;
+        position: relative;
+        z-index: 3;
+    }
+
+    .cab-arrow-btn:hover { background: #e2e8f0; }
+
+    .cab-arrow-btn .arrow-icon {
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+
+    .live-cab-card.expanded .cab-arrow-btn .arrow-icon {
+        transform: rotate(180deg);
     }
 
     .live-cab-card.moving {
@@ -134,102 +198,33 @@
         position: absolute;
         inset: 0;
         pointer-events: none;
-        background:
-            linear-gradient(
-                120deg,
-                transparent 0%,
-                rgba(255,255,255,0.18) 45%,
-                transparent 100%
-            );
+        background: linear-gradient(
+            120deg,
+            transparent 0%,
+            rgba(255,255,255,0.18) 45%,
+            transparent 100%
+        );
         transform: translateX(-100%);
         animation: movingGlow 2.2s linear infinite;
     }
 
     @keyframes movingGlow {
-        100% {
-            transform: translateX(100%);
-        }
-    }
-
-    .route-live-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-        background: #22c55e;
-        box-shadow: 0 0 0 rgba(34,197,94,0.4);
-        animation: pulseLiveDot 1.5s infinite;
-    }
-
-    @keyframes pulseLiveDot {
-        0% {
-            transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
-        }
-
-        70% {
-            transform: scale(1.12);
-            box-shadow: 0 0 0 10px rgba(34,197,94,0);
-        }
-
-        100% {
-            transform: scale(1);
-            box-shadow: 0 0 0 0 rgba(34,197,94,0);
-        }
-    }
-
-    .live-cab-head h3 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 900;
-        color: #111827;
-    }
-
-    .live-cab-head p {
-        margin: 4px 0 0;
-        color: #6b7280;
-        font-size: 13px;
-        font-weight: 700;
-    }
-
-    .driver-status-stack {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        align-items: flex-end;
-    }
-
-    .freshness-live {
-        color: #166534;
-    }
-
-    .freshness-idle {
-        color: #92400e;
-    }
-
-    .freshness-offline {
-        color: #991b1b;
+        100% { transform: translateX(100%); }
     }
 
     .speed-badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 13px;
+        padding: 7px 11px;
         border-radius: 999px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 900;
-        margin-bottom: 12px;
+        margin-bottom: 9px;
     }
 
-    .speed-safe {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .speed-medium {
-        background: #ffedd5;
-        color: #c2410c;
-    }
+    .speed-safe { background: #dcfce7; color: #166534; }
+    .speed-medium { background: #ffedd5; color: #c2410c; }
 
     .speed-danger {
         background: #fee2e2;
@@ -243,22 +238,29 @@
         100% { transform: scale(1); }
     }
 
+    .cab-collapsed-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-top: 7px;
+    }
+
     .cab-info-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 9px;
     }
 
     .cab-info-box {
         background: #f8fafc;
         border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 10px;
+        border-radius: 12px;
+        padding: 9px;
     }
 
     .cab-info-box span {
         display: block;
-        font-size: 11px;
+        font-size: 10px;
         color: #64748b;
         font-weight: 900;
         margin-bottom: 3px;
@@ -266,54 +268,58 @@
 
     .cab-info-box strong {
         color: #111827;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 900;
     }
 
     .cab-expanded-content {
         display: none;
-        margin-top: 12px;
+        margin-top: 11px;
     }
 
     .live-cab-card.expanded .cab-expanded-content {
         display: block;
     }
 
-    .cab-expand-btn {
-        width: 100%;
-        margin-top: 14px;
-        border: none;
+    .cab-expand-btn { display: none !important; }
+
+    .eta-highlight-box {
+        grid-column: 1 / -1;
+        background: linear-gradient(135deg, #eef2ff, #ecfeff);
+        border: 1px solid #c7d2fe;
         border-radius: 14px;
-        padding: 12px 14px;
-        background: #f1f5f9;
-        color: #334155;
-        font-size: 13px;
+        padding: 11px;
+    }
+
+    .eta-highlight-box span {
+        display: block;
+        color: #475569;
+        font-size: 10px;
         font-weight: 950;
-        cursor: pointer;
-        transition: 0.2s ease;
-        position: relative;
-        z-index: 2;
+        margin-bottom: 4px;
+        text-transform: uppercase;
     }
 
-    .cab-expand-btn:hover {
-        background: #e2e8f0;
+    .eta-highlight-box strong {
+        display: block;
+        color: #1e1b4b;
+        font-size: 14px;
+        font-weight: 950;
     }
 
-    .route-progress-wrap {
-        margin-top: 13px;
-    }
+    .route-progress-wrap { margin-top: 12px; }
 
     .route-progress-text {
         display: flex;
         justify-content: space-between;
-        font-size: 12px;
+        font-size: 11px;
         color: #64748b;
         font-weight: 900;
         margin-bottom: 6px;
     }
 
     .route-progress-bar {
-        height: 9px;
+        height: 8px;
         background: #e5e7eb;
         border-radius: 999px;
         overflow: hidden;
@@ -324,6 +330,10 @@
         background: linear-gradient(135deg, #2563eb, #22c55e);
         border-radius: 999px;
     }
+
+    .freshness-live { color: #166534; }
+    .freshness-idle { color: #92400e; }
+    .freshness-offline { color: #991b1b; }
 
     .empty-live-cab {
         grid-column: 1 / -1;
@@ -337,7 +347,8 @@
     }
 
     @media (max-width: 700px) {
-        .cab-info-grid {
+        .cab-info-grid,
+        .cab-collapsed-row {
             grid-template-columns: 1fr;
         }
     }
@@ -1024,18 +1035,6 @@
             "expanded"
         );
 
-        const expanded =
-            card.classList.contains(
-                "expanded"
-            );
-
-        if (button) {
-            button.textContent =
-                expanded
-                    ? "Collapse"
-                    : "Expand";
-        }
-
         syncExpandAllButton();
     }
 
@@ -1054,19 +1053,6 @@
                         "expanded",
                         allCabsExpanded
                     );
-                }
-            );
-
-        document
-            .querySelectorAll(
-                ".cab-expand-btn"
-            )
-            .forEach(
-                btn => {
-                    btn.textContent =
-                        allCabsExpanded
-                            ? "Collapse"
-                            : "Expand";
                 }
             );
 
@@ -1143,253 +1129,242 @@
                 allResults
             );
 
-        if (
-            !filteredResults.length
-        ) {
+        if (!filteredResults.length) {
             grid.innerHTML =
                 '<div class="empty-live-cab">' +
                 'No cab found for selected filter.' +
                 '</div>';
 
             syncExpandAllButton();
-
             return;
         }
 
         grid.innerHTML =
-            filteredResults
-                .map(
-                    cab => {
-                        const speed =
-                            Number(
-                                cab.speed_kmph ||
-                                0
-                            );
+            filteredResults.map(cab => {
+                const speed =
+                    Number(
+                        cab.speed_kmph || 0
+                    );
 
-                        const progress =
-                            Number(
-                                cab.progress_percent ||
-                                0
-                            );
+                const progress =
+                    Number(
+                        cab.progress_percent || 0
+                    );
 
-                        const routeRunId =
-                            String(
-                                cab.route_run_id
-                            );
+                const routeRunId =
+                    String(
+                        cab.route_run_id
+                    );
 
-                        const expandedClass =
-                            allCabsExpanded
-                                ? " expanded"
-                                : "";
+                const expandedClass =
+                    allCabsExpanded
+                        ? " expanded"
+                        : "";
 
-                        return `
-                            <div
-                                id="cab-card-${routeRunId}"
-                                class="${getCabCardClass(cab)}${expandedClass}"
-                            >
+                return `
+                    <div
+                        id="cab-card-${routeRunId}"
+                        class="${getCabCardClass(cab)}${expandedClass}"
+                    >
 
-                                <div class="live-cab-head">
+                        <div class="live-cab-head">
 
-                                    <div>
-                                        <h3>
-                                            ${cab.driver_name || "--"}
-                                        </h3>
+                            <div class="live-cab-head-left">
+                                <h3>
+                                    ${cab.driver_name || "--"}
+                                </h3>
 
-                                        <p>
-                                            ${cab.vehicle_number || "--"}
-                                            ${cab.vehicle_model ? " • " + cab.vehicle_model : ""}
-                                        </p>
-                                    </div>
+                                <p>
+                                    ${cab.vehicle_number || "--"}
+                                    ${cab.vehicle_model ? " • " + cab.vehicle_model : ""}
+                                </p>
+                            </div>
 
-                                    <div class="driver-status-stack">
+                            <div class="live-cab-head-actions">
 
-                                        <span
-                                            class="status-pill ${getCabStatusBadge(cab)}"
-                                        >
-                                            ${cab.online_status || "OFFLINE"}
-                                        </span>
+                                <div class="driver-status-stack">
 
-                                        <span
-                                            class="status-pill ${
-                                                cab.moving_status === "MOVING"
-                                                    ? "completed"
-                                                    : "warning"
-                                            }"
-                                        >
-                                            ${cab.moving_status || "STOPPED"}
-                                        </span>
-
-                                    </div>
-
-                                </div>
-
-                                <div
-                                    class="speed-badge ${getSpeedClass(speed)}"
-                                >
-                                    ${speed >= 80 ? "🚨" : "🚗"}
-                                    ${speed} km/h
-                                </div>
-
-                                ${speed >= 80 ? `
-                                    <div
-                                        class="speed-badge speed-danger"
+                                    <span
+                                        class="status-pill ${getCabStatusBadge(cab)}"
                                     >
-                                        🚨 OVERSPEED DETECTED
-                                    </div>
-                                ` : ""}
+                                        ${cab.online_status || "OFFLINE"}
+                                    </span>
 
-                                <!-- ALWAYS VISIBLE BASIC INFO -->
-
-                                <div class="cab-info-grid">
-
-                                    <div class="cab-info-box">
-                                        <span>Route</span>
-                                        <strong>
-                                            ${cab.route_name || "--"}
-                                        </strong>
-                                    </div>
-
-                                    <div class="cab-info-box">
-                                        <span>Trip Type</span>
-                                        <strong>
-                                            ${cab.trip_type || "--"}
-                                        </strong>
-                                    </div>
-
-                                </div>
-
-                                <!-- EXPANDED DETAILS -->
-
-                                <div class="cab-expanded-content">
-
-                                    <div class="cab-info-grid">
-
-                                        <div class="cab-info-box">
-                                            <span>Moving</span>
-                                            <strong>
-                                                ${cab.moving_status || "--"}
-                                            </strong>
-                                        </div>
-
-                                        <div class="cab-info-box">
-                                            <span>Updated</span>
-                                            <strong
-                                                class="${
-                                                    Number(cab.minutes_ago) <= 2
-                                                        ? "freshness-live"
-                                                        : Number(cab.minutes_ago) <= 5
-                                                            ? "freshness-idle"
-                                                            : "freshness-offline"
-                                                }"
-                                            >
-                                                ${
-                                                    Number(cab.minutes_ago) <= 2
-                                                        ? "🟢 Live"
-                                                        : Number(cab.minutes_ago) <= 5
-                                                            ? "🟡 Idle"
-                                                            : "🔴 Offline"
-                                                }
-                                            </strong>
-                                        </div>
-
-                                        <div class="cab-info-box">
-                                            <span>Total Stops</span>
-                                            <strong>
-                                                ${cab.total_stops || 0}
-                                            </strong>
-                                        </div>
-
-                                        <div class="cab-info-box">
-                                            <span>Completed</span>
-                                            <strong>
-                                                ${cab.completed_stops || 0}
-                                            </strong>
-                                        </div>
-
-                                        <div class="cab-info-box">
-                                            <span>Pending</span>
-                                            <strong>
-                                                ${cab.pending_stops || 0}
-                                            </strong>
-                                        </div>
-
-                                        <div class="cab-info-box">
-                                            <span>Expected Complete</span>
-                                            <strong>
-                                                ${cab.estimated_completion_time || "--"}
-                                            </strong>
-                                        </div>
-
-                                        <div class="eta-highlight-box">
-                                            <span>
-                                                Next Stop / Office Reach ETA
-                                            </span>
-
-                                            <strong>
-                                                ${cab.eta_label || "Location unavailable"}
-                                            </strong>
-
-                                            <div
-                                                style="
-                                                    margin-top:6px;
-                                                    color:#475569;
-                                                    font-size:12px;
-                                                    font-weight:800;
-                                                "
-                                            >
-                                                ${
-                                                    cab.next_stop_name &&
-                                                    cab.next_stop_name !== "--"
-                                                        ? cab.next_stop_name + " • "
-                                                        : ""
-                                                }
-                                                ${cab.next_stop_location || "--"}
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div class="route-progress-wrap">
-
-                                        <div class="route-progress-text">
-                                            <span>
-                                                Route Progress
-                                            </span>
-
-                                            <span>
-                                                ${progress}%
-                                            </span>
-                                        </div>
-
-                                        <div class="route-progress-bar">
-                                            <div
-                                                class="route-progress-fill"
-                                                style="width:${progress}%"
-                                            ></div>
-                                        </div>
-
-                                    </div>
+                                    <span
+                                        class="status-pill ${
+                                            cab.moving_status === "MOVING"
+                                                ? "completed"
+                                                : "warning"
+                                        }"
+                                    >
+                                        ${cab.moving_status || "STOPPED"}
+                                    </span>
 
                                 </div>
 
                                 <button
                                     type="button"
-                                    class="cab-expand-btn"
+                                    class="cab-arrow-btn"
                                     onclick="toggleCabCard('${routeRunId}', this)"
+                                    title="Expand / Collapse"
+                                    aria-label="Expand or collapse cab details"
                                 >
-                                    ${allCabsExpanded ? "Collapse" : "Expand"}
+                                    <span class="arrow-icon">⌄</span>
                                 </button>
 
                             </div>
-                        `;
-                    }
-                )
-                .join("");
+
+                        </div>
+
+                        <div
+                            class="speed-badge ${getSpeedClass(speed)}"
+                        >
+                            ${speed >= 80 ? "🚨" : "🚗"}
+                            ${speed} km/h
+                        </div>
+
+                        ${speed >= 80 ? `
+                            <div class="speed-badge speed-danger">
+                                🚨 OVERSPEED DETECTED
+                            </div>
+                        ` : ""}
+
+                        <div class="cab-collapsed-row">
+
+                            <div class="cab-info-box">
+                                <span>Route</span>
+                                <strong>
+                                    ${cab.route_name || "--"}
+                                </strong>
+                            </div>
+
+                            <div class="cab-info-box">
+                                <span>Trip Type</span>
+                                <strong>
+                                    ${cab.trip_type || "--"}
+                                </strong>
+                            </div>
+
+                        </div>
+
+                        <div class="cab-expanded-content">
+
+                            <div class="cab-info-grid">
+
+                                <div class="cab-info-box">
+                                    <span>Moving</span>
+                                    <strong>
+                                        ${cab.moving_status || "--"}
+                                    </strong>
+                                </div>
+
+                                <div class="cab-info-box">
+                                    <span>Updated</span>
+                                    <strong
+                                        class="${
+                                            Number(cab.minutes_ago) <= 2
+                                                ? "freshness-live"
+                                                : Number(cab.minutes_ago) <= 5
+                                                    ? "freshness-idle"
+                                                    : "freshness-offline"
+                                        }"
+                                    >
+                                        ${
+                                            Number(cab.minutes_ago) <= 2
+                                                ? "🟢 Live"
+                                                : Number(cab.minutes_ago) <= 5
+                                                    ? "🟡 Idle"
+                                                    : "🔴 Offline"
+                                        }
+                                    </strong>
+                                </div>
+
+                                <div class="cab-info-box">
+                                    <span>Total Stops</span>
+                                    <strong>
+                                        ${cab.total_stops || 0}
+                                    </strong>
+                                </div>
+
+                                <div class="cab-info-box">
+                                    <span>Completed</span>
+                                    <strong>
+                                        ${cab.completed_stops || 0}
+                                    </strong>
+                                </div>
+
+                                <div class="cab-info-box">
+                                    <span>Pending</span>
+                                    <strong>
+                                        ${cab.pending_stops || 0}
+                                    </strong>
+                                </div>
+
+                                <div class="cab-info-box">
+                                    <span>Expected Complete</span>
+                                    <strong>
+                                        ${cab.estimated_completion_time || "--"}
+                                    </strong>
+                                </div>
+
+                                <div class="eta-highlight-box">
+                                    <span>
+                                        Next Stop / Office Reach ETA
+                                    </span>
+
+                                    <strong>
+                                        ${cab.eta_label || "Location unavailable"}
+                                    </strong>
+
+                                    <div
+                                        style="
+                                            margin-top:6px;
+                                            color:#475569;
+                                            font-size:12px;
+                                            font-weight:800;
+                                        "
+                                    >
+                                        ${
+                                            cab.next_stop_name &&
+                                            cab.next_stop_name !== "--"
+                                                ? cab.next_stop_name + " • "
+                                                : ""
+                                        }
+                                        ${cab.next_stop_location || "--"}
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="route-progress-wrap">
+
+                                <div class="route-progress-text">
+                                    <span>
+                                        Route Progress
+                                    </span>
+
+                                    <span>
+                                        ${progress}%
+                                    </span>
+                                </div>
+
+                                <div class="route-progress-bar">
+                                    <div
+                                        class="route-progress-fill"
+                                        style="width:${progress}%"
+                                    ></div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                `;
+            }).join("");
 
         syncExpandAllButton();
     }
-
 
     // =========================================================
     // LOAD CAB DATA
