@@ -2,6 +2,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from trips.models import Vehicle
 from .models import PickupLocationChangeRequest
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+)
 
 User = get_user_model()
 
@@ -65,14 +68,17 @@ class SignupSerializer(serializers.ModelSerializer):
             "phone_number",
             "address",
 
-            # Employee
             "employee_id",
             "gender",
             "account_status",
-            # Driver
+
             "vehicle_number",
             "vehicle_model",
             "seat_count",
+        ]
+
+        read_only_fields = [
+            "account_status",
         ]
 
     # ============================================================
@@ -285,6 +291,7 @@ class MeSerializer(serializers.ModelSerializer):
 
             "employee_id",
             "gender",
+            "account_status",
 
             "phone_number",
             "address",
@@ -333,6 +340,104 @@ class UpdatePickupLocationSerializer(serializers.Serializer):
 
         return attrs
 
+class CustomTokenObtainPairSerializer(
+    TokenObtainPairSerializer
+):
+    def validate(self, attrs):
+        username = attrs.get("username", "").strip()
+        password = attrs.get("password", "")
+
+        # ========================================================
+        # FIND USER EVEN WHEN is_active=False
+        # ========================================================
+
+        try:
+            user = User.objects.get(
+                username=username
+            )
+        except User.DoesNotExist:
+            raise serializers.ValidationError({
+                "detail":
+                    "Invalid username or password."
+            })
+
+        # ========================================================
+        # PASSWORD CHECK
+        # ========================================================
+
+        if not user.check_password(password):
+            raise serializers.ValidationError({
+                "detail":
+                    "Invalid username or password."
+            })
+
+        # ========================================================
+        # ADMIN APPROVAL STATUS
+        # ========================================================
+
+        if (
+            user.account_status
+            == User.ACCOUNT_STATUS_PENDING
+        ):
+            raise serializers.ValidationError({
+                "account_status": "PENDING",
+                "detail": (
+                    "Your account is waiting for "
+                    "Admin approval."
+                ),
+            })
+
+        if (
+            user.account_status
+            == User.ACCOUNT_STATUS_REJECTED
+        ):
+            reason = (
+                user.account_rejection_reason
+                or "No reason was provided."
+            )
+
+            raise serializers.ValidationError({
+                "account_status": "REJECTED",
+                "detail": (
+                    "Your registration was rejected."
+                ),
+                "reason": reason,
+            })
+
+        # ========================================================
+        # APPROVED BUT DISABLED
+        # ========================================================
+
+        if not user.is_active:
+            raise serializers.ValidationError({
+                "detail":
+                    "Your account is currently disabled."
+            })
+
+        # ========================================================
+        # NORMAL JWT LOGIN
+        # ========================================================
+
+        data = super().validate(attrs)
+
+        data["user_id"] = user.id
+        data["username"] = user.username
+        data["role"] = user.role
+        data["account_status"] = (
+            user.account_status
+        )
+
+        if user.role == "EMPLOYEE":
+            data["employee_id"] = (
+                user.employee_id
+            )
+
+            data["gender"] = (
+                user.gender
+            )
+
+        return data
+    
 class PickupLocationChangeRequestSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(
         source="employee.username",

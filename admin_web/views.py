@@ -1248,6 +1248,154 @@ def reject_employee_account(request, employee_id):
         "admin_web:employee_account_approvals"
     )
 
+@login_required
+@admin_required
+@require_GET
+def driver_account_approvals_page(request):
+    """
+    Show driver registrations waiting for Admin approval.
+    """
+
+    pending_drivers = (
+        User.objects
+        .filter(
+            role=User.Role.DRIVER,
+            account_status=User.ACCOUNT_STATUS_PENDING,
+        )
+        .select_related("vehicle")
+        .order_by("-date_joined")
+    )
+
+    context = {
+        "pending_drivers": pending_drivers,
+        "pending_count": pending_drivers.count(),
+    }
+
+    return render(
+        request,
+        "admin_web/driver_account_approvals.html",
+        context,
+    )
+
+@login_required
+@admin_required
+@require_POST
+def approve_driver_account(request, driver_id):
+
+    driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+    )
+
+    if (
+        driver.account_status
+        != User.ACCOUNT_STATUS_PENDING
+    ):
+        messages.warning(
+            request,
+            "This account has already been reviewed.",
+        )
+
+        return redirect(
+            "admin_web:driver_account_approvals"
+        )
+
+    driver.account_status = (
+        User.ACCOUNT_STATUS_APPROVED
+    )
+
+    driver.is_active = True
+    driver.account_reviewed_at = timezone.now()
+    driver.account_reviewed_by = request.user
+    driver.account_rejection_reason = ""
+
+    driver.save(
+        update_fields=[
+            "account_status",
+            "is_active",
+            "account_reviewed_at",
+            "account_reviewed_by",
+            "account_rejection_reason",
+        ]
+    )
+
+    messages.success(
+        request,
+        f"{driver.username}'s driver account has been approved.",
+    )
+
+    return redirect(
+        "admin_web:driver_account_approvals"
+    )
+
+@login_required
+@admin_required
+@require_POST
+def reject_driver_account(request, driver_id):
+
+    driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+    )
+
+    if (
+        driver.account_status
+        != User.ACCOUNT_STATUS_PENDING
+    ):
+        messages.warning(
+            request,
+            "This account has already been reviewed.",
+        )
+
+        return redirect(
+            "admin_web:driver_account_approvals"
+        )
+
+    rejection_reason = request.POST.get(
+        "rejection_reason",
+        "",
+    ).strip()
+
+    if not rejection_reason:
+        messages.error(
+            request,
+            "Please enter a rejection reason.",
+        )
+
+        return redirect(
+            "admin_web:driver_account_approvals"
+        )
+
+    driver.account_status = (
+        User.ACCOUNT_STATUS_REJECTED
+    )
+
+    driver.is_active = False
+    driver.account_reviewed_at = timezone.now()
+    driver.account_reviewed_by = request.user
+    driver.account_rejection_reason = rejection_reason
+
+    driver.save(
+        update_fields=[
+            "account_status",
+            "is_active",
+            "account_reviewed_at",
+            "account_reviewed_by",
+            "account_rejection_reason",
+        ]
+    )
+
+    messages.success(
+        request,
+        f"{driver.username}'s driver account has been rejected.",
+    )
+
+    return redirect(
+        "admin_web:driver_account_approvals"
+    )
+
 
 @login_required
 @admin_required

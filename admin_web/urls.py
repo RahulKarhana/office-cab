@@ -129,6 +129,24 @@ urlpatterns = [
         views.reject_employee_account,
         name="reject_employee_account",
     ),
+
+    path(
+        "requests/accounts/drivers/",
+        views.driver_account_approvals_page,
+        name="driver_account_approvals",
+    ),
+
+    path(
+        "requests/accounts/drivers/<int:driver_id>/approve/",
+        views.approve_driver_account,
+        name="approve_driver_account",
+    ),
+
+    path(
+        "requests/accounts/drivers/<int:driver_id>/reject/",
+        views.reject_driver_account,
+        name="reject_driver_account",
+    ),
         
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),

@@ -4,6 +4,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from trips.services.notification_service import NotificationService
 from .models import PickupLocationChangeRequest
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+)
+
+from .serializers import (
+    CustomTokenObtainPairSerializer,
+)
 
 from .serializers import (
     SignupSerializer,
@@ -17,18 +24,28 @@ class SignupAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = SignupSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        serializer = SignupSerializer(
+            data=request.data
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
         user = serializer.save()
 
         return Response(
             {
-                "message": "User created successfully",
+                "message": (
+                    "Registration submitted successfully. "
+                    "Your account is waiting for Admin approval."
+                ),
+                "account_status": user.account_status,
+                "is_active": user.is_active,
                 "user": MeSerializer(user).data,
             },
             status=status.HTTP_201_CREATED,
         )
-
 
 class MeAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -36,7 +53,14 @@ class MeAPIView(APIView):
     def get(self, request):
         return Response(MeSerializer(request.user).data)
 
+class CustomTokenObtainPairView(
+    TokenObtainPairView
+):
+    serializer_class = (
+        CustomTokenObtainPairSerializer
+    )
 
+    
 class UpdatePickupLocationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

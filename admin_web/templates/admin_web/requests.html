@@ -274,18 +274,24 @@
             {% endif %}
         </a>
 
-        <!-- DRIVER ACCOUNT APPROVAL -->
-        <div class="request-card disabled">
-            <div class="request-icon">🚖</div>
+        <a
+            class="request-card"
+            href="{% url 'admin_web:driver_account_approvals' %}"
+        >
+            <span class="request-icon">🧑‍✈️</span>
 
-            <h3>Driver Account Approval</h3>
+            <strong>Driver Account Approval</strong>
 
-            <p>
-                Approve driver accounts before operational access is allowed.
-            </p>
+            <small>
+                Review new driver registrations
+            </small>
 
-            <span class="coming-soon">Coming Later</span>
-        </div>
+            {% if pending_driver_accounts > 0 %}
+                <span class="request-count">
+                    {{ pending_driver_accounts }}
+                </span>
+            {% endif %}
+        </a>
 
     </section>
 
