@@ -3051,6 +3051,154 @@ def reports_page(request):
 @login_required
 @admin_required
 @require_GET
+def leave_report_page(request):
+    query = request.GET.get("q", "").strip()
+    start_date_value = request.GET.get("start_date", "").strip()
+    end_date_value = request.GET.get("end_date", "").strip()
+
+    today = timezone.localdate()
+
+    start_date = (
+        parse_date(start_date_value)
+        if start_date_value
+        else today
+    )
+
+    end_date = (
+        parse_date(end_date_value)
+        if end_date_value
+        else start_date
+    )
+
+    if end_date < start_date:
+        end_date = start_date
+
+    leaves = (
+        EmployeeLeave.objects
+        .select_related("employee")
+        .filter(
+            leave_date__range=[
+                start_date,
+                end_date,
+            ]
+        )
+        .order_by(
+            "-leave_date",
+            "employee__username",
+        )
+    )
+
+    if query:
+        leaves = leaves.filter(
+            Q(
+                employee__username__icontains=query
+            )
+            |
+            Q(
+                reason__icontains=query
+            )
+        )
+
+    rows = []
+
+    total_auto_cancelled = 0
+    pickup_cancelled_total = 0
+    drop_cancelled_total = 0
+
+    for leave in leaves:
+        employee = leave.employee
+
+        cancelled_trips = (
+            Trip.objects
+            .filter(
+                employee=employee,
+                trip_date=leave.leave_date,
+                status=Trip.STATUS_CANCELLED,
+            )
+        )
+
+        pickup_cancelled = (
+            cancelled_trips
+            .filter(
+                trip_type=Trip.TRIP_TYPE_PICKUP,
+            )
+            .count()
+        )
+
+        drop_cancelled = (
+            cancelled_trips
+            .filter(
+                trip_type=Trip.TRIP_TYPE_DROP,
+            )
+            .count()
+        )
+
+        cancelled_count = (
+            pickup_cancelled
+            + drop_cancelled
+        )
+
+        total_auto_cancelled += cancelled_count
+        pickup_cancelled_total += pickup_cancelled
+        drop_cancelled_total += drop_cancelled
+
+        rows.append(
+            {
+                "id": leave.id,
+
+                "employee_name":
+                    employee.username,
+
+                "leave_date":
+                    leave.leave_date,
+
+                "reason":
+                    leave.reason
+                    or "No reason provided",
+
+                "created_at":
+                    leave.created_at,
+
+                "pickup_cancelled":
+                    pickup_cancelled,
+
+                "drop_cancelled":
+                    drop_cancelled,
+
+                "cancelled_count":
+                    cancelled_count,
+            }
+        )
+
+    context = {
+        "rows": rows,
+
+        "query": query,
+        "start_date": str(start_date),
+        "end_date": str(end_date),
+
+        "total_leave_records":
+            len(rows),
+
+        "pickup_cancelled_total":
+            pickup_cancelled_total,
+
+        "drop_cancelled_total":
+            drop_cancelled_total,
+
+        "total_auto_cancelled":
+            total_auto_cancelled,
+    }
+
+    return render(
+        request,
+        "admin_web/leave_report.html",
+        context,
+    )
+
+@login_required
+@admin_required
+@require_GET
 def route_analytics_page(request):
     date_filter = request.GET.get("date", "").strip()
 

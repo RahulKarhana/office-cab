@@ -90,6 +90,11 @@ urlpatterns = [
         name="no_show_report",
     ),
     path(
+            "leave-report/",
+            views.leave_report_page,
+            name="leave_report",
+        ),
+    path(
         "alerts/<int:alert_id>/driver-location/",
         views.alert_driver_location_api,
         name="alert_driver_location_api",

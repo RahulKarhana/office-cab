@@ -1051,7 +1051,10 @@
             <small>Driver waiting & No-show details</small>
         </a>
 
-        <a class="report-tab tab-yellow {% if active_report == 'leave' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=leave">
+        <a
+            class="report-tab tab-yellow"
+            href="{% url 'admin_web:leave_report' %}"
+        >
             <span class="icon">🏖️</span>
             <strong>Leave Report</strong>
             <small>Employee leave auto-cancel</small>
