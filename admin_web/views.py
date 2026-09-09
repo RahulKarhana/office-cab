@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.db import transaction
 import math
+from django.db.models import Count, Q, Avg, Max
 from trips.models import RouteRunStop
 from accounts.models import PickupLocationChangeRequest
 from trips.utils.notification import send_push_notification
@@ -3304,6 +3305,7 @@ def route_analytics_page(request):
     }
 
     return render(request, "admin_web/route_analytics.html", context)
+
 @login_required
 @admin_required
 def export_reports_excel(request):
@@ -3357,6 +3359,7 @@ def export_reports_excel(request):
 
     wb.save(response)
     return response
+
 
 
 @login_required
@@ -3545,6 +3548,576 @@ def driver_performance_page(request):
     }
 
     return render(request, "admin_web/driver_performance.html", context)
+
+# ============================================================
+# REVIEW REPORT
+# ============================================================
+
+@login_required
+@admin_required
+@require_GET
+def review_report_page(request):
+
+    today = timezone.localdate()
+
+    # --------------------------------------------------------
+    # FILTER VALUES
+    # --------------------------------------------------------
+
+    query = request.GET.get("q", "").strip()
+
+    driver_filter = request.GET.get(
+        "driver",
+        "",
+    ).strip()
+
+    employee_filter = request.GET.get(
+        "employee",
+        "",
+    ).strip()
+
+    rating_filter = request.GET.get(
+        "rating",
+        "",
+    ).strip()
+
+    trip_type_filter = request.GET.get(
+        "trip_type",
+        "",
+    ).strip().upper()
+
+    start_date_value = request.GET.get(
+        "start_date",
+        "",
+    ).strip()
+
+    end_date_value = request.GET.get(
+        "end_date",
+        "",
+    ).strip()
+
+    # --------------------------------------------------------
+    # CURRENT MONTH
+    # --------------------------------------------------------
+
+    month_start = today.replace(day=1)
+
+    # --------------------------------------------------------
+    # BASE REVIEW QUERY
+    # --------------------------------------------------------
+
+    all_reviews = (
+        Review.objects
+        .select_related(
+            "employee",
+            "trip",
+            "trip__driver",
+            "trip__vehicle",
+            "trip__route_run",
+            "trip__route_run__route_template",
+        )
+        .order_by("-created_at")
+    )
+
+    # --------------------------------------------------------
+    # TODAY REVIEWS
+    # --------------------------------------------------------
+
+    today_reviews = all_reviews.filter(
+        created_at__date=today
+    )
+
+    today_review_count = today_reviews.count()
+
+    today_average = (
+        today_reviews.aggregate(
+            average=Avg("rating")
+        )["average"]
+        or 0
+    )
+
+    # --------------------------------------------------------
+    # CURRENT MONTH REVIEWS
+    # --------------------------------------------------------
+
+    month_reviews = all_reviews.filter(
+        created_at__date__gte=month_start,
+        created_at__date__lte=today,
+    )
+
+    month_review_count = month_reviews.count()
+
+    month_average = (
+        month_reviews.aggregate(
+            average=Avg("rating")
+        )["average"]
+        or 0
+    )
+
+    # --------------------------------------------------------
+    # OVERALL REVIEW STATS
+    # --------------------------------------------------------
+
+    total_reviews = all_reviews.count()
+
+    overall_average = (
+        all_reviews.aggregate(
+            average=Avg("rating")
+        )["average"]
+        or 0
+    )
+
+    five_star_count = all_reviews.filter(
+        rating=5
+    ).count()
+
+    four_star_count = all_reviews.filter(
+        rating=4
+    ).count()
+
+    three_star_count = all_reviews.filter(
+        rating=3
+    ).count()
+
+    low_rating_count = all_reviews.filter(
+        rating__lte=2
+    ).count()
+
+    # --------------------------------------------------------
+    # DRIVER MONTHLY PERFORMANCE
+    # --------------------------------------------------------
+
+    driver_month_stats = (
+        month_reviews
+        .filter(
+            trip__driver__isnull=False
+        )
+        .values(
+            "trip__driver_id",
+            "trip__driver__username",
+        )
+        .annotate(
+            total_reviews=Count("id"),
+            average_rating=Avg("rating"),
+        )
+        .order_by(
+            "-average_rating",
+            "-total_reviews",
+        )
+    )
+
+    # --------------------------------------------------------
+    # TODAY DRIVER PERFORMANCE
+    # --------------------------------------------------------
+
+    driver_today_stats = (
+        today_reviews
+        .filter(
+            trip__driver__isnull=False
+        )
+        .values(
+            "trip__driver_id",
+        )
+        .annotate(
+            today_reviews=Count("id"),
+            today_average=Avg("rating"),
+        )
+    )
+
+    today_driver_map = {
+        item["trip__driver_id"]: item
+        for item in driver_today_stats
+    }
+
+    # --------------------------------------------------------
+    # BUILD DRIVER SUMMARY
+    # --------------------------------------------------------
+
+    driver_summary = []
+
+    for driver in driver_month_stats:
+
+        driver_id = driver[
+            "trip__driver_id"
+        ]
+
+        today_data = today_driver_map.get(
+            driver_id,
+            {},
+        )
+
+        driver_summary.append({
+            "driver_id":
+                driver_id,
+
+            "driver_name":
+                driver[
+                    "trip__driver__username"
+                ],
+
+            "today_reviews":
+                today_data.get(
+                    "today_reviews",
+                    0,
+                ),
+
+            "today_average":
+                round(
+                    today_data.get(
+                        "today_average",
+                        0,
+                    ) or 0,
+                    2,
+                ),
+
+            "month_reviews":
+                driver[
+                    "total_reviews"
+                ],
+
+            "month_average":
+                round(
+                    driver[
+                        "average_rating"
+                    ] or 0,
+                    2,
+                ),
+        })
+
+    # --------------------------------------------------------
+    # FILTERED DETAILED REVIEW LIST
+    # --------------------------------------------------------
+
+    reviews = all_reviews
+
+    parsed_start_date = (
+        parse_date(start_date_value)
+        if start_date_value
+        else None
+    )
+
+    parsed_end_date = (
+        parse_date(end_date_value)
+        if end_date_value
+        else None
+    )
+
+    if parsed_start_date:
+        reviews = reviews.filter(
+            created_at__date__gte=parsed_start_date
+        )
+
+    if parsed_end_date:
+        reviews = reviews.filter(
+            created_at__date__lte=parsed_end_date
+        )
+
+    # --------------------------------------------------------
+    # SEARCH
+    # Employee / Driver / Vehicle / Comment / Route
+    # --------------------------------------------------------
+
+    if query:
+
+        reviews = reviews.filter(
+
+            Q(
+                employee__username__icontains=query
+            )
+
+            |
+
+            Q(
+                trip__driver__username__icontains=query
+            )
+
+            |
+
+            Q(
+                trip__vehicle__vehicle_number__icontains=query
+            )
+
+            |
+
+            Q(
+                comment__icontains=query
+            )
+
+            |
+
+            Q(
+                trip__route_run__route_template__name__icontains=query
+            )
+
+        )
+
+    # --------------------------------------------------------
+    # DRIVER FILTER
+    # --------------------------------------------------------
+
+    if driver_filter:
+
+        reviews = reviews.filter(
+            trip__driver_id=driver_filter
+        )
+
+    # --------------------------------------------------------
+    # EMPLOYEE FILTER
+    # --------------------------------------------------------
+
+    if employee_filter:
+
+        reviews = reviews.filter(
+            employee_id=employee_filter
+        )
+
+    # --------------------------------------------------------
+    # RATING FILTER
+    # --------------------------------------------------------
+
+    if rating_filter in [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+    ]:
+
+        reviews = reviews.filter(
+            rating=int(rating_filter)
+        )
+
+    # --------------------------------------------------------
+    # TRIP TYPE FILTER
+    # --------------------------------------------------------
+
+    if trip_type_filter in [
+        "PICKUP",
+        "DROP",
+    ]:
+
+        reviews = reviews.filter(
+            trip__trip_type=trip_type_filter
+        )
+
+    # --------------------------------------------------------
+    # BUILD DETAIL ROWS
+    # --------------------------------------------------------
+
+    review_rows = []
+
+    for review in reviews:
+
+        trip = review.trip
+
+        driver = (
+            trip.driver
+            if trip
+            else None
+        )
+
+        vehicle = (
+            trip.vehicle
+            if trip
+            else None
+        )
+
+        route_run = (
+            trip.route_run
+            if trip
+            else None
+        )
+
+        route_name = "--"
+
+        if (
+            route_run
+            and route_run.route_template
+        ):
+            route_name = (
+                route_run
+                .route_template
+                .name
+            )
+
+        review_rows.append({
+
+            "id":
+                review.id,
+
+            "date":
+                timezone.localtime(
+                    review.created_at
+                ).date(),
+
+            "time":
+                timezone.localtime(
+                    review.created_at
+                ).time(),
+
+            "employee":
+                review.employee.username
+                if review.employee
+                else "--",
+
+            "driver":
+                driver.username
+                if driver
+                else "--",
+
+            "driver_id":
+                driver.id
+                if driver
+                else None,
+
+            "vehicle":
+                vehicle.vehicle_number
+                if vehicle
+                else "--",
+
+            "route_name":
+                route_name,
+
+            "trip_type":
+                trip.trip_type
+                if trip
+                else "--",
+
+            "trip_id":
+                trip.id
+                if trip
+                else None,
+
+            "rating":
+                review.rating,
+
+            "comment":
+                review.comment
+                or "No feedback comment",
+
+        })
+
+    # --------------------------------------------------------
+    # DROPDOWN DATA
+    # --------------------------------------------------------
+
+    drivers = (
+        User.objects
+        .filter(
+            role="DRIVER",
+            is_active=True,
+        )
+        .order_by("username")
+    )
+
+    employees = (
+        User.objects
+        .filter(
+            role="EMPLOYEE",
+            is_active=True,
+        )
+        .order_by("username")
+    )
+
+    # --------------------------------------------------------
+    # CONTEXT
+    # --------------------------------------------------------
+
+    context = {
+
+        "today":
+            today,
+
+        "month_start":
+            month_start,
+
+        # Main summary
+        "total_reviews":
+            total_reviews,
+
+        "overall_average":
+            round(
+                overall_average,
+                2,
+            ),
+
+        "today_review_count":
+            today_review_count,
+
+        "today_average":
+            round(
+                today_average,
+                2,
+            ),
+
+        "month_review_count":
+            month_review_count,
+
+        "month_average":
+            round(
+                month_average,
+                2,
+            ),
+
+        # Rating counts
+        "five_star_count":
+            five_star_count,
+
+        "four_star_count":
+            four_star_count,
+
+        "three_star_count":
+            three_star_count,
+
+        "low_rating_count":
+            low_rating_count,
+
+        # Driver report
+        "driver_summary":
+            driver_summary,
+
+        # Detailed report
+        "review_rows":
+            review_rows,
+
+        "filtered_review_count":
+            len(review_rows),
+
+        # Dropdowns
+        "drivers":
+            drivers,
+
+        "employees":
+            employees,
+
+        # Preserve filters
+        "query":
+            query,
+
+        "driver_filter":
+            driver_filter,
+
+        "employee_filter":
+            employee_filter,
+
+        "rating_filter":
+            rating_filter,
+
+        "trip_type_filter":
+            trip_type_filter,
+
+        "start_date_value":
+            start_date_value,
+
+        "end_date_value":
+            end_date_value,
+    }
+
+    return render(
+        request,
+        "admin_web/review_report.html",
+        context,
+    )
 
 @login_required
 @admin_required

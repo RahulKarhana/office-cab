@@ -1066,10 +1066,11 @@
             <small>Emergency alerts</small>
         </a>
 
-        <a class="report-tab tab-purple {% if active_report == 'reviews' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=reviews">
-            <span class="icon">⭐</span>
-            <strong>Review Report</strong>
-            <small>Ratings and comments</small>
+        <a class="report-tab tab-purple"
+            href="{% url 'admin_web:review_report' %}">
+                <span class="icon">⭐</span>
+                <strong>Review Report</strong>
+                <small>Ratings and comments</small>
         </a>
 
         <a class="report-tab tab-teal"
