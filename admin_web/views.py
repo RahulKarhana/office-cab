@@ -1312,6 +1312,12 @@ def employees_page(request):
         employees = employees.filter(is_active=True)
     elif filter_type == "inactive":
         employees = employees.filter(is_active=False)
+    elif filter_type == "pickup":
+        employees = employees.exclude(
+            pickup_location__isnull=True
+        ).exclude(
+            pickup_location=""
+        )
 
     employee_rows = []
 
@@ -1361,6 +1367,96 @@ def employees_page(request):
         "today": today,
     })
 
+@login_required
+@admin_required
+@require_GET
+def employee_profile_page(request, employee_id):
+
+    employee = get_object_or_404(
+        User,
+        id=employee_id,
+        role="EMPLOYEE",
+    )
+
+    route_stop = (
+        RouteStop.objects
+        .select_related(
+            "route",
+            "route__driver",
+            "route__vehicle",
+        )
+        .filter(
+            employee=employee
+        )
+        .first()
+    )
+
+    today = timezone.localdate()
+
+    today_trips = (
+        Trip.objects
+        .select_related(
+            "driver",
+            "vehicle",
+            "route_run",
+            "route_run__route_template",
+        )
+        .filter(
+            employee=employee,
+            trip_date=today,
+        )
+        .order_by("pickup_time")
+    )
+
+    recent_trips = (
+        Trip.objects
+        .select_related(
+            "driver",
+            "vehicle",
+            "route_run",
+            "route_run__route_template",
+        )
+        .filter(
+            employee=employee
+        )
+        .order_by("-trip_date", "-created_at")[:10]
+    )
+
+    leave_records = (
+        EmployeeLeave.objects
+        .filter(
+            employee=employee
+        )
+        .order_by("-leave_date")[:10]
+    )
+
+    reviews = (
+        Review.objects
+        .select_related(
+            "trip",
+            "trip__driver",
+        )
+        .filter(
+            employee=employee
+        )
+        .order_by("-created_at")[:10]
+    )
+
+    context = {
+        "employee": employee,
+        "route_stop": route_stop,
+        "today_trips": today_trips,
+        "recent_trips": recent_trips,
+        "leave_records": leave_records,
+        "reviews": reviews,
+        "today": today,
+    }
+
+    return render(
+        request,
+        "admin_web/employee_profile.html",
+        context,
+    )
 # =========================
 # DRIVERS
 # =========================

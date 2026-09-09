@@ -69,6 +69,12 @@
         box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
     }
 
+    .emp-stat.active-filter {
+        outline: 4px solid rgba(255,255,255,0.96);
+        box-shadow: 0 0 0 4px rgba(37,99,235,0.16), 0 20px 42px rgba(15, 23, 42, 0.20);
+        transform: translateY(-2px);
+    }
+
     .emp-stat::after {
         content: "";
         position: absolute;
@@ -327,37 +333,37 @@
     </section>
 
     <section class="employee-stats">
-        <a href="?filter=all" class="emp-stat stat-total">
+        <a href="{% url 'admin_web:employees' %}?filter=all" class="emp-stat stat-total {% if filter_type == 'all' %}active-filter{% endif %}">
             <span>Total Employees</span>
             <h3>{{ total_employees }}</h3>
             <small>All registered employees</small>
         </a>
 
-        <a href="?filter=assigned" class="emp-stat stat-assigned">
+        <a href="{% url 'admin_web:employees' %}?filter=assigned" class="emp-stat stat-assigned {% if filter_type == 'assigned' %}active-filter{% endif %}">
             <span>Assigned Employees</span>
             <h3>{{ assigned_employees_count }}</h3>
             <small>Route/trip assigned today</small>
         </a>
 
-        <a href="?filter=unassigned" class="emp-stat stat-unassigned">
+        <a href="{% url 'admin_web:employees' %}?filter=unassigned" class="emp-stat stat-unassigned {% if filter_type == 'unassigned' %}active-filter{% endif %}">
             <span>Unassigned Employees</span>
             <h3>{{ unassigned_employees_count }}</h3>
             <small>Need route assignment</small>
         </a>
 
-        <a href="?filter=active" class="emp-stat stat-active">
+        <a href="{% url 'admin_web:employees' %}?filter=active" class="emp-stat stat-active {% if filter_type == 'active' %}active-filter{% endif %}">
             <span>Active Employees</span>
             <h3>{{ active_employees }}</h3>
             <small>Currently active accounts</small>
         </a>
 
-        <a href="?filter=inactive" class="emp-stat stat-inactive">
+        <a href="{% url 'admin_web:employees' %}?filter=inactive" class="emp-stat stat-inactive {% if filter_type == 'inactive' %}active-filter{% endif %}">
             <span>Inactive Employees</span>
             <h3>{{ inactive_employees }}</h3>
             <small>Disabled accounts</small>
         </a>
 
-        <a href="?filter=all" class="emp-stat stat-pickup">
+        <a href="{% url 'admin_web:employees' %}?filter=pickup" class="emp-stat stat-pickup {% if filter_type == 'pickup' %}active-filter{% endif %}">
             <span>Pickup Saved</span>
             <h3>{{ employees_with_pickup }}</h3>
             <small>Pickup location available</small>
@@ -466,7 +472,7 @@
                                         Assign Route
                                     </a>                                
                                 {% endif %}
-                                <a href="#" class="mini-action view">View</a>
+                                <a href="{% url 'admin_web:employee_profile' row.employee.id %}" class="mini-action view">View</a>
                             </div>
                         </td>
                     </tr>
