@@ -290,6 +290,35 @@
         box-shadow: 0 22px 44px rgba(15, 23, 42, 0.20);
     }
 
+    /* =========================
+       REPORT CARD COUNT BADGE
+    ========================= */
+
+    .report-count {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+        z-index: 3;
+        min-width: 30px;
+        height: 30px;
+        padding: 0 9px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #111827;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 950;
+        box-shadow: 0 7px 16px rgba(15,23,42,0.18);
+    }
+
+    .report-count.red { background: linear-gradient(135deg,#dc2626,#991b1b); }
+    .report-count.orange { background: linear-gradient(135deg,#f97316,#c2410c); }
+    .report-count.teal { background: linear-gradient(135deg,#0f766e,#115e59); }
+    .report-count.slate { background: linear-gradient(135deg,#334155,#0f172a); }
+    .report-count.pink { background: linear-gradient(135deg,#db2777,#9d174d); }
+
     .report-tab .icon {
         width: 38px;
         height: 38px;
@@ -1008,6 +1037,7 @@
             class="report-tab tab-red"
             href="{% url 'admin_web:cancelled_trips' %}"
         >
+            <span class="report-count red">{{ cancelled_trips_count }}</span>
             <span class="icon">❌</span>
             <strong>Cancelled Trips</strong>
             <small>Employee/admin cancellations</small>
@@ -1015,6 +1045,7 @@
 
         <a class="report-tab tab-orange"
             href="{% url 'admin_web:no_show_report' %}">
+            <span class="report-count orange">{{ no_show_stops|length }}</span>
             <span class="icon">🚫</span>
             <strong>No-show Report</strong>
             <small>Driver waiting & No-show details</small>
@@ -1040,6 +1071,7 @@
 
         <a class="report-tab tab-teal"
             href="{% url 'admin_web:late_report' %}">
+                <span class="report-count teal">{{ late_employees|length }}</span>
                 <span class="icon">⏱️</span>
                 <strong>Late Employees</strong>
                 <small>Waiting/delay data</small>
@@ -1052,21 +1084,24 @@
         </a>
 
         <a class="report-tab tab-slate {% if active_report == 'driver_speed' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=driver_speed">
+            <span class="report-count slate">{{ overspeed_driver_count|default:"0" }}</span>
             <span class="icon">🚗</span>
             <strong>Driver Cab Speed</strong>
             <small>Live Overspeed Monitoring</small>
         </a>
 
         <a class="report-tab tab-pink {% if active_report == 'unassigned_employees' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=unassigned_employees">
+            <span class="report-count pink">{{ unassigned_employees|length }}</span>
             <span class="icon">👤</span>
             <strong>Unassigned Employees</strong>
-            <small>No trip on selected date</small>
+            <small>No trip in selected period</small>
         </a>
 
         <a class="report-tab tab-slate {% if active_report == 'unassigned_drivers' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=unassigned_drivers">
+            <span class="report-count slate">{{ unassigned_drivers|length }}</span>
             <span class="icon">🧑‍✈️</span>
             <strong>Unassigned Drivers</strong>
-            <small>No route/trip assigned</small>
+            <small>No route/trip in selected period</small>
         </a>
 
         <a class="report-tab tab-teal" href="{% url 'admin_web:route_analytics' %}?date={{ start_date }}">
