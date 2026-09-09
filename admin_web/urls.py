@@ -99,7 +99,7 @@ urlpatterns = [
         views.alert_driver_location_api,
         name="alert_driver_location_api",
     ),
-    
+
     path(
         "review-report/",
         views.review_report_page,
@@ -111,7 +111,25 @@ urlpatterns = [
         views.cancelled_trips_page,
         name="cancelled_trips",
     ),
-    
+
+    path(
+        "requests/accounts/employees/",
+        views.employee_account_approvals_page,
+        name="employee_account_approvals",
+    ),
+
+    path(
+        "requests/accounts/employees/<int:employee_id>/approve/",
+        views.approve_employee_account,
+        name="approve_employee_account",
+    ),
+
+    path(
+        "requests/accounts/employees/<int:employee_id>/reject/",
+        views.reject_employee_account,
+        name="reject_employee_account",
+    ),
+        
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-route-run/<int:route_run_id>/", views.cancel_route_run_trips, name="cancel_route_run_trips"),

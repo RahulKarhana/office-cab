@@ -255,18 +255,24 @@
             <span class="coming-soon">Coming Later</span>
         </div>
 
-        <!-- EMPLOYEE ACCOUNT APPROVAL -->
-        <div class="request-card disabled">
-            <div class="request-icon">👤</div>
+        <a
+            class="request-card"
+            href="{% url 'admin_web:employee_account_approvals' %}"
+        >
+            <span class="request-icon">👤</span>
 
-            <h3>Employee Account Approval</h3>
+            <strong>Employee Account Approval</strong>
 
-            <p>
-                Approve employee accounts before cab access is allowed.
-            </p>
+            <small>
+                Review new employee registrations
+            </small>
 
-            <span class="coming-soon">Coming Later</span>
-        </div>
+            {% if pending_employee_accounts > 0 %}
+                <span class="request-count">
+                    {{ pending_employee_accounts }}
+                </span>
+            {% endif %}
+        </a>
 
         <!-- DRIVER ACCOUNT APPROVAL -->
         <div class="request-card disabled">

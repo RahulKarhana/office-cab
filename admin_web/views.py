@@ -20,12 +20,16 @@ from django.db.models import Count, Q, Avg, Max
 from django.utils.dateparse import parse_date
 from collections import OrderedDict
 from django.contrib.auth import authenticate, login, logout
-from django.contrib import messages
 from math import radians, cos, sin, asin, sqrt
 from django.views.decorators.http import require_GET, require_POST
 import openpyxl
 from django.db.models import Count, Q
 from django.http import HttpResponse
+from django.shortcuts import (
+    get_object_or_404,
+    redirect,
+    render,
+)
 from trips.models import (
     Trip,
     Vehicle,
@@ -260,7 +264,21 @@ def dashboard(request):
     # employee account approvals
     # driver account approvals
 
-    pending_requests_count = pending_location_requests
+    pending_employee_accounts = User.objects.filter(
+        role=User.Role.EMPLOYEE,
+        account_status=User.ACCOUNT_STATUS_PENDING,
+    ).count()
+
+    pending_driver_accounts = User.objects.filter(
+        role=User.Role.DRIVER,
+        account_status=User.ACCOUNT_STATUS_PENDING,
+    ).count()
+
+    pending_requests_count = (
+        pending_location_requests
+        + pending_employee_accounts
+        + pending_driver_accounts
+    )
     # =========================
     # TODAY DASHBOARD ANALYTICS
     # =========================
@@ -339,6 +357,8 @@ def dashboard(request):
         "unread_emergency_alerts": unread_emergency_alerts,
         "pending_location_requests": pending_location_requests,
         "pending_requests_count": pending_requests_count,
+        "pending_driver_accounts": pending_driver_accounts,
+        "pending_employee_accounts": pending_employee_accounts,
         "started_cabs": started_cabs,
         "completed_cabs": completed_cabs,
         "late_cabs": late_cabs,
@@ -986,13 +1006,17 @@ def requests_page(request):
     """
     Main Requests hub.
 
-    Later this page will contain:
+    Contains:
     - Location Change Requests
     - Change Driver Requests
     - Change Route Requests
     - Employee Account Approvals
     - Driver Account Approvals
     """
+
+    # ============================================================
+    # PICKUP LOCATION REQUESTS
+    # ============================================================
 
     pending_location_requests = (
         PickupLocationChangeRequest.objects
@@ -1002,17 +1026,226 @@ def requests_page(request):
         .count()
     )
 
-    total_pending_requests = pending_location_requests
+    # ============================================================
+    # EMPLOYEE ACCOUNT APPROVALS
+    # ============================================================
+
+    pending_employee_accounts = (
+        User.objects
+        .filter(
+            role=User.Role.EMPLOYEE,
+            account_status=User.ACCOUNT_STATUS_PENDING,
+        )
+        .count()
+    )
+
+    # ============================================================
+    # DRIVER ACCOUNT APPROVALS
+    # ============================================================
+
+    pending_driver_accounts = (
+        User.objects
+        .filter(
+            role=User.Role.DRIVER,
+            account_status=User.ACCOUNT_STATUS_PENDING,
+        )
+        .count()
+    )
+
+    # ============================================================
+    # OTHER REQUEST TYPES
+    # Not implemented yet
+    # ============================================================
+
+    pending_change_driver_requests = 0
+    pending_change_route_requests = 0
+
+    # ============================================================
+    # TOTAL PENDING
+    # ============================================================
+
+    total_pending_requests = (
+        pending_location_requests
+        + pending_employee_accounts
+        + pending_driver_accounts
+        + pending_change_driver_requests
+        + pending_change_route_requests
+    )
 
     context = {
-        "pending_location_requests": pending_location_requests,
-        "total_pending_requests": total_pending_requests,
+        "pending_location_requests":
+            pending_location_requests,
+
+        "pending_employee_accounts":
+            pending_employee_accounts,
+
+        "pending_driver_accounts":
+            pending_driver_accounts,
+
+        "pending_change_driver_requests":
+            pending_change_driver_requests,
+
+        "pending_change_route_requests":
+            pending_change_route_requests,
+
+        "total_pending_requests":
+            total_pending_requests,
     }
 
     return render(
         request,
         "admin_web/requests.html",
         context,
+    )
+
+@login_required
+@admin_required
+@require_GET
+def employee_account_approvals_page(request):
+    """
+    Show employee registrations waiting for Admin approval.
+    """
+
+    pending_employees = (
+        User.objects
+        .filter(
+            role=User.Role.EMPLOYEE,
+            account_status=User.ACCOUNT_STATUS_PENDING,
+        )
+        .order_by("-date_joined")
+    )
+
+    context = {
+        "pending_employees": pending_employees,
+        "pending_count": pending_employees.count(),
+    }
+
+    return render(
+        request,
+        "admin_web/employee_account_approvals.html",
+        context,
+    )
+
+@login_required
+@admin_required
+@require_POST
+def approve_employee_account(request, employee_id):
+
+    employee = get_object_or_404(
+        User,
+        id=employee_id,
+        role=User.Role.EMPLOYEE,
+    )
+
+    if (
+        employee.account_status
+        != User.ACCOUNT_STATUS_PENDING
+    ):
+        messages.warning(
+            request,
+            "This account has already been reviewed.",
+        )
+
+        return redirect(
+            "admin_web:employee_account_approvals"
+        )
+
+    employee.account_status = (
+        User.ACCOUNT_STATUS_APPROVED
+    )
+
+    employee.is_active = True
+
+    employee.account_reviewed_at = timezone.now()
+    employee.account_reviewed_by = request.user
+    employee.account_rejection_reason = ""
+
+    employee.save(
+        update_fields=[
+            "account_status",
+            "is_active",
+            "account_reviewed_at",
+            "account_reviewed_by",
+            "account_rejection_reason",
+        ]
+    )
+
+    messages.success(
+        request,
+        f"{employee.username}'s account has been approved.",
+    )
+
+    return redirect(
+        "admin_web:employee_account_approvals"
+    )
+@login_required
+@admin_required
+@require_POST
+def reject_employee_account(request, employee_id):
+
+    employee = get_object_or_404(
+        User,
+        id=employee_id,
+        role=User.Role.EMPLOYEE,
+    )
+
+    if (
+        employee.account_status
+        != User.ACCOUNT_STATUS_PENDING
+    ):
+        messages.warning(
+            request,
+            "This account has already been reviewed.",
+        )
+
+        return redirect(
+            "admin_web:employee_account_approvals"
+        )
+
+    rejection_reason = request.POST.get(
+        "rejection_reason",
+        "",
+    ).strip()
+
+    if not rejection_reason:
+        messages.error(
+            request,
+            "Please enter a rejection reason.",
+        )
+
+        return redirect(
+            "admin_web:employee_account_approvals"
+        )
+
+    employee.account_status = (
+        User.ACCOUNT_STATUS_REJECTED
+    )
+
+    employee.is_active = False
+
+    employee.account_reviewed_at = timezone.now()
+    employee.account_reviewed_by = request.user
+    employee.account_rejection_reason = (
+        rejection_reason
+    )
+
+    employee.save(
+        update_fields=[
+            "account_status",
+            "is_active",
+            "account_reviewed_at",
+            "account_reviewed_by",
+            "account_rejection_reason",
+        ]
+    )
+
+    messages.success(
+        request,
+        f"{employee.username}'s account has been rejected.",
+    )
+
+    return redirect(
+        "admin_web:employee_account_approvals"
     )
 
 

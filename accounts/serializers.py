@@ -7,15 +7,56 @@ User = get_user_model()
 
 
 class SignupSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
-    address = serializers.CharField(required=False, allow_blank=True)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=6,
+    )
 
-    vehicle_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    vehicle_model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    seat_count = serializers.IntegerField(required=False, allow_null=True)
+    address = serializers.CharField(
+        required=False,
+        allow_blank=True,
+    )
+
+    # ============================================================
+    # EMPLOYEE FIELDS
+    # ============================================================
+
+    employee_id = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=5,
+    )
+
+    gender = serializers.ChoiceField(
+        choices=User.GENDER_CHOICES,
+        required=False,
+        allow_blank=True,
+    )
+
+    # ============================================================
+    # DRIVER VEHICLE FIELDS
+    # ============================================================
+
+    vehicle_number = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    vehicle_model = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+    )
+
+    seat_count = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = User
+
         fields = [
             "id",
             "username",
@@ -23,48 +64,202 @@ class SignupSerializer(serializers.ModelSerializer):
             "role",
             "phone_number",
             "address",
+
+            # Employee
+            "employee_id",
+            "gender",
+            "account_status",
+            # Driver
             "vehicle_number",
             "vehicle_model",
             "seat_count",
         ]
 
+    # ============================================================
+    # ROLE VALIDATION
+    # ============================================================
+
     def validate_role(self, value):
-        allowed = {"EMPLOYEE", "DRIVER"}
+        allowed = {
+            "EMPLOYEE",
+            "DRIVER",
+        }
+
         if value not in allowed:
-            raise serializers.ValidationError("Role must be EMPLOYEE or DRIVER.")
+            raise serializers.ValidationError(
+                "Role must be EMPLOYEE or DRIVER."
+            )
+
         return value
 
+    # ============================================================
+    # EMPLOYEE ID VALIDATION
+    # Format must be:
+    #
+    # E0001
+    # E0282
+    # E0999
+    #
+    # E + exactly 4 numbers
+    # ============================================================
+
+    def validate_employee_id(self, value):
+
+        if not value:
+            return value
+
+        value = value.strip().upper()
+
+        if len(value) != 5:
+            raise serializers.ValidationError(
+                "Employee ID must be exactly 5 characters. "
+                "Example: E0282."
+            )
+
+        if value[0] != "E":
+            raise serializers.ValidationError(
+                "Employee ID must start with capital E. "
+                "Example: E0282."
+            )
+
+        if not value[1:].isdigit():
+            raise serializers.ValidationError(
+                "Employee ID must contain E followed by "
+                "exactly 4 numbers."
+            )
+
+        if User.objects.filter(
+            employee_id=value
+        ).exists():
+            raise serializers.ValidationError(
+                "This Employee ID is already registered."
+            )
+
+        return value
+
+    # ============================================================
+    # COMPLETE SIGNUP VALIDATION
+    # ============================================================
+
     def validate(self, attrs):
+
         role = attrs.get("role")
 
-        if role == "DRIVER":
+        # --------------------------------------------------------
+        # EMPLOYEE
+        # --------------------------------------------------------
+
+        if role == "EMPLOYEE":
+
+            employee_id = attrs.get(
+                "employee_id",
+                "",
+            )
+
+            gender = attrs.get(
+                "gender",
+                "",
+            )
+
+            if not employee_id:
+                raise serializers.ValidationError({
+                    "employee_id":
+                        "Employee ID is required."
+                })
+
+            if not gender:
+                raise serializers.ValidationError({
+                    "gender":
+                        "Gender is required."
+                })
+
+        # --------------------------------------------------------
+        # DRIVER
+        # --------------------------------------------------------
+
+        elif role == "DRIVER":
+
             if not attrs.get("vehicle_number"):
-                raise serializers.ValidationError(
-                    {"vehicle_number": "Vehicle number is required for driver."}
-                )
+                raise serializers.ValidationError({
+                    "vehicle_number":
+                        "Vehicle number is required for driver."
+                })
+
             if not attrs.get("vehicle_model"):
-                raise serializers.ValidationError(
-                    {"vehicle_model": "Vehicle model is required for driver."}
-                )
+                raise serializers.ValidationError({
+                    "vehicle_model":
+                        "Vehicle model is required for driver."
+                })
+
             if not attrs.get("seat_count"):
-                raise serializers.ValidationError(
-                    {"seat_count": "Seat count is required for driver."}
-                )
+                raise serializers.ValidationError({
+                    "seat_count":
+                        "Seat count is required for driver."
+                })
+
+            # Driver does not use employee-only fields.
+            attrs["employee_id"] = None
+            attrs["gender"] = ""
 
         return attrs
 
+    # ============================================================
+    # CREATE USER
+    # New signup = PENDING until Admin approval
+    # ============================================================
+
     def create(self, validated_data):
-        password = validated_data.pop("password")
 
-        vehicle_number = validated_data.pop("vehicle_number", None)
-        vehicle_model = validated_data.pop("vehicle_model", None)
-        seat_count = validated_data.pop("seat_count", None)
+        password = validated_data.pop(
+            "password"
+        )
 
-        user = User(**validated_data)
-        user.set_password(password)
+        vehicle_number = validated_data.pop(
+            "vehicle_number",
+            None,
+        )
+
+        vehicle_model = validated_data.pop(
+            "vehicle_model",
+            None,
+        )
+
+        seat_count = validated_data.pop(
+            "seat_count",
+            None,
+        )
+
+        # ========================================================
+        # NEW REGISTRATION MUST WAIT FOR ADMIN APPROVAL
+        # ========================================================
+
+        validated_data["account_status"] = (
+            User.ACCOUNT_STATUS_PENDING
+        )
+
+        validated_data["is_active"] = False
+
+        # No review information yet.
+        validated_data["account_reviewed_at"] = None
+        validated_data["account_reviewed_by"] = None
+        validated_data["account_rejection_reason"] = ""
+
+        user = User(
+            **validated_data
+        )
+
+        user.set_password(
+            password
+        )
+
         user.save()
 
+        # ========================================================
+        # CREATE VEHICLE FOR DRIVER
+        # ========================================================
+
         if user.role == "DRIVER":
+
             Vehicle.objects.create(
                 driver=user,
                 vehicle_number=vehicle_number,
@@ -74,7 +269,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
         return user
 
-
+    
 class MeSerializer(serializers.ModelSerializer):
     vehicle_number = serializers.SerializerMethodField()
     vehicle_model = serializers.SerializerMethodField()
@@ -82,15 +277,21 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
+
         fields = [
             "id",
             "username",
             "role",
+
+            "employee_id",
+            "gender",
+
             "phone_number",
             "address",
             "pickup_location",
             "pickup_latitude",
             "pickup_longitude",
+
             "vehicle_number",
             "vehicle_model",
             "seat_count",
@@ -110,7 +311,6 @@ class MeSerializer(serializers.ModelSerializer):
         if hasattr(obj, "vehicle"):
             return obj.vehicle.seat_count
         return None
-
 
 class UpdatePickupLocationSerializer(serializers.Serializer):
     pickup_location = serializers.CharField(required=False, allow_blank=True)
