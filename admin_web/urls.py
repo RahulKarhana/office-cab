@@ -77,6 +77,12 @@ urlpatterns = [
         views.assign_employee_to_route,
         name="assign_employee_to_route",
     ),
+
+    path(
+        "employees/<int:employee_id>/delete/",
+        views.delete_employee_account,
+        name="delete_employee_account",
+    ),
     
     path("tracking/", views.live_tracking, name="tracking"),
     path(
