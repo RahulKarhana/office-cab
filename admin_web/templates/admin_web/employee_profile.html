@@ -7,27 +7,1157 @@
 
 {% block extra_css %}
 <style>
-.profile-page{display:grid;gap:20px}.profile-hero{background:linear-gradient(135deg,#111827,#1f2937);color:#fff;border-radius:28px;padding:24px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;box-shadow:0 18px 40px rgba(15,23,42,.18)}.profile-identity{display:flex;align-items:center;gap:16px}.profile-avatar{width:72px;height:72px;border-radius:22px;display:grid;place-items:center;background:linear-gradient(135deg,#6366f1,#2563eb);font-size:30px;font-weight:900}.profile-hero h2{margin:0;font-size:30px;font-weight:900}.profile-hero p{margin:6px 0 0;color:#cbd5e1;font-weight:700}.profile-actions{display:flex;gap:10px;flex-wrap:wrap}.profile-btn{text-decoration:none;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:900}.btn-light{background:#fff;color:#111827}.btn-blue{background:#2563eb;color:#fff}.profile-grid,.route-layout{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.info-card{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:17px;box-shadow:0 10px 26px rgba(15,23,42,.05)}.info-card span{display:block;color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase;margin-bottom:6px}.info-card strong{color:#111827;font-size:14px;font-weight:900;word-break:break-word}.section-card{background:#fff;border:1px solid #e5e7eb;border-radius:24px;box-shadow:0 10px 28px rgba(15,23,42,.05);overflow:hidden}.section-head{padding:18px 20px;border-bottom:1px solid #edf0f4;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.section-head h3{margin:0;font-size:18px;font-weight:900;color:#111827}.section-head p{margin:4px 0 0;color:#64748b;font-size:12px;font-weight:700}.status-pill{display:inline-flex;padding:7px 11px;border-radius:999px;font-size:11px;font-weight:900}.green{background:#dcfce7;color:#166534}.orange{background:#ffedd5;color:#c2410c}.blue{background:#dbeafe;color:#1d4ed8}.red{background:#fee2e2;color:#991b1b}.slate{background:#f1f5f9;color:#475569}.route-layout{padding:18px 20px 20px}.table-wrap{overflow-x:auto}.profile-table{width:100%;min-width:900px;border-collapse:collapse}.profile-table th{text-align:left;padding:12px 14px;background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;font-weight:900;border-bottom:1px solid #e5e7eb;white-space:nowrap}.profile-table td{padding:13px 14px;border-bottom:1px solid #edf0f4;color:#334155;font-size:12px;font-weight:700;vertical-align:middle}.profile-table tbody tr:hover td{background:#f8fafc}.empty-state{padding:28px 20px;text-align:center;color:#64748b;font-weight:800}.feedback{max-width:360px;white-space:normal;line-height:1.5}.stars{color:#f59e0b;font-weight:900;white-space:nowrap}@media(max-width:1100px){.profile-grid,.route-layout{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.profile-grid,.route-layout{grid-template-columns:1fr}.profile-hero{align-items:flex-start}}
+.profile-page{
+    display:grid;
+    gap:20px;
+}
+
+.profile-hero{
+    background:linear-gradient(135deg,#111827,#1f2937);
+    color:#fff;
+    border-radius:28px;
+    padding:24px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    box-shadow:0 18px 40px rgba(15,23,42,.18);
+}
+
+.profile-identity{
+    display:flex;
+    align-items:center;
+    gap:16px;
+}
+
+.profile-avatar{
+    width:72px;
+    height:72px;
+    border-radius:22px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(135deg,#6366f1,#2563eb);
+    font-size:30px;
+    font-weight:900;
+}
+
+.profile-hero h2{
+    margin:0;
+    font-size:30px;
+    font-weight:900;
+}
+
+.profile-hero p{
+    margin:6px 0 0;
+    color:#cbd5e1;
+    font-weight:700;
+}
+
+.profile-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.profile-btn{
+    text-decoration:none;
+    padding:11px 15px;
+    border-radius:13px;
+    font-size:12px;
+    font-weight:900;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.btn-light{
+    background:#fff;
+    color:#111827;
+}
+
+.btn-blue{
+    background:#2563eb;
+    color:#fff;
+}
+
+.btn-delete{
+    background:#dc2626;
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    font-family:inherit;
+}
+
+.btn-delete:hover{
+    background:#b91c1c;
+}
+
+.profile-grid,
+.route-layout{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+}
+
+.info-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:20px;
+    padding:17px;
+    box-shadow:0 10px 26px rgba(15,23,42,.05);
+}
+
+.info-card span{
+    display:block;
+    color:#64748b;
+    font-size:11px;
+    font-weight:900;
+    text-transform:uppercase;
+    margin-bottom:6px;
+}
+
+.info-card strong{
+    color:#111827;
+    font-size:14px;
+    font-weight:900;
+    word-break:break-word;
+}
+
+.section-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:24px;
+    box-shadow:0 10px 28px rgba(15,23,42,.05);
+    overflow:hidden;
+}
+
+.section-head{
+    padding:18px 20px;
+    border-bottom:1px solid #edf0f4;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+.section-head h3{
+    margin:0;
+    font-size:18px;
+    font-weight:900;
+    color:#111827;
+}
+
+.section-head p{
+    margin:4px 0 0;
+    color:#64748b;
+    font-size:12px;
+    font-weight:700;
+}
+
+.status-pill{
+    display:inline-flex;
+    padding:7px 11px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+}
+
+.green{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.orange{
+    background:#ffedd5;
+    color:#c2410c;
+}
+
+.blue{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+.red{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.slate{
+    background:#f1f5f9;
+    color:#475569;
+}
+
+.route-layout{
+    padding:18px 20px 20px;
+}
+
+.table-wrap{
+    overflow-x:auto;
+}
+
+.profile-table{
+    width:100%;
+    min-width:900px;
+    border-collapse:collapse;
+}
+
+.profile-table th{
+    text-align:left;
+    padding:12px 14px;
+    background:#f8fafc;
+    color:#64748b;
+    font-size:10px;
+    text-transform:uppercase;
+    font-weight:900;
+    border-bottom:1px solid #e5e7eb;
+    white-space:nowrap;
+}
+
+.profile-table td{
+    padding:13px 14px;
+    border-bottom:1px solid #edf0f4;
+    color:#334155;
+    font-size:12px;
+    font-weight:700;
+    vertical-align:middle;
+}
+
+.profile-table tbody tr:hover td{
+    background:#f8fafc;
+}
+
+.empty-state{
+    padding:28px 20px;
+    text-align:center;
+    color:#64748b;
+    font-weight:800;
+}
+
+.feedback{
+    max-width:360px;
+    white-space:normal;
+    line-height:1.5;
+}
+
+.stars{
+    color:#f59e0b;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+/* ============================================================
+   DELETE EMPLOYEE MODAL
+============================================================ */
+
+.delete-modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.68);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    backdrop-filter:blur(3px);
+}
+
+.delete-modal{
+    background:#fff;
+    width:100%;
+    max-width:500px;
+    border-radius:26px;
+    padding:26px;
+    box-shadow:0 30px 80px rgba(0,0,0,.30);
+}
+
+.delete-icon{
+    width:68px;
+    height:68px;
+    border-radius:50%;
+    background:#fee2e2;
+    color:#dc2626;
+    display:grid;
+    place-items:center;
+    margin:0 auto 16px;
+    font-size:30px;
+}
+
+.delete-modal h2{
+    margin:0;
+    color:#111827;
+    font-size:23px;
+    font-weight:900;
+    text-align:center;
+}
+
+.delete-modal-description{
+    color:#64748b;
+    margin:12px 0 0;
+    line-height:1.6;
+    text-align:center;
+    font-size:14px;
+}
+
+.delete-warning{
+    background:#fef2f2;
+    border:1px solid #fecaca;
+    padding:16px;
+    border-radius:16px;
+    margin:20px 0;
+    color:#991b1b;
+    font-size:13px;
+    line-height:1.8;
+}
+
+.delete-actions{
+    display:flex;
+    gap:12px;
+    justify-content:flex-end;
+}
+
+.modal-btn{
+    border:none;
+    padding:12px 18px;
+    border-radius:12px;
+    font-weight:900;
+    cursor:pointer;
+    font-family:inherit;
+}
+
+.modal-cancel{
+    background:#e5e7eb;
+    color:#111827;
+}
+
+.modal-delete{
+    background:#dc2626;
+    color:#fff;
+}
+
+.modal-delete:hover{
+    background:#b91c1c;
+}
+
+@media(max-width:1100px){
+    .profile-grid,
+    .route-layout{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:700px){
+    .profile-grid,
+    .route-layout{
+        grid-template-columns:1fr;
+    }
+
+    .profile-hero{
+        align-items:flex-start;
+    }
+
+    .profile-actions{
+        width:100%;
+    }
+
+    .profile-btn{
+        flex:1;
+    }
+
+    .delete-actions{
+        flex-direction:column-reverse;
+    }
+
+    .modal-btn{
+        width:100%;
+    }
+}
 </style>
 {% endblock %}
 
+
 {% block content %}
+
 <div class="profile-page">
-<section class="profile-hero"><div class="profile-identity"><div class="profile-avatar">{{ employee.username|slice:":1"|upper }}</div><div><h2>{{ employee.username }}</h2><p>Employee ID: {{ employee.id }} · {% if employee.is_active %}Active Account{% else %}Inactive Account{% endif %}</p></div></div><div class="profile-actions"><a href="{% url 'admin_web:employees' %}" class="profile-btn btn-light">← Back to Employees</a><a href="{% url 'admin_web:employee_route_search' employee.id %}" class="profile-btn btn-blue">{% if route_stop %}Change Route{% else %}Assign Route{% endif %}</a></div></section>
-<section class="profile-grid">
-<div class="info-card"><span>Phone</span><strong>{{ employee.phone_number|default:"--" }}</strong></div>
-<div class="info-card"><span>Account Status</span><strong>{% if employee.is_active %}Active{% else %}Inactive{% endif %}</strong></div>
-<div class="info-card"><span>Pickup Location</span><strong>{{ employee.pickup_location|default:"No pickup saved" }}</strong></div>
-<div class="info-card"><span>Address</span><strong>{{ employee.address|default:"--" }}</strong></div>
-<div class="info-card"><span>Pickup Latitude</span><strong>{{ employee.pickup_latitude|default:"--" }}</strong></div>
-<div class="info-card"><span>Pickup Longitude</span><strong>{{ employee.pickup_longitude|default:"--" }}</strong></div>
-<div class="info-card"><span>Today</span><strong>{{ today|date:"d M Y" }}</strong></div>
-<div class="info-card"><span>Route Status</span><strong>{% if route_stop %}Assigned{% else %}Unassigned{% endif %}</strong></div>
-</section>
-<section class="section-card"><div class="section-head"><div><h3>Route Assignment</h3><p>Permanent route assignment and cab details</p></div>{% if route_stop %}<span class="status-pill green">Assigned</span>{% else %}<span class="status-pill orange">Unassigned</span>{% endif %}</div>{% if route_stop %}<div class="route-layout"><div class="info-card"><span>Route</span><strong>{{ route_stop.route.name|default:"--" }}</strong></div><div class="info-card"><span>Driver</span><strong>{% if route_stop.route.driver %}{{ route_stop.route.driver.username }}{% else %}--{% endif %}</strong></div><div class="info-card"><span>Vehicle</span><strong>{% if route_stop.route.vehicle %}{{ route_stop.route.vehicle.vehicle_number }}{% else %}--{% endif %}</strong></div><div class="info-card"><span>Stop Order</span><strong>{{ route_stop.stop_order|default:"--" }}</strong></div></div>{% else %}<div class="empty-state">This employee is not assigned to any saved route.</div>{% endif %}</section>
-<section class="section-card"><div class="section-head"><div><h3>Today's Trips</h3><p>Pickup and Drop trips assigned for today</p></div><span class="status-pill blue">{{ today_trips|length }} Trip{{ today_trips|length|pluralize }}</span></div>{% if today_trips %}<div class="table-wrap"><table class="profile-table"><thead><tr><th>Trip</th><th>Route</th><th>Driver</th><th>Vehicle</th><th>Pickup</th><th>Drop</th><th>Status</th></tr></thead><tbody>{% for trip in today_trips %}<tr><td>{{ trip.trip_type }}</td><td>{% if trip.route_run and trip.route_run.route_template %}{{ trip.route_run.route_template.name }}{% else %}--{% endif %}</td><td>{% if trip.driver %}{{ trip.driver.username }}{% else %}--{% endif %}</td><td>{% if trip.vehicle %}{{ trip.vehicle.vehicle_number }}{% else %}--{% endif %}</td><td>{{ trip.pickup_location|default:"--" }}</td><td>{{ trip.drop_location|default:"--" }}</td><td>{% if trip.status == "COMPLETED" %}<span class="status-pill green">Completed</span>{% elif trip.status == "CANCELLED" %}<span class="status-pill red">Cancelled</span>{% elif trip.status == "STARTED" %}<span class="status-pill blue">Started</span>{% else %}<span class="status-pill slate">{{ trip.status }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state">No trips assigned for today.</div>{% endif %}</section>
-<section class="section-card"><div class="section-head"><div><h3>Recent Trip History</h3><p>Latest 10 trips for this employee</p></div></div>{% if recent_trips %}<div class="table-wrap"><table class="profile-table"><thead><tr><th>Date</th><th>Trip</th><th>Route</th><th>Driver</th><th>Vehicle</th><th>Status</th></tr></thead><tbody>{% for trip in recent_trips %}<tr><td>{{ trip.trip_date|date:"d M Y" }}</td><td>{{ trip.trip_type }}</td><td>{% if trip.route_run and trip.route_run.route_template %}{{ trip.route_run.route_template.name }}{% else %}--{% endif %}</td><td>{% if trip.driver %}{{ trip.driver.username }}{% else %}--{% endif %}</td><td>{% if trip.vehicle %}{{ trip.vehicle.vehicle_number }}{% else %}--{% endif %}</td><td>{{ trip.status }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state">No trip history found.</div>{% endif %}</section>
-<section class="section-card"><div class="section-head"><div><h3>Leave History</h3><p>Latest employee leave records</p></div></div>{% if leave_records %}<div class="table-wrap"><table class="profile-table"><thead><tr><th>Leave Date</th><th>Reason</th><th>Marked At</th></tr></thead><tbody>{% for leave in leave_records %}<tr><td>{{ leave.leave_date|date:"d M Y" }}</td><td>{{ leave.reason|default:"No reason provided" }}</td><td>{{ leave.created_at|date:"d M Y, h:i A" }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state">No leave records found.</div>{% endif %}</section>
-<section class="section-card"><div class="section-head"><div><h3>Review History</h3><p>Latest ratings and feedback submitted by this employee</p></div></div>{% if reviews %}<div class="table-wrap"><table class="profile-table"><thead><tr><th>Date</th><th>Trip</th><th>Driver</th><th>Rating</th><th>Feedback</th></tr></thead><tbody>{% for review in reviews %}<tr><td>{{ review.created_at|date:"d M Y" }}</td><td>{{ review.trip.trip_type }}</td><td>{% if review.trip.driver %}{{ review.trip.driver.username }}{% else %}--{% endif %}</td><td><span class="stars">{% if review.rating == 5 %}★★★★★{% elif review.rating == 4 %}★★★★☆{% elif review.rating == 3 %}★★★☆☆{% elif review.rating == 2 %}★★☆☆☆{% else %}★☆☆☆☆{% endif %}</span></td><td class="feedback">{{ review.comment|default:"No feedback comment" }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state">No reviews submitted by this employee.</div>{% endif %}</section>
+
+    <!-- =======================================================
+         PROFILE HERO
+    ======================================================== -->
+
+    <section class="profile-hero">
+
+        <div class="profile-identity">
+
+            <div class="profile-avatar">
+                {{ employee.username|slice:":1"|upper }}
+            </div>
+
+            <div>
+                <h2>{{ employee.username }}</h2>
+
+                <p>
+                    Employee ID:
+                    {% if employee.employee_id %}
+                        {{ employee.employee_id }}
+                    {% else %}
+                        {{ employee.id }}
+                    {% endif %}
+                    ·
+                    {% if employee.is_active %}
+                        Active Account
+                    {% else %}
+                        Inactive Account
+                    {% endif %}
+                </p>
+            </div>
+
+        </div>
+
+        <div class="profile-actions">
+
+            <a
+                href="{% url 'admin_web:employees' %}"
+                class="profile-btn btn-light"
+            >
+                ← Back to Employees
+            </a>
+
+            <a
+                href="{% url 'admin_web:employee_route_search' employee.id %}"
+                class="profile-btn btn-blue"
+            >
+                {% if route_stop %}
+                    Change Route
+                {% else %}
+                    Assign Route
+                {% endif %}
+            </a>
+
+            <button
+                type="button"
+                class="profile-btn btn-delete"
+                onclick="openDeleteEmployeeModal(
+                    '{{ employee.id }}',
+                    '{{ employee.username|escapejs }}'
+                )"
+            >
+                Delete Account
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- =======================================================
+         BASIC INFORMATION
+    ======================================================== -->
+
+    <section class="profile-grid">
+
+        <div class="info-card">
+            <span>Phone</span>
+            <strong>{{ employee.phone_number|default:"--" }}</strong>
+        </div>
+
+        <div class="info-card">
+            <span>Account Status</span>
+            <strong>
+                {% if employee.is_active %}
+                    Active
+                {% else %}
+                    Inactive
+                {% endif %}
+            </strong>
+        </div>
+
+        <div class="info-card">
+            <span>Pickup Location</span>
+            <strong>
+                {{ employee.pickup_location|default:"No pickup saved" }}
+            </strong>
+        </div>
+
+        <div class="info-card">
+            <span>Address</span>
+            <strong>{{ employee.address|default:"--" }}</strong>
+        </div>
+
+        <div class="info-card">
+            <span>Pickup Latitude</span>
+            <strong>{{ employee.pickup_latitude|default:"--" }}</strong>
+        </div>
+
+        <div class="info-card">
+            <span>Pickup Longitude</span>
+            <strong>{{ employee.pickup_longitude|default:"--" }}</strong>
+        </div>
+
+        <div class="info-card">
+            <span>Today</span>
+            <strong>{{ today|date:"d M Y" }}</strong>
+        </div>
+
+        <div class="info-card">
+            <span>Route Status</span>
+            <strong>
+                {% if route_stop %}
+                    Assigned
+                {% else %}
+                    Unassigned
+                {% endif %}
+            </strong>
+        </div>
+
+    </section>
+
+
+    <!-- =======================================================
+         ROUTE ASSIGNMENT
+    ======================================================== -->
+
+    <section class="section-card">
+
+        <div class="section-head">
+
+            <div>
+                <h3>Route Assignment</h3>
+                <p>Permanent route assignment and cab details</p>
+            </div>
+
+            {% if route_stop %}
+                <span class="status-pill green">
+                    Assigned
+                </span>
+            {% else %}
+                <span class="status-pill orange">
+                    Unassigned
+                </span>
+            {% endif %}
+
+        </div>
+
+        {% if route_stop %}
+
+            <div class="route-layout">
+
+                <div class="info-card">
+                    <span>Route</span>
+                    <strong>
+                        {{ route_stop.route.name|default:"--" }}
+                    </strong>
+                </div>
+
+                <div class="info-card">
+                    <span>Driver</span>
+                    <strong>
+                        {% if route_stop.route.driver %}
+                            {{ route_stop.route.driver.username }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="info-card">
+                    <span>Vehicle</span>
+                    <strong>
+                        {% if route_stop.route.vehicle %}
+                            {{ route_stop.route.vehicle.vehicle_number }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </strong>
+                </div>
+
+                <div class="info-card">
+                    <span>Stop Order</span>
+                    <strong>
+                        {{ route_stop.stop_order|default:"--" }}
+                    </strong>
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                This employee is not assigned to any saved route.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- =======================================================
+         TODAY TRIPS
+    ======================================================== -->
+
+    <section class="section-card">
+
+        <div class="section-head">
+
+            <div>
+                <h3>Today's Trips</h3>
+                <p>Pickup and Drop trips assigned for today</p>
+            </div>
+
+            <span class="status-pill blue">
+                {{ today_trips|length }}
+                Trip{{ today_trips|length|pluralize }}
+            </span>
+
+        </div>
+
+        {% if today_trips %}
+
+            <div class="table-wrap">
+
+                <table class="profile-table">
+
+                    <thead>
+                    <tr>
+                        <th>Trip</th>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Pickup</th>
+                        <th>Drop</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for trip in today_trips %}
+
+                        <tr>
+
+                            <td>{{ trip.trip_type }}</td>
+
+                            <td>
+                                {% if trip.route_run and trip.route_run.route_template %}
+                                    {{ trip.route_run.route_template.name }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if trip.driver %}
+                                    {{ trip.driver.username }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if trip.vehicle %}
+                                    {{ trip.vehicle.vehicle_number }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ trip.pickup_location|default:"--" }}
+                            </td>
+
+                            <td>
+                                {{ trip.drop_location|default:"--" }}
+                            </td>
+
+                            <td>
+
+                                {% if trip.status == "COMPLETED" %}
+
+                                    <span class="status-pill green">
+                                        Completed
+                                    </span>
+
+                                {% elif trip.status == "CANCELLED" %}
+
+                                    <span class="status-pill red">
+                                        Cancelled
+                                    </span>
+
+                                {% elif trip.status == "STARTED" %}
+
+                                    <span class="status-pill blue">
+                                        Started
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="status-pill slate">
+                                        {{ trip.status }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                No trips assigned for today.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- =======================================================
+         RECENT TRIPS
+    ======================================================== -->
+
+    <section class="section-card">
+
+        <div class="section-head">
+
+            <div>
+                <h3>Recent Trip History</h3>
+                <p>Latest 10 trips for this employee</p>
+            </div>
+
+        </div>
+
+        {% if recent_trips %}
+
+            <div class="table-wrap">
+
+                <table class="profile-table">
+
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Trip</th>
+                        <th>Route</th>
+                        <th>Driver</th>
+                        <th>Vehicle</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for trip in recent_trips %}
+
+                        <tr>
+
+                            <td>
+                                {{ trip.trip_date|date:"d M Y" }}
+                            </td>
+
+                            <td>
+                                {{ trip.trip_type }}
+                            </td>
+
+                            <td>
+                                {% if trip.route_run and trip.route_run.route_template %}
+                                    {{ trip.route_run.route_template.name }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if trip.driver %}
+                                    {{ trip.driver.username }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if trip.vehicle %}
+                                    {{ trip.vehicle.vehicle_number }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ trip.status }}
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                No trip history found.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- =======================================================
+         LEAVE HISTORY
+    ======================================================== -->
+
+    <section class="section-card">
+
+        <div class="section-head">
+
+            <div>
+                <h3>Leave History</h3>
+                <p>Latest employee leave records</p>
+            </div>
+
+        </div>
+
+        {% if leave_records %}
+
+            <div class="table-wrap">
+
+                <table class="profile-table">
+
+                    <thead>
+                    <tr>
+                        <th>Leave Date</th>
+                        <th>Reason</th>
+                        <th>Marked At</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for leave in leave_records %}
+
+                        <tr>
+
+                            <td>
+                                {{ leave.leave_date|date:"d M Y" }}
+                            </td>
+
+                            <td>
+                                {{ leave.reason|default:"No reason provided" }}
+                            </td>
+
+                            <td>
+                                {{ leave.created_at|date:"d M Y, h:i A" }}
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                No leave records found.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- =======================================================
+         REVIEW HISTORY
+    ======================================================== -->
+
+    <section class="section-card">
+
+        <div class="section-head">
+
+            <div>
+                <h3>Review History</h3>
+                <p>Latest ratings and feedback submitted by this employee</p>
+            </div>
+
+        </div>
+
+        {% if reviews %}
+
+            <div class="table-wrap">
+
+                <table class="profile-table">
+
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Trip</th>
+                        <th>Driver</th>
+                        <th>Rating</th>
+                        <th>Feedback</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+
+                    {% for review in reviews %}
+
+                        <tr>
+
+                            <td>
+                                {{ review.created_at|date:"d M Y" }}
+                            </td>
+
+                            <td>
+                                {{ review.trip.trip_type }}
+                            </td>
+
+                            <td>
+                                {% if review.trip.driver %}
+                                    {{ review.trip.driver.username }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </td>
+
+                            <td>
+
+                                <span class="stars">
+
+                                    {% if review.rating == 5 %}
+                                        ★★★★★
+                                    {% elif review.rating == 4 %}
+                                        ★★★★☆
+                                    {% elif review.rating == 3 %}
+                                        ★★★☆☆
+                                    {% elif review.rating == 2 %}
+                                        ★★☆☆☆
+                                    {% else %}
+                                        ★☆☆☆☆
+                                    {% endif %}
+
+                                </span>
+
+                            </td>
+
+                            <td class="feedback">
+                                {{ review.comment|default:"No feedback comment" }}
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                No reviews submitted by this employee.
+            </div>
+
+        {% endif %}
+
+    </section>
+
 </div>
+
+
+<!-- ============================================================
+     DELETE EMPLOYEE CONFIRMATION MODAL
+============================================================= -->
+
+<div
+    id="deleteEmployeeModal"
+    class="delete-modal-overlay"
+    onclick="handleDeleteModalOutsideClick(event)"
+>
+
+    <div
+        class="delete-modal"
+        onclick="event.stopPropagation()"
+    >
+
+        <div class="delete-icon">
+            ⚠
+        </div>
+
+        <h2>
+            Permanently Delete Employee?
+        </h2>
+
+        <p class="delete-modal-description">
+
+            You are about to permanently delete
+
+            <strong id="deleteEmployeeName">
+                this employee
+            </strong>.
+
+        </p>
+
+
+        <div class="delete-warning">
+
+            <strong>
+                This will:
+            </strong>
+
+            <br>
+
+            • Cancel/remove current and upcoming cab assignments
+
+            <br>
+
+            • Remove the employee from the assigned route
+
+            <br>
+
+            • Make the occupied route seat available again
+
+            <br>
+
+            • Permanently delete the employee account
+
+            <br><br>
+
+            <strong>
+                This action cannot be undone.
+            </strong>
+
+        </div>
+
+
+        <form
+            id="deleteEmployeeForm"
+            method="post"
+        >
+
+            {% csrf_token %}
+
+            <div class="delete-actions">
+
+                <button
+                    type="button"
+                    class="modal-btn modal-cancel"
+                    onclick="closeDeleteEmployeeModal()"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="submit"
+                    class="modal-btn modal-delete"
+                >
+                    Delete Permanently
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script>
+
+function openDeleteEmployeeModal(
+    employeeId,
+    employeeName
+) {
+
+    const modal =
+        document.getElementById(
+            "deleteEmployeeModal"
+        );
+
+    const nameElement =
+        document.getElementById(
+            "deleteEmployeeName"
+        );
+
+    const form =
+        document.getElementById(
+            "deleteEmployeeForm"
+        );
+
+    nameElement.textContent =
+        employeeName;
+
+    form.action =
+        `/admin-web/employees/${employeeId}/delete/`;
+
+    modal.style.display =
+        "flex";
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+
+function closeDeleteEmployeeModal() {
+
+    const modal =
+        document.getElementById(
+            "deleteEmployeeModal"
+        );
+
+    modal.style.display =
+        "none";
+
+    document.body.style.overflow =
+        "";
+}
+
+
+function handleDeleteModalOutsideClick(event) {
+
+    if (
+        event.target.id ===
+        "deleteEmployeeModal"
+    ) {
+        closeDeleteEmployeeModal();
+    }
+}
+
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Escape") {
+            closeDeleteEmployeeModal();
+        }
+
+    }
+);
+
+</script>
+
 {% endblock %}

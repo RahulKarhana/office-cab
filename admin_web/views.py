@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.db import transaction
 import math
+from django.db import transaction
 from django.db.models import Count, Q, Avg, Max
 from trips.models import RouteRunStop
 from accounts.models import PickupLocationChangeRequest
@@ -993,6 +994,62 @@ def no_show_report_page(request):
         "admin_web/no_show_report.html",
         context,
     )
+
+
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
+def delete_employee_account(request, employee_id):
+    employee = get_object_or_404(
+        User,
+        id=employee_id,
+        role=User.Role.EMPLOYEE,
+    )
+
+    # 1. Cancel/remove active + upcoming trip assignments
+    # 2. Remove employee from route stops
+    # 3. Remove current RouteRunStop if required
+    # 4. Permanently delete account
+
+    employee.delete()
+
+    messages.success(
+        request,
+        "Employee account permanently deleted. "
+        "All cab assignments were removed.",
+    )
+
+    return redirect("admin_web:employees")
+
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
+def delete_driver_account(request, driver_id):
+    driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+    )
+
+    # Find routes belonging to this driver.
+    # Release all employees assigned under those routes.
+    # Cancel active/upcoming assignments.
+    # Remove/unassign vehicle.
+    # Then permanently delete driver.
+
+    driver.delete()
+
+    messages.success(
+        request,
+        "Driver account permanently deleted. "
+        "Employees from the driver's routes are now unassigned.",
+    )
+
+    return redirect("admin_web:drivers")
 
 
 # =========================================================
