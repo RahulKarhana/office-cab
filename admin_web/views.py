@@ -4224,57 +4224,2250 @@ def route_analytics_page(request):
 @login_required
 @admin_required
 def export_reports_excel(request):
-    trips = Trip.objects.select_related(
-        "employee",
-        "driver",
-        "vehicle",
-        "route_run",
-        "route_run__route_template",
-    ).order_by("-pickup_time")
+
+    # ==========================================================
+    # DATE RANGE
+    # ==========================================================
+
+    start_date_value = request.GET.get(
+        "start_date",
+        "",
+    ).strip()
+
+    end_date_value = request.GET.get(
+        "end_date",
+        "",
+    ).strip()
+
+    today = timezone.localdate()
+
+    try:
+
+        start_date_obj = (
+            datetime.strptime(
+                start_date_value,
+                "%Y-%m-%d",
+            ).date()
+            if start_date_value
+            else today
+        )
+
+        end_date_obj = (
+            datetime.strptime(
+                end_date_value,
+                "%Y-%m-%d",
+            ).date()
+            if end_date_value
+            else start_date_obj
+        )
+
+    except ValueError:
+
+        start_date_obj = today
+        end_date_obj = today
+
+
+    if end_date_obj < start_date_obj:
+        end_date_obj = start_date_obj
+
+
+    # ==========================================================
+    # WORKBOOK
+    # ==========================================================
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Trip Reports"
 
-    # Header
-    headers = [
-        "Employee",
-        "Driver",
-        "Vehicle",
-        "Route",
-        "Trip Type",
-        "Trip Date",
-        "Pickup Time",
-        "Start Time",
-        "End Time",
-        "Status",
-    ]
+    default_sheet = wb.active
+    wb.remove(default_sheet)
 
-    ws.append(headers)
 
-    # Data
+    # ==========================================================
+    # STYLES
+    # ==========================================================
+
+    title_fill = PatternFill(
+        "solid",
+        fgColor="172554",
+    )
+
+    header_fill = PatternFill(
+        "solid",
+        fgColor="2563EB",
+    )
+
+    alternate_fill = PatternFill(
+        "solid",
+        fgColor="F8FAFC",
+    )
+
+    danger_fill = PatternFill(
+        "solid",
+        fgColor="FEE2E2",
+    )
+
+    warning_fill = PatternFill(
+        "solid",
+        fgColor="FEF3C7",
+    )
+
+    success_fill = PatternFill(
+        "solid",
+        fgColor="DCFCE7",
+    )
+
+    title_font = Font(
+        color="FFFFFF",
+        bold=True,
+        size=16,
+    )
+
+    header_font = Font(
+        color="FFFFFF",
+        bold=True,
+    )
+
+    subtitle_font = Font(
+        color="64748B",
+        italic=True,
+    )
+
+    thin_border = Border(
+        left=Side(
+            style="thin",
+            color="E5E7EB",
+        ),
+        right=Side(
+            style="thin",
+            color="E5E7EB",
+        ),
+        top=Side(
+            style="thin",
+            color="E5E7EB",
+        ),
+        bottom=Side(
+            style="thin",
+            color="E5E7EB",
+        ),
+    )
+
+
+    # ==========================================================
+    # HELPERS
+    # ==========================================================
+
+    def safe_localtime(value):
+
+        if not value:
+            return ""
+
+        try:
+            return timezone.localtime(
+                value
+            ).strftime(
+                "%d %b %Y %I:%M:%S %p"
+            )
+        except Exception:
+            return str(value)
+
+
+    def format_duration(seconds):
+
+        seconds = max(
+            0,
+            int(seconds or 0),
+        )
+
+        hours = seconds // 3600
+
+        minutes = (
+            seconds % 3600
+        ) // 60
+
+        secs = seconds % 60
+
+        if hours:
+            return (
+                f"{hours:02d}:"
+                f"{minutes:02d}:"
+                f"{secs:02d}"
+            )
+
+        return (
+            f"{minutes:02d}:"
+            f"{secs:02d}"
+        )
+
+
+    def create_sheet(
+        sheet_name,
+        title,
+        headers,
+    ):
+
+        ws = wb.create_sheet(
+            title=sheet_name[:31]
+        )
+
+        last_column = get_column_letter(
+            len(headers)
+        )
+
+        ws.merge_cells(
+            f"A1:{last_column}1"
+        )
+
+        ws["A1"] = title
+        ws["A1"].fill = title_fill
+        ws["A1"].font = title_font
+        ws["A1"].alignment = Alignment(
+            horizontal="left",
+            vertical="center",
+        )
+
+        ws.row_dimensions[1].height = 28
+
+
+        ws.merge_cells(
+            f"A2:{last_column}2"
+        )
+
+        ws["A2"] = (
+            "Date Range: "
+            f"{start_date_obj.strftime('%d %b %Y')} "
+            "to "
+            f"{end_date_obj.strftime('%d %b %Y')}"
+        )
+
+        ws["A2"].font = subtitle_font
+
+
+        ws.merge_cells(
+            f"A3:{last_column}3"
+        )
+
+        ws["A3"] = (
+            "Generated: "
+            f"{timezone.localtime().strftime('%d %b %Y %I:%M %p')}"
+        )
+
+        ws["A3"].font = subtitle_font
+
+
+        ws.append([])
+
+        ws.append(headers)
+
+        header_row = 5
+
+        for cell in ws[header_row]:
+
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(
+                horizontal="center",
+                vertical="center",
+            )
+
+            cell.border = thin_border
+
+
+        ws.freeze_panes = "A6"
+
+        ws.auto_filter.ref = (
+            f"A5:{last_column}5"
+        )
+
+        return ws
+
+
+    def finish_sheet(ws):
+
+        # Data styling
+        for row in range(
+            6,
+            ws.max_row + 1,
+        ):
+
+            for cell in ws[row]:
+
+                cell.border = thin_border
+
+                cell.alignment = Alignment(
+                    vertical="top",
+                    wrap_text=True,
+                )
+
+                if row % 2 == 0:
+                    cell.fill = alternate_fill
+
+
+        # Widths
+        for column_cells in ws.columns:
+
+            column_letter = (
+                get_column_letter(
+                    column_cells[0].column
+                )
+            )
+
+            max_length = 0
+
+            for cell in column_cells:
+
+                if cell.value is None:
+                    continue
+
+                max_length = max(
+                    max_length,
+                    len(str(cell.value)),
+                )
+
+            ws.column_dimensions[
+                column_letter
+            ].width = min(
+                max(
+                    max_length + 3,
+                    12,
+                ),
+                45,
+            )
+
+
+    # ==========================================================
+    # BASE TRIPS
+    # ==========================================================
+
+    trips = (
+        Trip.objects
+        .filter(
+            trip_date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+        .select_related(
+            "employee",
+            "driver",
+            "vehicle",
+            "route_run",
+            "route_run__route_template",
+        )
+        .order_by(
+            "-trip_date",
+            "driver__username",
+            "pickup_time",
+        )
+    )
+
+
+    # ==========================================================
+    # 1. TRIP REPORT BY DRIVER
+    # ==========================================================
+
+    ws = create_sheet(
+        "Trip Report by Driver",
+        "CabMate - Trip Report by Driver",
+        [
+            "Trip ID",
+            "Date",
+            "Driver",
+            "Employee",
+            "Vehicle",
+            "Vehicle Model",
+            "Route",
+            "Trip Type",
+            "Pickup Location",
+            "Drop Location",
+            "Pickup Time",
+            "Start Time",
+            "End Time",
+            "Status",
+        ],
+    )
+
     for trip in trips:
+
+        route_name = "Manual Route"
+
+        if (
+            trip.route_run
+            and trip.route_run.route_template
+        ):
+            route_name = (
+                trip.route_run
+                .route_template
+                .name
+            )
+
         ws.append([
-            trip.employee.username if trip.employee else "",
-            trip.driver.username if trip.driver else "",
-            trip.vehicle.vehicle_number if trip.vehicle else "",
-            trip.route_run.route_template.name if trip.route_run and trip.route_run.route_template else "Manual",
+            trip.id,
+
+            trip.trip_date,
+
+            (
+                trip.driver.username
+                if trip.driver
+                else "Unassigned"
+            ),
+
+            (
+                trip.employee.username
+                if trip.employee
+                else ""
+            ),
+
+            (
+                trip.vehicle.vehicle_number
+                if trip.vehicle
+                else ""
+            ),
+
+            (
+                trip.vehicle.vehicle_model
+                if trip.vehicle
+                else ""
+            ),
+
+            route_name,
+
             trip.trip_type,
-            str(trip.trip_date),
-            str(trip.pickup_time),
-            str(trip.start_time),
-            str(trip.end_time),
+
+            trip.pickup_location or "",
+
+            trip.drop_location or "",
+
+            safe_localtime(
+                trip.pickup_time
+            ),
+
+            safe_localtime(
+                trip.start_time
+            ),
+
+            safe_localtime(
+                trip.end_time
+            ),
+
             trip.status,
         ])
 
-    response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 2. CANCELLED TRIPS
+    # ==========================================================
+
+    ws = create_sheet(
+        "Cancelled Trips",
+        "CabMate - Cancelled Trips",
+        [
+            "Cancellation ID",
+            "Trip ID",
+            "Trip Date",
+            "Employee",
+            "Driver",
+            "Vehicle",
+            "Route",
+            "Trip Type",
+            "Pickup Location",
+            "Drop Location",
+            "Cancelled By",
+            "Cancelled By Role",
+            "Reason",
+            "Declaration Accepted",
+            "Declaration Text",
+            "Cancelled At",
+        ],
     )
-    response["Content-Disposition"] = 'attachment; filename="trip_report.xlsx"'
+
+    cancellations = (
+        TripCancellation.objects
+        .select_related(
+            "trip",
+            "trip__employee",
+            "trip__driver",
+            "trip__vehicle",
+            "trip__route_run",
+            "trip__route_run__route_template",
+            "cancelled_by",
+        )
+        .filter(
+            trip__status=
+                Trip.STATUS_CANCELLED,
+
+            trip__trip_date__range=[
+                start_date_obj,
+                end_date_obj,
+            ],
+        )
+        .order_by(
+            "-cancelled_at"
+        )
+    )
+
+    for cancellation in cancellations:
+
+        trip = cancellation.trip
+
+        route_name = "Manual Route"
+
+        if (
+            trip.route_run
+            and trip.route_run.route_template
+        ):
+            route_name = (
+                trip.route_run
+                .route_template
+                .name
+            )
+
+        ws.append([
+            cancellation.id,
+
+            trip.id,
+
+            trip.trip_date,
+
+            (
+                trip.employee.username
+                if trip.employee
+                else ""
+            ),
+
+            (
+                trip.driver.username
+                if trip.driver
+                else ""
+            ),
+
+            (
+                trip.vehicle.vehicle_number
+                if trip.vehicle
+                else ""
+            ),
+
+            route_name,
+
+            trip.trip_type,
+
+            trip.pickup_location or "",
+
+            trip.drop_location or "",
+
+            (
+                cancellation
+                .cancelled_by
+                .username
+                if cancellation.cancelled_by
+                else ""
+            ),
+
+            (
+                cancellation
+                .cancelled_by_role
+                or ""
+            ),
+
+            (
+                cancellation.reason
+                or ""
+            ),
+
+            (
+                "YES"
+                if cancellation
+                .declaration_accepted
+                else "NO"
+            ),
+
+            (
+                cancellation
+                .declaration_text
+                or ""
+            ),
+
+            safe_localtime(
+                cancellation
+                .cancelled_at
+            ),
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 3. NO-SHOW REPORT
+    # ==========================================================
+
+    ws = create_sheet(
+        "No-show Report",
+        "CabMate - No-show Report",
+        [
+            "Date",
+            "Employee",
+            "Route",
+            "Driver",
+            "Vehicle",
+            "Trip Type",
+            "Stop Order",
+            "Driver Arrived",
+            "Waiting Started",
+            "No Show At",
+            "Free Wait",
+            "Late Wait",
+            "Total Waiting",
+            "Result",
+        ],
+    )
+
+    no_show_stops = (
+        RouteRunStop.objects
+        .select_related(
+            "employee",
+            "route_run",
+            "route_run__driver",
+            "route_run__vehicle",
+            "route_run__route_template",
+        )
+        .filter(
+            is_no_show=True,
+
+            route_run__run_date__range=[
+                start_date_obj,
+                end_date_obj,
+            ],
+        )
+        .order_by(
+            "-route_run__run_date",
+            "-no_show_at",
+        )
+    )
+
+    for stop in no_show_stops:
+
+        run = stop.route_run
+
+        waiting_started_at = (
+            stop.waiting_started_at
+            or stop.arrival_time
+        )
+
+        total_wait_seconds = 0
+
+        if (
+            waiting_started_at
+            and stop.no_show_at
+        ):
+
+            total_wait_seconds = max(
+                0,
+                int(
+                    (
+                        stop.no_show_at
+                        - waiting_started_at
+                    ).total_seconds()
+                ),
+            )
+
+
+        free_limit_seconds = (
+            (
+                stop.waiting_minutes
+                or 10
+            )
+            * 60
+        )
+
+        free_wait_seconds = min(
+            total_wait_seconds,
+            free_limit_seconds,
+        )
+
+        calculated_late = max(
+            0,
+            total_wait_seconds
+            - free_limit_seconds,
+        )
+
+        late_seconds = max(
+            stop.late_seconds or 0,
+            calculated_late,
+        )
+
+        ws.append([
+            (
+                run.run_date
+                if run
+                else ""
+            ),
+
+            (
+                stop.employee.username
+                if stop.employee
+                else ""
+            ),
+
+            (
+                run.route_template.name
+                if (
+                    run
+                    and run.route_template
+                )
+                else "Manual Route"
+            ),
+
+            (
+                run.driver.username
+                if (
+                    run
+                    and run.driver
+                )
+                else ""
+            ),
+
+            (
+                run.vehicle.vehicle_number
+                if (
+                    run
+                    and run.vehicle
+                )
+                else ""
+            ),
+
+            (
+                run.trip_type
+                if run
+                else ""
+            ),
+
+            stop.stop_order,
+
+            safe_localtime(
+                stop.arrival_time
+            ),
+
+            safe_localtime(
+                waiting_started_at
+            ),
+
+            safe_localtime(
+                stop.no_show_at
+            ),
+
+            format_duration(
+                free_wait_seconds
+            ),
+
+            format_duration(
+                late_seconds
+            ),
+
+            format_duration(
+                total_wait_seconds
+            ),
+
+            "NO SHOW",
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 4. LEAVE REPORT
+    # ==========================================================
+
+    ws = create_sheet(
+        "Leave Report",
+        "CabMate - Employee Leave Report",
+        [
+            "Employee ID",
+            "Employee",
+            "Phone",
+            "Leave Date",
+            "Reason",
+            "Pickup Cancelled",
+            "Drop Cancelled",
+            "Total Auto Cancelled",
+            "Created At",
+        ],
+    )
+
+    leave_reports = (
+        EmployeeLeave.objects
+        .select_related(
+            "employee"
+        )
+        .filter(
+            leave_date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+        .order_by(
+            "-leave_date",
+            "employee__username",
+        )
+    )
+
+    for leave in leave_reports:
+
+        employee = leave.employee
+
+        cancelled_for_leave = (
+            Trip.objects
+            .filter(
+                employee=employee,
+                trip_date=leave.leave_date,
+                status=
+                    Trip.STATUS_CANCELLED,
+            )
+        )
+
+        pickup_cancelled = (
+            cancelled_for_leave
+            .filter(
+                trip_type=
+                    Trip.TRIP_TYPE_PICKUP
+            )
+            .count()
+        )
+
+        drop_cancelled = (
+            cancelled_for_leave
+            .filter(
+                trip_type=
+                    Trip.TRIP_TYPE_DROP
+            )
+            .count()
+        )
+
+        ws.append([
+            (
+                employee.employee_id
+                or employee.id
+            ),
+
+            employee.username,
+
+            getattr(
+                employee,
+                "phone_number",
+                "",
+            ) or "",
+
+            leave.leave_date,
+
+            leave.reason or "",
+
+            pickup_cancelled,
+
+            drop_cancelled,
+
+            (
+                pickup_cancelled
+                + drop_cancelled
+            ),
+
+            safe_localtime(
+                leave.created_at
+            ),
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 5. REQUESTS
+    # ==========================================================
+    #
+    # This combines:
+    # - Employee account requests
+    # - Driver account requests
+    # - Pickup location change requests
+    # ==========================================================
+
+    ws = create_sheet(
+        "Requests",
+        "CabMate - Requests & Approvals",
+        [
+            "Request Type",
+            "User ID",
+            "Username",
+            "Role",
+            "Employee ID",
+            "Phone",
+            "Status",
+            "Requested At",
+            "Reviewed At",
+            "Reviewed By",
+            "Details",
+        ],
+    )
+
+
+    # ----------------------------------------------------------
+    # Employee / Driver account requests
+    # ----------------------------------------------------------
+
+    account_requests = (
+        User.objects
+        .filter(
+            role__in=[
+                User.Role.EMPLOYEE,
+                User.Role.DRIVER,
+            ]
+        )
+        .exclude(
+            account_status=
+                User.ACCOUNT_STATUS_APPROVED
+        )
+        .order_by(
+            "-date_joined"
+        )
+    )
+
+    for user in account_requests:
+
+        joined_date = (
+            timezone.localtime(
+                user.date_joined
+            ).date()
+            if user.date_joined
+            else None
+        )
+
+        if (
+            joined_date
+            and not (
+                start_date_obj
+                <= joined_date
+                <= end_date_obj
+            )
+        ):
+            continue
+
+
+        reviewed_by = getattr(
+            user,
+            "account_reviewed_by",
+            None,
+        )
+
+        ws.append([
+            (
+                "Employee Account"
+                if (
+                    user.role
+                    == User.Role.EMPLOYEE
+                )
+                else "Driver Account"
+            ),
+
+            user.id,
+
+            user.username,
+
+            user.role,
+
+            (
+                user.employee_id
+                or ""
+            ),
+
+            (
+                user.phone_number
+                or ""
+            ),
+
+            user.account_status,
+
+            safe_localtime(
+                user.date_joined
+            ),
+
+            safe_localtime(
+                getattr(
+                    user,
+                    "account_reviewed_at",
+                    None,
+                )
+            ),
+
+            (
+                reviewed_by.username
+                if reviewed_by
+                else ""
+            ),
+
+            (
+                getattr(
+                    user,
+                    "account_rejection_reason",
+                    "",
+                )
+                or ""
+            ),
+        ])
+
+
+    # ----------------------------------------------------------
+    # Pickup location change requests
+    # ----------------------------------------------------------
+
+    location_requests = (
+        PickupLocationChangeRequest.objects
+        .select_related(
+            "employee",
+            "reviewed_by",
+        )
+        .filter(
+            requested_at__date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+        .order_by(
+            "-requested_at"
+        )
+    )
+
+    for item in location_requests:
+
+        reviewed_by = getattr(
+            item,
+            "reviewed_by",
+            None,
+        )
+
+        new_location = (
+            getattr(
+                item,
+                "new_pickup_location",
+                "",
+            )
+            or getattr(
+                item,
+                "requested_location",
+                "",
+            )
+            or ""
+        )
+
+        ws.append([
+            "Pickup Location Change",
+
+            item.id,
+
+            (
+                item.employee.username
+                if item.employee
+                else ""
+            ),
+
+            "EMPLOYEE",
+
+            (
+                item.employee.employee_id
+                if (
+                    item.employee
+                    and item.employee.employee_id
+                )
+                else ""
+            ),
+
+            (
+                item.employee.phone_number
+                if item.employee
+                else ""
+            ),
+
+            item.status,
+
+            safe_localtime(
+                item.requested_at
+            ),
+
+            safe_localtime(
+                getattr(
+                    item,
+                    "reviewed_at",
+                    None,
+                )
+            ),
+
+            (
+                reviewed_by.username
+                if reviewed_by
+                else ""
+            ),
+
+            new_location,
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 6. REVIEW REPORT
+    # ==========================================================
+
+    ws = create_sheet(
+        "Review Report",
+        "CabMate - Review Report",
+        [
+            "Review ID",
+            "Date",
+            "Employee",
+            "Driver",
+            "Vehicle",
+            "Route",
+            "Trip ID",
+            "Trip Type",
+            "Rating",
+            "Feedback",
+        ],
+    )
+
+    review_reports = (
+        Review.objects
+        .select_related(
+            "employee",
+            "trip",
+            "trip__driver",
+            "trip__vehicle",
+            "trip__route_run",
+            "trip__route_run__route_template",
+        )
+        .filter(
+            created_at__date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+        .order_by(
+            "-created_at"
+        )
+    )
+
+    for review in review_reports:
+
+        trip = review.trip
+
+        route_name = "Manual Route"
+
+        if (
+            trip
+            and trip.route_run
+            and trip.route_run.route_template
+        ):
+            route_name = (
+                trip.route_run
+                .route_template
+                .name
+            )
+
+        ws.append([
+            review.id,
+
+            safe_localtime(
+                review.created_at
+            ),
+
+            (
+                review.employee.username
+                if review.employee
+                else ""
+            ),
+
+            (
+                trip.driver.username
+                if (
+                    trip
+                    and trip.driver
+                )
+                else ""
+            ),
+
+            (
+                trip.vehicle.vehicle_number
+                if (
+                    trip
+                    and trip.vehicle
+                )
+                else ""
+            ),
+
+            route_name,
+
+            (
+                trip.id
+                if trip
+                else ""
+            ),
+
+            (
+                trip.trip_type
+                if trip
+                else ""
+            ),
+
+            review.rating,
+
+            review.comment or "",
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 7. LATE EMPLOYEES
+    # ==========================================================
+
+    ws = create_sheet(
+        "Late Employees",
+        "CabMate - Late Employees",
+        [
+            "Date",
+            "Employee",
+            "Route",
+            "Driver",
+            "Vehicle",
+            "Trip Type",
+            "Stop Order",
+            "Arrival Time",
+            "Finished At",
+            "Late Time",
+            "Late Seconds",
+            "Result",
+        ],
+    )
+
+    late_stops = (
+        RouteRunStop.objects
+        .select_related(
+            "employee",
+            "route_run",
+            "route_run__driver",
+            "route_run__vehicle",
+            "route_run__route_template",
+        )
+        .filter(
+            late_seconds__gt=0,
+
+            route_run__run_date__range=[
+                start_date_obj,
+                end_date_obj,
+            ],
+        )
+        .order_by(
+            "-route_run__run_date",
+            "-late_seconds",
+        )
+    )
+
+    for stop in late_stops:
+
+        run = stop.route_run
+
+        if stop.is_no_show:
+
+            result = "NO SHOW"
+            finished_at = stop.no_show_at
+
+        elif stop.is_picked:
+
+            result = "PICKED"
+            finished_at = stop.picked_at
+
+        else:
+
+            result = "WAITING"
+            finished_at = None
+
+
+        late_seconds = (
+            stop.late_seconds or 0
+        )
+
+        ws.append([
+            (
+                run.run_date
+                if run
+                else ""
+            ),
+
+            (
+                stop.employee.username
+                if stop.employee
+                else ""
+            ),
+
+            (
+                run.route_template.name
+                if (
+                    run
+                    and run.route_template
+                )
+                else "Manual Route"
+            ),
+
+            (
+                run.driver.username
+                if (
+                    run
+                    and run.driver
+                )
+                else ""
+            ),
+
+            (
+                run.vehicle.vehicle_number
+                if (
+                    run
+                    and run.vehicle
+                )
+                else ""
+            ),
+
+            (
+                run.trip_type
+                if run
+                else ""
+            ),
+
+            stop.stop_order,
+
+            safe_localtime(
+                stop.arrival_time
+            ),
+
+            safe_localtime(
+                finished_at
+            ),
+
+            format_duration(
+                late_seconds
+            ),
+
+            late_seconds,
+
+            result,
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 8. DRIVER PERFORMANCE
+    # ==========================================================
+
+    ws = create_sheet(
+        "Driver Performance",
+        "CabMate - Driver Performance",
+        [
+            "Driver ID",
+            "Driver",
+            "Phone",
+            "Total Trips",
+            "Assigned",
+            "Started",
+            "Completed",
+            "Cancelled",
+            "Completion %",
+            "Average Speed",
+            "Maximum Speed",
+            "Overspeed Count",
+            "Speed Records",
+            "Safety Score",
+            "Safety Status",
+        ],
+    )
+
+
+    speed_history = (
+        DriverLocationHistory.objects
+        .filter(
+            recorded_at__date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+    )
+
+
+    speed_stats = (
+        speed_history
+        .values(
+            "driver_id"
+        )
+        .annotate(
+            avg_speed=Avg(
+                "speed_kmph"
+            ),
+
+            max_speed=Max(
+                "speed_kmph"
+            ),
+
+            overspeed_count=Count(
+                "id",
+                filter=Q(
+                    is_overspeed=True
+                ),
+            ),
+
+            speed_records=Count(
+                "id"
+            ),
+        )
+    )
+
+
+    speed_map = {
+        item["driver_id"]:
+            item
+        for item in speed_stats
+    }
+
+
+    drivers = (
+        User.objects
+        .filter(
+            role=User.Role.DRIVER
+        )
+        .order_by(
+            "username"
+        )
+    )
+
+
+    for driver in drivers:
+
+        driver_trips = (
+            trips.filter(
+                driver=driver
+            )
+        )
+
+        total_trips = (
+            driver_trips.count()
+        )
+
+        assigned = (
+            driver_trips
+            .filter(
+                status=
+                    Trip.STATUS_ASSIGNED
+            )
+            .count()
+        )
+
+        started = (
+            driver_trips
+            .filter(
+                status=
+                    Trip.STATUS_STARTED
+            )
+            .count()
+        )
+
+        completed = (
+            driver_trips
+            .filter(
+                status=
+                    Trip.STATUS_COMPLETED
+            )
+            .count()
+        )
+
+        cancelled = (
+            driver_trips
+            .filter(
+                status=
+                    Trip.STATUS_CANCELLED
+            )
+            .count()
+        )
+
+        completion_percent = (
+            round(
+                (
+                    completed
+                    / total_trips
+                ) * 100,
+                1,
+            )
+            if total_trips
+            else 0
+        )
+
+
+        speed_data = (
+            speed_map.get(
+                driver.id,
+                {},
+            )
+        )
+
+        avg_speed = round(
+            speed_data.get(
+                "avg_speed"
+            ) or 0,
+            1,
+        )
+
+        max_speed = round(
+            speed_data.get(
+                "max_speed"
+            ) or 0,
+            1,
+        )
+
+        overspeed_count = (
+            speed_data.get(
+                "overspeed_count"
+            )
+            or 0
+        )
+
+        speed_records = (
+            speed_data.get(
+                "speed_records"
+            )
+            or 0
+        )
+
+
+        safety_score = 100
+
+        safety_score -= (
+            overspeed_count * 5
+        )
+
+        safety_score -= (
+            cancelled * 3
+        )
+
+        safety_score = max(
+            0,
+            min(
+                100,
+                safety_score,
+            ),
+        )
+
+
+        if safety_score >= 85:
+
+            safety_status = (
+                "Safe Driver"
+            )
+
+        elif safety_score >= 60:
+
+            safety_status = (
+                "Moderate Risk"
+            )
+
+        else:
+
+            safety_status = (
+                "Risky Driver"
+            )
+
+
+        ws.append([
+            driver.id,
+
+            driver.username,
+
+            (
+                getattr(
+                    driver,
+                    "phone_number",
+                    "",
+                )
+                or ""
+            ),
+
+            total_trips,
+
+            assigned,
+
+            started,
+
+            completed,
+
+            cancelled,
+
+            completion_percent,
+
+            avg_speed,
+
+            max_speed,
+
+            overspeed_count,
+
+            speed_records,
+
+            safety_score,
+
+            safety_status,
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 9. DRIVER CAB SPEED
+    # ==========================================================
+
+    ws = create_sheet(
+        "Driver Cab Speed",
+        "CabMate - Driver Cab Speed Report",
+        [
+            "Date",
+            "Time",
+            "Driver",
+            "Vehicle",
+            "Route",
+            "Trip Type",
+            "Speed KM/H",
+            "Overspeed",
+            "Latitude",
+            "Longitude",
+            "Route Run ID",
+        ],
+    )
+
+
+    speed_records = (
+        DriverLocationHistory.objects
+        .select_related(
+            "driver",
+            "route_run",
+            "route_run__vehicle",
+            "route_run__route_template",
+        )
+        .filter(
+            recorded_at__date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+        .order_by(
+            "-recorded_at"
+        )
+    )
+
+
+    for record in speed_records:
+
+        local_time = (
+            timezone.localtime(
+                record.recorded_at
+            )
+            if record.recorded_at
+            else None
+        )
+
+        run = record.route_run
+
+
+        ws.append([
+            (
+                local_time.date()
+                if local_time
+                else ""
+            ),
+
+            (
+                local_time.strftime(
+                    "%I:%M:%S %p"
+                )
+                if local_time
+                else ""
+            ),
+
+            (
+                record.driver.username
+                if record.driver
+                else ""
+            ),
+
+            (
+                run.vehicle.vehicle_number
+                if (
+                    run
+                    and run.vehicle
+                )
+                else ""
+            ),
+
+            (
+                run.route_template.name
+                if (
+                    run
+                    and run.route_template
+                )
+                else "Manual Route"
+            ),
+
+            (
+                record.trip_type
+                or (
+                    run.trip_type
+                    if run
+                    else ""
+                )
+            ),
+
+            round(
+                record.speed_kmph
+                or 0,
+                1,
+            ),
+
+            (
+                "YES"
+                if record.is_overspeed
+                else "NO"
+            ),
+
+            record.latitude,
+
+            record.longitude,
+
+            (
+                run.id
+                if run
+                else ""
+            ),
+        ])
+
+
+        # Highlight overspeed row
+        current_row = ws.max_row
+
+        if record.is_overspeed:
+
+            for cell in ws[
+                current_row
+            ]:
+
+                cell.fill = danger_fill
+
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 10. UNASSIGNED EMPLOYEES
+    # ==========================================================
+    #
+    # Same logic as reports_page:
+    # active employee with no trip in selected period.
+    # ==========================================================
+
+    ws = create_sheet(
+        "Unassigned Employees",
+        "CabMate - Unassigned Employees",
+        [
+            "User ID",
+            "Employee ID",
+            "Employee",
+            "Phone",
+            "Pickup Location",
+            "Address",
+            "Account Status",
+        ],
+    )
+
+
+    assigned_employee_ids = set(
+        trips.values_list(
+            "employee_id",
+            flat=True,
+        )
+    )
+
+
+    unassigned_employees = (
+        User.objects
+        .filter(
+            role=User.Role.EMPLOYEE,
+            is_active=True,
+        )
+        .exclude(
+            id__in=
+                assigned_employee_ids
+        )
+        .order_by(
+            "username"
+        )
+    )
+
+
+    for employee in (
+        unassigned_employees
+    ):
+
+        ws.append([
+            employee.id,
+
+            (
+                employee.employee_id
+                or ""
+            ),
+
+            employee.username,
+
+            (
+                employee.phone_number
+                or ""
+            ),
+
+            (
+                employee.pickup_location
+                or ""
+            ),
+
+            (
+                employee.address
+                or ""
+            ),
+
+            (
+                getattr(
+                    employee,
+                    "account_status",
+                    "",
+                )
+                or ""
+            ),
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 11. UNASSIGNED DRIVERS
+    # ==========================================================
+    #
+    # Same logic as reports_page:
+    # active driver with no trip in selected period.
+    # ==========================================================
+
+    ws = create_sheet(
+        "Unassigned Drivers",
+        "CabMate - Unassigned Drivers",
+        [
+            "Driver ID",
+            "Driver",
+            "Phone",
+            "Vehicle Number",
+            "Vehicle Model",
+            "Seats",
+            "Account Status",
+        ],
+    )
+
+
+    assigned_driver_ids = set(
+        trips.exclude(
+            driver_id__isnull=True
+        ).values_list(
+            "driver_id",
+            flat=True,
+        )
+    )
+
+
+    unassigned_drivers = (
+        User.objects
+        .filter(
+            role=User.Role.DRIVER,
+            is_active=True,
+        )
+        .exclude(
+            id__in=
+                assigned_driver_ids
+        )
+        .order_by(
+            "username"
+        )
+    )
+
+
+    for driver in (
+        unassigned_drivers
+    ):
+
+        try:
+            vehicle = driver.vehicle
+        except Exception:
+            vehicle = None
+
+
+        ws.append([
+            driver.id,
+
+            driver.username,
+
+            (
+                driver.phone_number
+                or ""
+            ),
+
+            (
+                vehicle.vehicle_number
+                if vehicle
+                else ""
+            ),
+
+            (
+                vehicle.vehicle_model
+                if vehicle
+                else ""
+            ),
+
+            (
+                vehicle.seat_count
+                if vehicle
+                else ""
+            ),
+
+            (
+                getattr(
+                    driver,
+                    "account_status",
+                    "",
+                )
+                or ""
+            ),
+        ])
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # 12. ROUTE ANALYTICS
+    # ==========================================================
+    #
+    # Uses same calculation as your route_analytics_page().
+    # ==========================================================
+
+    ws = create_sheet(
+        "Route Analytics",
+        "CabMate - Route Analytics",
+        [
+            "Date",
+            "Route Run ID",
+            "Route",
+            "Trip Type",
+            "Driver",
+            "Vehicle",
+            "Total Stops",
+            "Completed Stops",
+            "No Shows",
+            "Stop Completion %",
+            "Total Trips",
+            "Completed Trips",
+            "Cancelled Trips",
+            "Trip Completion %",
+            "Duration Minutes",
+            "Efficiency Score",
+            "Health",
+        ],
+    )
+
+
+    route_runs = (
+        RouteRun.objects
+        .select_related(
+            "route_template",
+            "driver",
+            "vehicle",
+        )
+        .prefetch_related(
+            "stops__employee",
+            "trips",
+        )
+        .filter(
+            run_date__range=[
+                start_date_obj,
+                end_date_obj,
+            ]
+        )
+        .order_by(
+            "-run_date",
+            "trip_type",
+            "route_template__name",
+        )
+    )
+
+
+    for run in route_runs:
+
+        run_stops = list(
+            run.stops.all()
+        )
+
+        run_trips = list(
+            run.trips.all()
+        )
+
+        total_stops = len(
+            run_stops
+        )
+
+        completed_stops = len([
+            stop
+            for stop in run_stops
+            if getattr(
+                stop,
+                "is_picked",
+                False,
+            )
+        ])
+
+        no_show_count = len([
+            stop
+            for stop in run_stops
+            if getattr(
+                stop,
+                "is_no_show",
+                False,
+            )
+        ])
+
+        total_run_trips = len(
+            run_trips
+        )
+
+        completed_run_trips = len([
+            trip
+            for trip in run_trips
+            if (
+                trip.status
+                == Trip.STATUS_COMPLETED
+            )
+        ])
+
+        cancelled_run_trips = len([
+            trip
+            for trip in run_trips
+            if (
+                trip.status
+                == Trip.STATUS_CANCELLED
+            )
+        ])
+
+
+        stop_completion_percent = (
+            round(
+                (
+                    completed_stops
+                    / total_stops
+                ) * 100,
+                1,
+            )
+            if total_stops
+            else 0
+        )
+
+
+        trip_completion_percent = (
+            round(
+                (
+                    completed_run_trips
+                    / total_run_trips
+                ) * 100,
+                1,
+            )
+            if total_run_trips
+            else 0
+        )
+
+
+        duration_minutes = 0
+
+        if (
+            run.started_at
+            and run.completed_at
+        ):
+
+            duration_minutes = int(
+                (
+                    run.completed_at
+                    - run.started_at
+                ).total_seconds()
+                / 60
+            )
+
+
+        efficiency_score = 100
+
+        efficiency_score -= (
+            no_show_count * 8
+        )
+
+        efficiency_score -= (
+            cancelled_run_trips
+            * 5
+        )
+
+
+        if duration_minutes:
+
+            duration_limit = (
+                120
+                if (
+                    run.trip_type
+                    == Trip.TRIP_TYPE_PICKUP
+                )
+                else 90
+            )
+
+            if (
+                duration_minutes
+                > duration_limit
+            ):
+
+                efficiency_score -= 15
+
+
+        efficiency_score = max(
+            0,
+            min(
+                100,
+                efficiency_score,
+            ),
+        )
+
+
+        if efficiency_score >= 85:
+
+            health = "EXCELLENT"
+
+        elif efficiency_score >= 60:
+
+            health = "MODERATE"
+
+        else:
+
+            health = "CRITICAL"
+
+
+        ws.append([
+            run.run_date,
+
+            run.id,
+
+            (
+                run.route_template.name
+                if run.route_template
+                else "Manual Route"
+            ),
+
+            run.trip_type,
+
+            (
+                run.driver.username
+                if run.driver
+                else ""
+            ),
+
+            (
+                run.vehicle.vehicle_number
+                if run.vehicle
+                else ""
+            ),
+
+            total_stops,
+
+            completed_stops,
+
+            no_show_count,
+
+            stop_completion_percent,
+
+            total_run_trips,
+
+            completed_run_trips,
+
+            cancelled_run_trips,
+
+            trip_completion_percent,
+
+            duration_minutes,
+
+            efficiency_score,
+
+            health,
+        ])
+
+
+        current_row = ws.max_row
+
+        if health == "CRITICAL":
+
+            for cell in ws[
+                current_row
+            ]:
+                cell.fill = danger_fill
+
+        elif health == "MODERATE":
+
+            for cell in ws[
+                current_row
+            ]:
+                cell.fill = warning_fill
+
+        else:
+
+            for cell in ws[
+                current_row
+            ]:
+                cell.fill = success_fill
+
+
+    finish_sheet(ws)
+
+
+    # ==========================================================
+    # RESPONSE
+    # ==========================================================
+
+    filename = (
+        "CabMate_All_Reports_"
+        f"{start_date_obj}_to_"
+        f"{end_date_obj}.xlsx"
+    )
+
+
+    response = HttpResponse(
+        content_type=(
+            "application/"
+            "vnd.openxmlformats-"
+            "officedocument."
+            "spreadsheetml.sheet"
+        )
+    )
+
+
+    response[
+        "Content-Disposition"
+    ] = (
+        f'attachment; '
+        f'filename="{filename}"'
+    )
+
 
     wb.save(response)
-    return response
 
+    return response
 
 
 @login_required
