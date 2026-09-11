@@ -164,6 +164,12 @@ urlpatterns = [
     ),
     
     path(
+        "drivers/<int:driver_id>/profile/",
+        views.driver_profile_page,
+        name="driver_profile",
+    ),
+
+    path(
         "drivers/<int:driver_id>/delete/",
         views.delete_driver_account,
         name="delete_driver_account",

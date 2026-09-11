@@ -3,7 +3,7 @@
 {% block title %}Drivers - CabMate Admin{% endblock %}
 {% block nav_drivers %}active{% endblock %}
 {% block page_heading %}Drivers{% endblock %}
-{% block page_subheading %}Manage drivers, vehicles, and seating capacity{% endblock %}
+{% block page_subheading %}Manage drivers and view complete driver profiles{% endblock %}
 
 {% block content %}
 
@@ -48,13 +48,19 @@
     border-radius:12px;
     font-weight:900;
     cursor:pointer;
-    color:white;
+    color:#fff;
     background:linear-gradient(135deg,#2563eb,#3b82f6);
+    transition:.2s ease;
+}
+
+.driver-search-btn:hover{
+    transform:translateY(-1px);
+    box-shadow:0 8px 20px rgba(37,99,235,.22);
 }
 
 
 /* ============================================================
-   DRIVER
+   DRIVER PROFILE
 ============================================================ */
 
 .driver-profile{
@@ -68,11 +74,17 @@
     height:42px;
     border-radius:50%;
     background:linear-gradient(135deg,#2563eb,#60a5fa);
-    color:white;
+    color:#fff;
     display:flex;
     align-items:center;
     justify-content:center;
     font-weight:950;
+    flex-shrink:0;
+}
+
+.driver-name{
+    color:#111827;
+    font-weight:900;
 }
 
 .driver-sub{
@@ -96,6 +108,7 @@
     padding:8px 12px;
     border-radius:999px;
     font-weight:900;
+    white-space:nowrap;
 }
 
 .vehicle-missing{
@@ -105,11 +118,12 @@
     padding:8px 12px;
     border-radius:999px;
     font-weight:900;
+    white-space:nowrap;
 }
 
 
 /* ============================================================
-   DRIVER STATUS
+   DRIVER VEHICLE STATUS CARD
 ============================================================ */
 
 .driver-status-card{
@@ -133,6 +147,7 @@
     font-size:30px;
     background:#eff6ff;
     color:#2563eb;
+    flex-shrink:0;
 }
 
 .driver-status-card.warning .driver-status-icon{
@@ -153,20 +168,50 @@
     font-weight:850;
 }
 
-.admin-table tbody tr:hover{
-    background:#f8fafc;
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.driver-active{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#dbeafe;
+    color:#2563eb;
+    padding:7px 18px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+}
+
+.driver-inactive{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:#fee2e2;
+    color:#b91c1c;
+    padding:7px 18px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
 }
 
 
 /* ============================================================
-   DELETE ACCOUNT BUTTON
+   VIEW PROFILE BUTTON
 ============================================================ */
 
-.delete-account-btn{
+.view-driver-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    text-decoration:none;
     border:none;
-    background:#fee2e2;
-    color:#b91c1c;
-    padding:9px 13px;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    color:#fff;
+    padding:9px 15px;
     border-radius:11px;
     font-size:11px;
     font-weight:900;
@@ -175,146 +220,48 @@
     transition:.2s ease;
 }
 
-.delete-account-btn:hover{
-    background:#dc2626;
+.view-driver-btn:hover{
     color:#fff;
     transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(37,99,235,.22);
 }
 
 
 /* ============================================================
-   DELETE DRIVER MODAL
+   TABLE
 ============================================================ */
 
-.delete-modal-overlay{
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(15,23,42,.70);
-    z-index:99999;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    backdrop-filter:blur(4px);
+.admin-table tbody tr{
+    transition:.15s ease;
 }
 
-.delete-modal{
-    width:100%;
-    max-width:510px;
-    background:#fff;
-    border-radius:26px;
-    padding:28px;
-    box-shadow:0 30px 90px rgba(0,0,0,.35);
-    animation:deleteModalOpen .18s ease-out;
+.admin-table tbody tr:hover{
+    background:#f8fafc;
 }
 
-@keyframes deleteModalOpen{
-    from{
-        opacity:0;
-        transform:translateY(12px) scale(.98);
-    }
-    to{
-        opacity:1;
-        transform:translateY(0) scale(1);
-    }
+.admin-table th{
+    white-space:nowrap;
 }
 
-.delete-modal-icon{
-    width:68px;
-    height:68px;
-    margin:0 auto 16px;
-    border-radius:50%;
-    background:#fee2e2;
-    color:#dc2626;
-    display:grid;
-    place-items:center;
-    font-size:31px;
-}
-
-.delete-modal h2{
-    margin:0;
-    text-align:center;
-    color:#111827;
-    font-size:23px;
-    font-weight:950;
-}
-
-.delete-modal-description{
-    text-align:center;
-    color:#64748b;
-    font-size:14px;
-    font-weight:700;
-    line-height:1.6;
-    margin:12px 0 0;
-}
-
-.delete-driver-name{
-    color:#111827;
-    font-weight:950;
-}
-
-.delete-warning-box{
-    margin:20px 0;
-    background:#fef2f2;
-    border:1px solid #fecaca;
-    border-radius:17px;
-    padding:17px;
-    color:#991b1b;
-    font-size:13px;
-    line-height:1.8;
-}
-
-.delete-warning-title{
-    display:block;
-    font-size:13px;
-    font-weight:950;
-    margin-bottom:5px;
-}
-
-.delete-final-warning{
-    display:block;
-    margin-top:9px;
-    font-weight:950;
-}
-
-.delete-modal-actions{
-    display:flex;
-    justify-content:flex-end;
-    gap:12px;
-    margin-top:4px;
-}
-
-.delete-modal-btn{
-    border:none;
-    padding:12px 18px;
-    border-radius:12px;
-    font-size:12px;
-    font-weight:900;
-    cursor:pointer;
-    font-family:inherit;
-}
-
-.delete-modal-cancel{
-    background:#e5e7eb;
-    color:#111827;
-}
-
-.delete-modal-cancel:hover{
-    background:#d1d5db;
-}
-
-.delete-modal-confirm{
-    background:#dc2626;
-    color:#fff;
-}
-
-.delete-modal-confirm:hover{
-    background:#b91c1c;
+.admin-table td{
+    vertical-align:middle;
 }
 
 
 /* ============================================================
-   MOBILE
+   EMPTY STATE
+============================================================ */
+
+.empty-drivers{
+    text-align:center;
+    padding:35px 20px !important;
+    color:#64748b;
+    font-weight:800;
+}
+
+
+/* ============================================================
+   RESPONSIVE
 ============================================================ */
 
 @media(max-width:700px){
@@ -328,12 +275,12 @@
         width:100%;
     }
 
-    .delete-modal-actions{
-        flex-direction:column-reverse;
+    .driver-status-card{
+        align-items:flex-start;
     }
 
-    .delete-modal-btn{
-        width:100%;
+    .driver-status-card h3{
+        font-size:22px;
     }
 
 }
@@ -345,43 +292,83 @@
 
 
     <!-- ========================================================
-         DRIVER STATISTICS
+         STATISTICS
     ========================================================= -->
 
     <section class="stats-row">
 
         <div class="mini-stat-card">
-            <p>Total Drivers</p>
-            <h3>{{ total_drivers }}</h3>
-            <span>All registered drivers</span>
+
+            <p>
+                Total Drivers
+            </p>
+
+            <h3>
+                {{ total_drivers }}
+            </h3>
+
+            <span>
+                All registered drivers
+            </span>
+
         </div>
 
 
         <div class="mini-stat-card">
-            <p>Active Drivers</p>
-            <h3>{{ active_drivers }}</h3>
-            <span>Currently active accounts</span>
+
+            <p>
+                Active Drivers
+            </p>
+
+            <h3>
+                {{ active_drivers }}
+            </h3>
+
+            <span>
+                Currently active accounts
+            </span>
+
         </div>
 
 
         <div class="mini-stat-card">
-            <p>Assigned Vehicles</p>
-            <h3>{{ assigned_vehicles }}</h3>
-            <span>Vehicles linked to drivers</span>
+
+            <p>
+                Assigned Vehicles
+            </p>
+
+            <h3>
+                {{ assigned_vehicles }}
+            </h3>
+
+            <span>
+                Vehicles linked to drivers
+            </span>
+
         </div>
 
 
         <div class="mini-stat-card">
-            <p>Total Seats</p>
-            <h3>{{ total_seats }}</h3>
-            <span>Total capacity of all cabs</span>
+
+            <p>
+                Total Seats
+            </p>
+
+            <h3>
+                {{ total_seats }}
+            </h3>
+
+            <span>
+                Total capacity of all cabs
+            </span>
+
         </div>
 
     </section>
 
 
     <!-- ========================================================
-         VEHICLE STATUS
+         DRIVER VEHICLE STATUS
     ========================================================= -->
 
     <section
@@ -396,6 +383,7 @@
         <div class="driver-status-icon">
             🚖
         </div>
+
 
         <div>
 
@@ -442,7 +430,7 @@
                 </h3>
 
                 <p>
-                    Search drivers and check assigned cab details
+                    Search drivers and open complete driver profiles
                 </p>
 
             </div>
@@ -450,7 +438,9 @@
         </div>
 
 
-        <!-- SEARCH -->
+        <!-- ====================================================
+             SEARCH
+        ===================================================== -->
 
         <form
             method="get"
@@ -463,12 +453,14 @@
                     🔍
                 </span>
 
+
                 <input
                     type="text"
                     name="q"
                     value="{{ query }}"
                     placeholder="Search driver, phone number, vehicle number or model..."
                 >
+
 
                 <button
                     type="submit"
@@ -482,7 +474,9 @@
         </form>
 
 
-        <!-- DRIVER TABLE -->
+        <!-- ====================================================
+             TABLE
+        ===================================================== -->
 
         <div
             class="table-wrap"
@@ -495,23 +489,37 @@
 
                     <tr>
 
-                        <th>ID</th>
+                        <th>
+                            ID
+                        </th>
 
-                        <th>Driver</th>
+                        <th>
+                            Driver
+                        </th>
 
-                        <th>Phone</th>
+                        <th>
+                            Phone
+                        </th>
 
-                        <th>Address</th>
+                        <th>
+                            Vehicle Number
+                        </th>
 
-                        <th>Vehicle Number</th>
+                        <th>
+                            Vehicle Model
+                        </th>
 
-                        <th>Vehicle Model</th>
+                        <th>
+                            Seats
+                        </th>
 
-                        <th>Seats</th>
+                        <th>
+                            Status
+                        </th>
 
-                        <th>Status</th>
-
-                        <th>Action</th>
+                        <th>
+                            View
+                        </th>
 
                     </tr>
 
@@ -523,6 +531,7 @@
                     {% for driver in drivers %}
 
                     <tr>
+
 
                         <!-- ID -->
 
@@ -543,14 +552,19 @@
 
                                 </div>
 
+
                                 <div>
 
-                                    <strong>
+                                    <div class="driver-name">
+
                                         {{ driver.username }}
-                                    </strong>
+
+                                    </div>
 
                                     <div class="driver-sub">
+
                                         Driver ID #{{ driver.id }}
+
                                     </div>
 
                                 </div>
@@ -563,14 +577,9 @@
                         <!-- PHONE -->
 
                         <td>
+
                             {{ driver.phone_number|default:"--" }}
-                        </td>
 
-
-                        <!-- ADDRESS -->
-
-                        <td>
-                            {{ driver.address|default:"--" }}
                         </td>
 
 
@@ -583,6 +592,7 @@
                                 <span class="vehicle-badge">
 
                                     🚖
+
                                     {{ driver.vehicle.vehicle_number }}
 
                                 </span>
@@ -590,7 +600,9 @@
                             {% else %}
 
                                 <span class="vehicle-missing">
+
                                     No Vehicle
+
                                 </span>
 
                             {% endif %}
@@ -638,14 +650,18 @@
 
                             {% if driver.is_active %}
 
-                                <span class="status-pill completed">
+                                <span class="driver-active">
+
                                     Active
+
                                 </span>
 
                             {% else %}
 
-                                <span class="status-pill warning">
+                                <span class="driver-inactive">
+
                                     Inactive
+
                                 </span>
 
                             {% endif %}
@@ -653,37 +669,41 @@
                         </td>
 
 
-                        <!-- =================================================
-                             DELETE DRIVER
-                        ================================================== -->
+                        <!-- VIEW PROFILE -->
 
                         <td>
 
-                            <button
-                                type="button"
-                                class="delete-account-btn"
-                                onclick="openDeleteDriverModal(
-                                    '{{ driver.id }}',
-                                    '{{ driver.username|escapejs }}'
-                                )"
+                            <a
+                                href="{% url 'admin_web:driver_profile' driver.id %}"
+                                class="view-driver-btn"
                             >
-                                Delete Account
-                            </button>
+
+                                View
+
+                            </a>
 
                         </td>
+
 
                     </tr>
 
 
                     {% empty %}
 
+
                     <tr>
 
-                        <td colspan="9">
+                        <td
+                            colspan="8"
+                            class="empty-drivers"
+                        >
+
                             No drivers found.
+
                         </td>
 
                     </tr>
+
 
                     {% endfor %}
 
@@ -696,205 +716,5 @@
     </section>
 
 </div>
-
-
-
-<!-- ============================================================
-     DELETE DRIVER CONFIRMATION POPUP
-============================================================= -->
-
-<div
-    id="deleteDriverModal"
-    class="delete-modal-overlay"
-    onclick="handleDriverModalOutsideClick(event)"
->
-
-    <div
-        class="delete-modal"
-        onclick="event.stopPropagation()"
-    >
-
-        <div class="delete-modal-icon">
-            ⚠
-        </div>
-
-
-        <h2>
-            Permanently Delete Driver?
-        </h2>
-
-
-        <p class="delete-modal-description">
-
-            You are about to permanently delete
-
-            <span
-                id="deleteDriverName"
-                class="delete-driver-name"
-            >
-                this driver
-            </span>.
-
-        </p>
-
-
-        <div class="delete-warning-box">
-
-            <span class="delete-warning-title">
-                This will:
-            </span>
-
-            • Cancel the driver's active/upcoming cab assignments
-
-            <br>
-
-            • Remove the driver from assigned routes
-
-            <br>
-
-            • Remove employees from those route assignments
-
-            <br>
-
-            • Move affected employees to
-            <strong>Unassigned Employees</strong>
-
-            <br>
-
-            • Permanently delete the driver account
-
-            <span class="delete-final-warning">
-                This action cannot be undone.
-            </span>
-
-        </div>
-
-
-        <form
-            id="deleteDriverForm"
-            method="post"
-        >
-
-            {% csrf_token %}
-
-
-            <div class="delete-modal-actions">
-
-                <button
-                    type="button"
-                    class="delete-modal-btn delete-modal-cancel"
-                    onclick="closeDeleteDriverModal()"
-                >
-                    Cancel
-                </button>
-
-
-                <button
-                    type="submit"
-                    class="delete-modal-btn delete-modal-confirm"
-                >
-                    Delete Permanently
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-
-<!-- ============================================================
-     JAVASCRIPT
-============================================================= -->
-
-<script>
-
-function openDeleteDriverModal(
-    driverId,
-    driverName
-){
-
-    const modal =
-        document.getElementById(
-            "deleteDriverModal"
-        );
-
-    const driverNameElement =
-        document.getElementById(
-            "deleteDriverName"
-        );
-
-    const deleteForm =
-        document.getElementById(
-            "deleteDriverForm"
-        );
-
-
-    driverNameElement.textContent =
-        driverName;
-
-
-    deleteForm.action =
-        `/admin-web/drivers/${driverId}/delete/`;
-
-
-    modal.style.display =
-        "flex";
-
-
-    document.body.style.overflow =
-        "hidden";
-}
-
-
-
-function closeDeleteDriverModal(){
-
-    const modal =
-        document.getElementById(
-            "deleteDriverModal"
-        );
-
-
-    modal.style.display =
-        "none";
-
-
-    document.body.style.overflow =
-        "";
-
-}
-
-
-
-function handleDriverModalOutsideClick(event){
-
-    if(
-        event.target.id ===
-        "deleteDriverModal"
-    ){
-        closeDeleteDriverModal();
-    }
-
-}
-
-
-
-document.addEventListener(
-    "keydown",
-    function(event){
-
-        if(event.key === "Escape"){
-            closeDeleteDriverModal();
-        }
-
-    }
-);
-
-</script>
-
 
 {% endblock %}

@@ -1110,6 +1110,200 @@ def delete_employee_account(request, employee_id):
 
 @login_required
 @admin_required
+@require_GET
+def driver_profile_page(request, driver_id):
+
+    # ==========================================================
+    # DRIVER
+    # ==========================================================
+
+    driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+    )
+
+    today = timezone.localdate()
+
+
+    # ==========================================================
+    # VEHICLE
+    # ==========================================================
+
+    try:
+        vehicle = driver.vehicle
+    except Exception:
+        vehicle = None
+
+
+    # ==========================================================
+    # PERMANENT ROUTES ASSIGNED TO DRIVER
+    # ==========================================================
+
+    routes = (
+        RouteTemplate.objects
+        .filter(driver=driver)
+        .select_related("vehicle")
+        .order_by("name")
+    )
+
+
+    # ==========================================================
+    # EMPLOYEES ASSIGNED UNDER DRIVER ROUTES
+    # ==========================================================
+
+    assigned_stops = (
+        RouteStop.objects
+        .filter(route__driver=driver)
+        .select_related(
+            "employee",
+            "route",
+            "route__vehicle",
+        )
+        .order_by(
+            "route__name",
+            "stop_order",
+        )
+    )
+
+
+    assigned_employee_count = (
+        assigned_stops
+        .values("employee_id")
+        .distinct()
+        .count()
+    )
+
+
+    # ==========================================================
+    # TODAY'S DRIVER TRIPS
+    # ==========================================================
+
+    today_trips = (
+        Trip.objects
+        .filter(
+            driver=driver,
+            trip_date=today,
+        )
+        .select_related(
+            "employee",
+            "vehicle",
+            "route_run",
+            "route_run__route_template",
+        )
+        .order_by(
+            "trip_type",
+            "id",
+        )
+    )
+
+
+    # ==========================================================
+    # RECENT DRIVER TRIP HISTORY
+    # ==========================================================
+
+    recent_trips = (
+        Trip.objects
+        .filter(
+            driver=driver,
+        )
+        .select_related(
+            "employee",
+            "vehicle",
+            "route_run",
+            "route_run__route_template",
+        )
+        .order_by(
+            "-trip_date",
+            "-id",
+        )[:20]
+    )
+
+
+    # ==========================================================
+    # DRIVER REVIEWS
+    # ==========================================================
+
+    reviews = (
+        Review.objects
+        .filter(
+            trip__driver=driver,
+        )
+        .select_related(
+            "trip",
+            "trip__employee",
+        )
+        .order_by(
+            "-created_at"
+        )[:10]
+    )
+
+
+    # ==========================================================
+    # REVIEW AVERAGE
+    # ==========================================================
+
+    review_count = reviews.count()
+
+    if review_count:
+
+        average_rating = (
+            sum(
+                review.rating
+                for review in reviews
+            )
+            / review_count
+        )
+
+        average_rating = round(
+            average_rating,
+            1,
+        )
+
+    else:
+
+        average_rating = 0
+
+
+    # ==========================================================
+    # RENDER
+    # ==========================================================
+
+    context = {
+
+        "driver": driver,
+
+        "vehicle": vehicle,
+
+        "today": today,
+
+        "routes": routes,
+
+        "assigned_stops": assigned_stops,
+
+        "assigned_employee_count":
+            assigned_employee_count,
+
+        "today_trips": today_trips,
+
+        "recent_trips": recent_trips,
+
+        "reviews": reviews,
+
+        "review_count": review_count,
+
+        "average_rating": average_rating,
+    }
+
+
+    return render(
+        request,
+        "admin_web/driver_profile.html",
+        context,
+    )
+
+@login_required
+@admin_required
 @require_POST
 @transaction.atomic
 def delete_driver_account(request, driver_id):

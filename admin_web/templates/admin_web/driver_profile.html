@@ -1,0 +1,2226 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}
+{{ driver.username }} - Driver Profile
+{% endblock %}
+
+{% block nav_drivers %}
+active
+{% endblock %}
+
+{% block page_heading %}
+Driver Profile
+{% endblock %}
+
+{% block page_subheading %}
+Complete driver, vehicle, route, employee, trip and review details
+{% endblock %}
+
+
+{% block extra_css %}
+
+<style>
+
+/* ============================================================
+   PAGE
+============================================================ */
+
+.profile-page{
+    display:grid;
+    gap:20px;
+}
+
+
+/* ============================================================
+   HERO
+============================================================ */
+
+.profile-hero{
+    background:
+        linear-gradient(
+            135deg,
+            #111827,
+            #1e3a8a
+        );
+
+    color:#fff;
+
+    border-radius:28px;
+
+    padding:25px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:20px;
+
+    flex-wrap:wrap;
+
+    box-shadow:
+        0 18px 40px
+        rgba(15,23,42,.18);
+}
+
+
+.profile-identity{
+    display:flex;
+    align-items:center;
+    gap:16px;
+}
+
+
+.profile-avatar{
+    width:76px;
+    height:76px;
+
+    border-radius:22px;
+
+    display:grid;
+    place-items:center;
+
+    background:
+        linear-gradient(
+            135deg,
+            #3b82f6,
+            #2563eb
+        );
+
+    font-size:32px;
+    font-weight:950;
+
+    box-shadow:
+        inset 0 0 0 1px
+        rgba(255,255,255,.12);
+}
+
+
+.profile-hero h2{
+    margin:0;
+
+    font-size:30px;
+
+    font-weight:950;
+}
+
+
+.profile-hero p{
+    margin:6px 0 0;
+
+    color:#cbd5e1;
+
+    font-size:13px;
+
+    font-weight:750;
+}
+
+
+.profile-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+
+.profile-btn{
+    border:none;
+
+    text-decoration:none;
+
+    padding:11px 16px;
+
+    border-radius:13px;
+
+    font-size:12px;
+
+    font-weight:900;
+
+    cursor:pointer;
+
+    font-family:inherit;
+
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    transition:.2s ease;
+}
+
+
+.profile-btn:hover{
+    transform:translateY(-1px);
+}
+
+
+.btn-light{
+    background:#fff;
+    color:#111827;
+}
+
+
+.btn-delete{
+    background:#dc2626;
+    color:#fff;
+}
+
+
+.btn-delete:hover{
+    background:#b91c1c;
+}
+
+
+/* ============================================================
+   INFORMATION GRID
+============================================================ */
+
+.profile-grid{
+    display:grid;
+
+    grid-template-columns:
+        repeat(4,1fr);
+
+    gap:14px;
+}
+
+
+.info-card{
+    background:#fff;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:20px;
+
+    padding:17px;
+
+    box-shadow:
+        0 10px 26px
+        rgba(15,23,42,.05);
+}
+
+
+.info-card span{
+    display:block;
+
+    color:#64748b;
+
+    font-size:10px;
+
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.4px;
+
+    margin-bottom:7px;
+}
+
+
+.info-card strong{
+    display:block;
+
+    color:#111827;
+
+    font-size:14px;
+
+    font-weight:900;
+
+    word-break:break-word;
+}
+
+
+/* ============================================================
+   SECTION
+============================================================ */
+
+.section-card{
+    background:#fff;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:24px;
+
+    box-shadow:
+        0 10px 28px
+        rgba(15,23,42,.05);
+
+    overflow:hidden;
+}
+
+
+.section-head{
+    padding:18px 20px;
+
+    border-bottom:
+        1px solid #edf0f4;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    gap:12px;
+
+    flex-wrap:wrap;
+}
+
+
+.section-head h3{
+    margin:0;
+
+    font-size:18px;
+
+    font-weight:950;
+
+    color:#111827;
+}
+
+
+.section-head p{
+    margin:4px 0 0;
+
+    color:#64748b;
+
+    font-size:12px;
+
+    font-weight:700;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.status-pill{
+    display:inline-flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    padding:7px 11px;
+
+    border-radius:999px;
+
+    font-size:10px;
+
+    font-weight:900;
+}
+
+
+.green{
+    background:#dcfce7;
+    color:#166534;
+}
+
+
+.blue{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+
+.orange{
+    background:#ffedd5;
+    color:#c2410c;
+}
+
+
+.red{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+
+.slate{
+    background:#f1f5f9;
+    color:#475569;
+}
+
+
+/* ============================================================
+   VEHICLE
+============================================================ */
+
+.vehicle-grid{
+    display:grid;
+
+    grid-template-columns:
+        repeat(4,1fr);
+
+    gap:14px;
+
+    padding:18px 20px 20px;
+}
+
+
+.vehicle-number{
+    color:#1d4ed8 !important;
+}
+
+
+/* ============================================================
+   ROUTES
+============================================================ */
+
+.route-grid{
+    padding:18px 20px;
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap:14px;
+}
+
+
+.route-card{
+    padding:17px;
+
+    border:1px solid #dbeafe;
+
+    border-radius:18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f8fbff,
+            #eff6ff
+        );
+}
+
+
+.route-card h4{
+    margin:0 0 12px;
+
+    color:#111827;
+
+    font-size:15px;
+
+    font-weight:950;
+}
+
+
+.route-meta{
+    display:grid;
+    gap:8px;
+
+    color:#475569;
+
+    font-size:12px;
+
+    font-weight:750;
+}
+
+
+.route-meta strong{
+    color:#111827;
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.table-wrap{
+    overflow-x:auto;
+}
+
+
+.profile-table{
+    width:100%;
+
+    min-width:900px;
+
+    border-collapse:collapse;
+}
+
+
+.profile-table th{
+    text-align:left;
+
+    padding:12px 14px;
+
+    background:#f8fafc;
+
+    color:#64748b;
+
+    font-size:10px;
+
+    text-transform:uppercase;
+
+    font-weight:900;
+
+    border-bottom:
+        1px solid #e5e7eb;
+
+    white-space:nowrap;
+}
+
+
+.profile-table td{
+    padding:13px 14px;
+
+    border-bottom:
+        1px solid #edf0f4;
+
+    color:#334155;
+
+    font-size:12px;
+
+    font-weight:700;
+
+    vertical-align:middle;
+}
+
+
+.profile-table tbody tr:hover td{
+    background:#f8fafc;
+}
+
+
+/* ============================================================
+   EMPLOYEE
+============================================================ */
+
+.employee-cell{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+
+.employee-avatar{
+    width:34px;
+    height:34px;
+
+    border-radius:50%;
+
+    background:#dbeafe;
+
+    color:#1d4ed8;
+
+    display:grid;
+
+    place-items:center;
+
+    font-weight:950;
+}
+
+
+/* ============================================================
+   REVIEWS
+============================================================ */
+
+.stars{
+    color:#f59e0b;
+
+    font-size:14px;
+
+    font-weight:900;
+
+    white-space:nowrap;
+}
+
+
+.feedback{
+    max-width:350px;
+
+    white-space:normal;
+
+    line-height:1.5;
+}
+
+
+/* ============================================================
+   EMPTY
+============================================================ */
+
+.empty-state{
+    padding:30px 20px;
+
+    text-align:center;
+
+    color:#64748b;
+
+    font-weight:800;
+}
+
+
+/* ============================================================
+   DELETE MODAL
+============================================================ */
+
+.delete-modal-overlay{
+    display:none;
+
+    position:fixed;
+
+    inset:0;
+
+    background:
+        rgba(15,23,42,.72);
+
+    z-index:99999;
+
+    align-items:center;
+
+    justify-content:center;
+
+    padding:20px;
+
+    backdrop-filter:
+        blur(4px);
+}
+
+
+.delete-modal{
+    width:100%;
+
+    max-width:520px;
+
+    background:#fff;
+
+    border-radius:26px;
+
+    padding:28px;
+
+    box-shadow:
+        0 30px 90px
+        rgba(0,0,0,.35);
+}
+
+
+.delete-icon{
+    width:68px;
+    height:68px;
+
+    border-radius:50%;
+
+    background:#fee2e2;
+
+    color:#dc2626;
+
+    display:grid;
+
+    place-items:center;
+
+    margin:
+        0 auto 16px;
+
+    font-size:31px;
+}
+
+
+.delete-modal h2{
+    margin:0;
+
+    text-align:center;
+
+    color:#111827;
+
+    font-size:23px;
+
+    font-weight:950;
+}
+
+
+.delete-description{
+    color:#64748b;
+
+    text-align:center;
+
+    margin-top:12px;
+
+    line-height:1.6;
+
+    font-size:14px;
+
+    font-weight:700;
+}
+
+
+.delete-warning{
+    background:#fef2f2;
+
+    border:
+        1px solid #fecaca;
+
+    color:#991b1b;
+
+    border-radius:17px;
+
+    padding:17px;
+
+    margin:20px 0;
+
+    font-size:13px;
+
+    line-height:1.8;
+}
+
+
+.delete-actions{
+    display:flex;
+
+    justify-content:flex-end;
+
+    gap:12px;
+}
+
+
+.modal-btn{
+    border:none;
+
+    padding:12px 18px;
+
+    border-radius:12px;
+
+    font-size:12px;
+
+    font-weight:900;
+
+    cursor:pointer;
+
+    font-family:inherit;
+}
+
+
+.modal-cancel{
+    background:#e5e7eb;
+
+    color:#111827;
+}
+
+
+.modal-delete{
+    background:#dc2626;
+
+    color:#fff;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media(max-width:1100px){
+
+    .profile-grid,
+    .vehicle-grid{
+        grid-template-columns:
+            repeat(2,1fr);
+    }
+
+    .route-grid{
+        grid-template-columns:
+            repeat(2,1fr);
+    }
+
+}
+
+
+@media(max-width:700px){
+
+    .profile-grid,
+    .vehicle-grid,
+    .route-grid{
+        grid-template-columns:1fr;
+    }
+
+    .profile-hero{
+        align-items:flex-start;
+    }
+
+    .profile-actions{
+        width:100%;
+    }
+
+    .profile-btn{
+        flex:1;
+    }
+
+    .delete-actions{
+        flex-direction:
+            column-reverse;
+    }
+
+    .modal-btn{
+        width:100%;
+    }
+
+}
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="profile-page">
+
+
+    <!-- ========================================================
+         DRIVER HERO
+    ========================================================= -->
+
+    <section class="profile-hero">
+
+
+        <div class="profile-identity">
+
+
+            <div class="profile-avatar">
+
+                {{ driver.username|slice:":1"|upper }}
+
+            </div>
+
+
+            <div>
+
+                <h2>
+
+                    {{ driver.username }}
+
+                </h2>
+
+
+                <p>
+
+                    Driver ID #{{ driver.id }}
+
+                    ·
+
+                    {% if driver.is_active %}
+
+                        Active Account
+
+                    {% else %}
+
+                        Inactive Account
+
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="profile-actions">
+
+
+            <a
+                href="{% url 'admin_web:drivers' %}"
+                class="profile-btn btn-light"
+            >
+
+                ← Back to Drivers
+
+            </a>
+
+
+            <button
+                type="button"
+                class="profile-btn btn-delete"
+                onclick="openDeleteDriverModal()"
+            >
+
+                Delete Account
+
+            </button>
+
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         DRIVER INFORMATION
+    ========================================================= -->
+
+    <section class="profile-grid">
+
+
+        <div class="info-card">
+
+            <span>
+                Driver ID
+            </span>
+
+            <strong>
+                #{{ driver.id }}
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Username
+            </span>
+
+            <strong>
+                {{ driver.username }}
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Phone Number
+            </span>
+
+            <strong>
+                {{ driver.phone_number|default:"--" }}
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Account Status
+            </span>
+
+            <strong>
+
+                {% if driver.is_active %}
+
+                    Active
+
+                {% else %}
+
+                    Inactive
+
+                {% endif %}
+
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Address
+            </span>
+
+            <strong>
+                {{ driver.address|default:"--" }}
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Assigned Routes
+            </span>
+
+            <strong>
+                {{ routes|length }}
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Assigned Employees
+            </span>
+
+            <strong>
+                {{ assigned_employee_count }}
+            </strong>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <span>
+                Average Rating
+            </span>
+
+            <strong>
+
+                {% if review_count %}
+
+                    ⭐ {{ average_rating }} / 5
+
+                {% else %}
+
+                    No Rating
+
+                {% endif %}
+
+            </strong>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         VEHICLE
+    ========================================================= -->
+
+    <section class="section-card">
+
+
+        <div class="section-head">
+
+            <div>
+
+                <h3>
+                    Vehicle Details
+                </h3>
+
+                <p>
+                    Cab currently assigned to this driver
+                </p>
+
+            </div>
+
+
+            {% if vehicle %}
+
+                <span class="status-pill green">
+
+                    Vehicle Assigned
+
+                </span>
+
+            {% else %}
+
+                <span class="status-pill orange">
+
+                    No Vehicle
+
+                </span>
+
+            {% endif %}
+
+        </div>
+
+
+
+        {% if vehicle %}
+
+
+        <div class="vehicle-grid">
+
+
+            <div class="info-card">
+
+                <span>
+                    Vehicle Number
+                </span>
+
+                <strong class="vehicle-number">
+
+                    {{ vehicle.vehicle_number }}
+
+                </strong>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <span>
+                    Vehicle Model
+                </span>
+
+                <strong>
+
+                    {{ vehicle.vehicle_model|default:"--" }}
+
+                </strong>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <span>
+                    Seating Capacity
+                </span>
+
+                <strong>
+
+                    {{ vehicle.seat_count|default:"--" }}
+
+                </strong>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <span>
+                    Vehicle Status
+                </span>
+
+                <strong>
+
+                    {% if vehicle.is_active %}
+
+                        Active
+
+                    {% else %}
+
+                        Inactive
+
+                    {% endif %}
+
+                </strong>
+
+            </div>
+
+
+        </div>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                No vehicle is assigned to this driver.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         ROUTES
+    ========================================================= -->
+
+    <section class="section-card">
+
+
+        <div class="section-head">
+
+            <div>
+
+                <h3>
+                    Assigned Routes
+                </h3>
+
+                <p>
+                    Permanent routes assigned to this driver
+                </p>
+
+            </div>
+
+
+            <span class="status-pill blue">
+
+                {{ routes|length }}
+                Route{{ routes|length|pluralize }}
+
+            </span>
+
+        </div>
+
+
+
+        {% if routes %}
+
+
+        <div class="route-grid">
+
+
+            {% for route in routes %}
+
+
+            <div class="route-card">
+
+
+                <h4>
+
+                    🚖 {{ route.name }}
+
+                </h4>
+
+
+                <div class="route-meta">
+
+
+                    <div>
+
+                        <strong>
+                            Vehicle:
+                        </strong>
+
+                        {% if route.vehicle %}
+
+                            {{ route.vehicle.vehicle_number }}
+
+                        {% else %}
+
+                            --
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div>
+
+                        <strong>
+                            Route ID:
+                        </strong>
+
+                        #{{ route.id }}
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+            {% endfor %}
+
+
+        </div>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                This driver is currently not assigned to any route.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         ASSIGNED EMPLOYEES
+    ========================================================= -->
+
+    <section class="section-card">
+
+
+        <div class="section-head">
+
+
+            <div>
+
+                <h3>
+                    Assigned Employees
+                </h3>
+
+                <p>
+                    Employees currently travelling under this driver's routes
+                </p>
+
+            </div>
+
+
+            <span class="status-pill blue">
+
+                {{ assigned_employee_count }}
+                Employee{{ assigned_employee_count|pluralize }}
+
+            </span>
+
+
+        </div>
+
+
+
+        {% if assigned_stops %}
+
+
+        <div class="table-wrap">
+
+
+            <table class="profile-table">
+
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Employee
+                        </th>
+
+                        <th>
+                            Employee ID
+                        </th>
+
+                        <th>
+                            Route
+                        </th>
+
+                        <th>
+                            Stop Order
+                        </th>
+
+                        <th>
+                            Pickup Location
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    {% for stop in assigned_stops %}
+
+
+                    <tr>
+
+
+                        <td>
+
+
+                            <div class="employee-cell">
+
+
+                                <div class="employee-avatar">
+
+                                    {{ stop.employee.username|slice:":1"|upper }}
+
+                                </div>
+
+
+                                <strong>
+
+                                    {{ stop.employee.username }}
+
+                                </strong>
+
+
+                            </div>
+
+
+                        </td>
+
+
+                        <td>
+
+                            {% if stop.employee.employee_id %}
+
+                                {{ stop.employee.employee_id }}
+
+                            {% else %}
+
+                                #{{ stop.employee.id }}
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {{ stop.route.name|default:"--" }}
+
+                        </td>
+
+
+                        <td>
+
+                            {{ stop.stop_order|default:"--" }}
+
+                        </td>
+
+
+                        <td>
+
+                            {{ stop.employee.pickup_location|default:"--" }}
+
+                        </td>
+
+
+                        <td>
+
+
+                            {% if stop.employee.is_active %}
+
+                                <span class="status-pill green">
+
+                                    Active
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="status-pill red">
+
+                                    Inactive
+
+                                </span>
+
+                            {% endif %}
+
+
+                        </td>
+
+
+                    </tr>
+
+
+                    {% endfor %}
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                No employees are assigned under this driver.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         TODAY TRIPS
+    ========================================================= -->
+
+    <section class="section-card">
+
+
+        <div class="section-head">
+
+
+            <div>
+
+                <h3>
+                    Today's Trips
+                </h3>
+
+                <p>
+                    Pickup and Drop assignments for today
+                </p>
+
+            </div>
+
+
+            <span class="status-pill blue">
+
+                {{ today_trips|length }}
+                Trip{{ today_trips|length|pluralize }}
+
+            </span>
+
+
+        </div>
+
+
+
+        {% if today_trips %}
+
+
+        <div class="table-wrap">
+
+
+            <table class="profile-table">
+
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Trip
+                        </th>
+
+                        <th>
+                            Employee
+                        </th>
+
+                        <th>
+                            Route
+                        </th>
+
+                        <th>
+                            Vehicle
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    {% for trip in today_trips %}
+
+
+                    <tr>
+
+
+                        <td>
+
+                            {{ trip.trip_type }}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if trip.employee %}
+
+                                {{ trip.employee.username }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if trip.route_run and trip.route_run.route_template %}
+
+                                {{ trip.route_run.route_template.name }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if trip.vehicle %}
+
+                                {{ trip.vehicle.vehicle_number }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+
+                            {% if trip.status == "COMPLETED" %}
+
+                                <span class="status-pill green">
+
+                                    Completed
+
+                                </span>
+
+
+                            {% elif trip.status == "CANCELLED" %}
+
+                                <span class="status-pill red">
+
+                                    Cancelled
+
+                                </span>
+
+
+                            {% elif trip.status == "STARTED" %}
+
+                                <span class="status-pill blue">
+
+                                    Started
+
+                                </span>
+
+
+                            {% else %}
+
+                                <span class="status-pill slate">
+
+                                    {{ trip.status }}
+
+                                </span>
+
+                            {% endif %}
+
+
+                        </td>
+
+
+                    </tr>
+
+
+                    {% endfor %}
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                No trips assigned to this driver today.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         RECENT TRIP HISTORY
+    ========================================================= -->
+
+    <section class="section-card">
+
+
+        <div class="section-head">
+
+
+            <div>
+
+                <h3>
+                    Recent Trip History
+                </h3>
+
+                <p>
+                    Latest trips handled by this driver
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+
+        {% if recent_trips %}
+
+
+        <div class="table-wrap">
+
+
+            <table class="profile-table">
+
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Trip
+                        </th>
+
+                        <th>
+                            Employee
+                        </th>
+
+                        <th>
+                            Route
+                        </th>
+
+                        <th>
+                            Vehicle
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    {% for trip in recent_trips %}
+
+
+                    <tr>
+
+
+                        <td>
+
+                            {{ trip.trip_date|date:"d M Y" }}
+
+                        </td>
+
+
+                        <td>
+
+                            {{ trip.trip_type }}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if trip.employee %}
+
+                                {{ trip.employee.username }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if trip.route_run and trip.route_run.route_template %}
+
+                                {{ trip.route_run.route_template.name }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if trip.vehicle %}
+
+                                {{ trip.vehicle.vehicle_number }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {{ trip.status }}
+
+                        </td>
+
+
+                    </tr>
+
+
+                    {% endfor %}
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                No trip history found for this driver.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+
+    <!-- ========================================================
+         DRIVER REVIEWS
+    ========================================================= -->
+
+    <section class="section-card">
+
+
+        <div class="section-head">
+
+
+            <div>
+
+                <h3>
+                    Driver Reviews
+                </h3>
+
+                <p>
+                    Latest employee ratings and feedback
+                </p>
+
+            </div>
+
+
+            {% if review_count %}
+
+                <span class="status-pill green">
+
+                    ⭐ {{ average_rating }} / 5
+
+                </span>
+
+            {% endif %}
+
+
+        </div>
+
+
+
+        {% if reviews %}
+
+
+        <div class="table-wrap">
+
+
+            <table class="profile-table">
+
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Date
+                        </th>
+
+                        <th>
+                            Employee
+                        </th>
+
+                        <th>
+                            Trip
+                        </th>
+
+                        <th>
+                            Rating
+                        </th>
+
+                        <th>
+                            Feedback
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    {% for review in reviews %}
+
+
+                    <tr>
+
+
+                        <td>
+
+                            {{ review.created_at|date:"d M Y" }}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if review.trip.employee %}
+
+                                {{ review.trip.employee.username }}
+
+                            {% else %}
+
+                                --
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {{ review.trip.trip_type }}
+
+                        </td>
+
+
+                        <td>
+
+
+                            <span class="stars">
+
+
+                                {% if review.rating == 5 %}
+
+                                    ★★★★★
+
+                                {% elif review.rating == 4 %}
+
+                                    ★★★★☆
+
+                                {% elif review.rating == 3 %}
+
+                                    ★★★☆☆
+
+                                {% elif review.rating == 2 %}
+
+                                    ★★☆☆☆
+
+                                {% else %}
+
+                                    ★☆☆☆☆
+
+                                {% endif %}
+
+
+                            </span>
+
+
+                        </td>
+
+
+                        <td class="feedback">
+
+                            {{ review.comment|default:"No feedback comment" }}
+
+                        </td>
+
+
+                    </tr>
+
+
+                    {% endfor %}
+
+
+                </tbody>
+
+
+            </table>
+
+
+        </div>
+
+
+        {% else %}
+
+
+            <div class="empty-state">
+
+                No reviews have been submitted for this driver.
+
+            </div>
+
+
+        {% endif %}
+
+
+    </section>
+
+
+</div>
+
+
+
+<!-- ============================================================
+     DELETE DRIVER MODAL
+============================================================= -->
+
+<div
+    id="deleteDriverModal"
+    class="delete-modal-overlay"
+    onclick="handleDeleteModalOutside(event)"
+>
+
+
+    <div
+        class="delete-modal"
+        onclick="event.stopPropagation()"
+    >
+
+
+        <div class="delete-icon">
+
+            ⚠
+
+        </div>
+
+
+        <h2>
+
+            Permanently Delete Driver?
+
+        </h2>
+
+
+        <p class="delete-description">
+
+            You are about to permanently delete
+
+            <strong>
+
+                {{ driver.username }}
+
+            </strong>.
+
+        </p>
+
+
+
+        <div class="delete-warning">
+
+
+            <strong>
+
+                This will:
+
+            </strong>
+
+
+            <br>
+
+
+            • Cancel all active and upcoming cab assignments
+
+
+            <br>
+
+
+            • Remove the driver from assigned routes
+
+
+            <br>
+
+
+            • Remove employees from the driver's route assignments
+
+
+            <br>
+
+
+            • Move affected employees to
+            <strong>
+                Unassigned Employees
+            </strong>
+
+
+            <br>
+
+
+            • Permanently delete the driver account
+
+
+            <br><br>
+
+
+            <strong>
+
+                This action cannot be undone.
+
+            </strong>
+
+
+        </div>
+
+
+
+        <form
+            method="post"
+            action="{% url 'admin_web:delete_driver_account' driver.id %}"
+        >
+
+
+            {% csrf_token %}
+
+
+            <div class="delete-actions">
+
+
+                <button
+                    type="button"
+                    class="modal-btn modal-cancel"
+                    onclick="closeDeleteDriverModal()"
+                >
+
+                    Cancel
+
+                </button>
+
+
+                <button
+                    type="submit"
+                    class="modal-btn modal-delete"
+                >
+
+                    Delete Permanently
+
+                </button>
+
+
+            </div>
+
+
+        </form>
+
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+function openDeleteDriverModal(){
+
+    document.getElementById(
+        "deleteDriverModal"
+    ).style.display = "flex";
+
+    document.body.style.overflow =
+        "hidden";
+
+}
+
+
+
+function closeDeleteDriverModal(){
+
+    document.getElementById(
+        "deleteDriverModal"
+    ).style.display = "none";
+
+    document.body.style.overflow =
+        "";
+
+}
+
+
+
+function handleDeleteModalOutside(event){
+
+    if(
+        event.target.id ===
+        "deleteDriverModal"
+    ){
+
+        closeDeleteDriverModal();
+
+    }
+
+}
+
+
+
+document.addEventListener(
+    "keydown",
+    function(event){
+
+        if(event.key === "Escape"){
+
+            closeDeleteDriverModal();
+
+        }
+
+    }
+);
+
+</script>
+
+
+{% endblock %}
