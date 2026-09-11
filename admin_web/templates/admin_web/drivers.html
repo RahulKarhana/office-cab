@@ -8,65 +8,354 @@
 {% block content %}
 
 <style>
-.driver-search-form{margin-top:20px;}
+
+/* ============================================================
+   SEARCH
+============================================================ */
+
+.driver-search-form{
+    margin-top:20px;
+}
+
 .driver-search-box{
-    display:flex;align-items:center;gap:12px;background:#fff;
-    border:1px solid #e5e7eb;border-radius:18px;padding:10px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:18px;
+    padding:10px 14px;
     box-shadow:0 10px 30px rgba(15,23,42,.06);
 }
-.search-icon{font-size:18px;}
+
+.search-icon{
+    font-size:18px;
+}
+
 .driver-search-box input{
-    flex:1;border:none;outline:none;font-size:15px;background:transparent;
-    font-weight:700;color:#111827;
+    flex:1;
+    border:none;
+    outline:none;
+    font-size:15px;
+    background:transparent;
+    font-weight:700;
+    color:#111827;
 }
+
 .driver-search-btn{
-    border:none;padding:12px 24px;border-radius:12px;font-weight:900;
-    cursor:pointer;color:white;background:linear-gradient(135deg,#2563eb,#3b82f6);
+    border:none;
+    padding:12px 24px;
+    border-radius:12px;
+    font-weight:900;
+    cursor:pointer;
+    color:white;
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
 }
-.driver-profile{display:flex;align-items:center;gap:12px;}
+
+
+/* ============================================================
+   DRIVER
+============================================================ */
+
+.driver-profile{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
 .driver-avatar{
-    width:42px;height:42px;border-radius:50%;
+    width:42px;
+    height:42px;
+    border-radius:50%;
     background:linear-gradient(135deg,#2563eb,#60a5fa);
-    color:white;display:flex;align-items:center;justify-content:center;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     font-weight:950;
 }
-.driver-sub{font-size:12px;color:#64748b;font-weight:800;margin-top:3px;}
+
+.driver-sub{
+    font-size:12px;
+    color:#64748b;
+    font-weight:800;
+    margin-top:3px;
+}
+
+
+/* ============================================================
+   VEHICLE
+============================================================ */
+
 .vehicle-badge{
-    display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;
-    padding:8px 12px;border-radius:999px;font-weight:900;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    padding:8px 12px;
+    border-radius:999px;
+    font-weight:900;
 }
+
 .vehicle-missing{
-    display:inline-flex;background:#fee2e2;color:#991b1b;
-    padding:8px 12px;border-radius:999px;font-weight:900;
+    display:inline-flex;
+    background:#fee2e2;
+    color:#991b1b;
+    padding:8px 12px;
+    border-radius:999px;
+    font-weight:900;
 }
+
+
+/* ============================================================
+   DRIVER STATUS
+============================================================ */
+
 .driver-status-card{
-    grid-column:1/-1;background:linear-gradient(135deg,#ffffff,#f8fbff);
-    border:1px solid #dbeafe;border-radius:26px;padding:24px;
-    display:flex;align-items:center;gap:18px;
+    grid-column:1/-1;
+    background:linear-gradient(135deg,#ffffff,#f8fbff);
+    border:1px solid #dbeafe;
+    border-radius:26px;
+    padding:24px;
+    display:flex;
+    align-items:center;
+    gap:18px;
     box-shadow:0 18px 40px rgba(15,23,42,.07);
 }
+
 .driver-status-icon{
-    width:64px;height:64px;border-radius:22px;display:grid;place-items:center;
-    font-size:30px;background:#eff6ff;color:#2563eb;
+    width:64px;
+    height:64px;
+    border-radius:22px;
+    display:grid;
+    place-items:center;
+    font-size:30px;
+    background:#eff6ff;
+    color:#2563eb;
 }
-.driver-status-card.warning .driver-status-icon{background:#fff7ed;color:#ea580c;}
-.driver-status-card h3{margin:0;font-size:28px;font-weight:950;color:#14213d;}
-.driver-status-card p{margin:5px 0 0;color:#64748b;font-weight:850;}
-.admin-table tbody tr:hover{background:#f8fafc;}
+
+.driver-status-card.warning .driver-status-icon{
+    background:#fff7ed;
+    color:#ea580c;
+}
+
+.driver-status-card h3{
+    margin:0;
+    font-size:28px;
+    font-weight:950;
+    color:#14213d;
+}
+
+.driver-status-card p{
+    margin:5px 0 0;
+    color:#64748b;
+    font-weight:850;
+}
+
+.admin-table tbody tr:hover{
+    background:#f8fafc;
+}
+
+
+/* ============================================================
+   DELETE ACCOUNT BUTTON
+============================================================ */
+
+.delete-account-btn{
+    border:none;
+    background:#fee2e2;
+    color:#b91c1c;
+    padding:9px 13px;
+    border-radius:11px;
+    font-size:11px;
+    font-weight:900;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:.2s ease;
+}
+
+.delete-account-btn:hover{
+    background:#dc2626;
+    color:#fff;
+    transform:translateY(-1px);
+}
+
+
+/* ============================================================
+   DELETE DRIVER MODAL
+============================================================ */
+
+.delete-modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.70);
+    z-index:99999;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    backdrop-filter:blur(4px);
+}
+
+.delete-modal{
+    width:100%;
+    max-width:510px;
+    background:#fff;
+    border-radius:26px;
+    padding:28px;
+    box-shadow:0 30px 90px rgba(0,0,0,.35);
+    animation:deleteModalOpen .18s ease-out;
+}
+
+@keyframes deleteModalOpen{
+    from{
+        opacity:0;
+        transform:translateY(12px) scale(.98);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0) scale(1);
+    }
+}
+
+.delete-modal-icon{
+    width:68px;
+    height:68px;
+    margin:0 auto 16px;
+    border-radius:50%;
+    background:#fee2e2;
+    color:#dc2626;
+    display:grid;
+    place-items:center;
+    font-size:31px;
+}
+
+.delete-modal h2{
+    margin:0;
+    text-align:center;
+    color:#111827;
+    font-size:23px;
+    font-weight:950;
+}
+
+.delete-modal-description{
+    text-align:center;
+    color:#64748b;
+    font-size:14px;
+    font-weight:700;
+    line-height:1.6;
+    margin:12px 0 0;
+}
+
+.delete-driver-name{
+    color:#111827;
+    font-weight:950;
+}
+
+.delete-warning-box{
+    margin:20px 0;
+    background:#fef2f2;
+    border:1px solid #fecaca;
+    border-radius:17px;
+    padding:17px;
+    color:#991b1b;
+    font-size:13px;
+    line-height:1.8;
+}
+
+.delete-warning-title{
+    display:block;
+    font-size:13px;
+    font-weight:950;
+    margin-bottom:5px;
+}
+
+.delete-final-warning{
+    display:block;
+    margin-top:9px;
+    font-weight:950;
+}
+
+.delete-modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+    margin-top:4px;
+}
+
+.delete-modal-btn{
+    border:none;
+    padding:12px 18px;
+    border-radius:12px;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+    font-family:inherit;
+}
+
+.delete-modal-cancel{
+    background:#e5e7eb;
+    color:#111827;
+}
+
+.delete-modal-cancel:hover{
+    background:#d1d5db;
+}
+
+.delete-modal-confirm{
+    background:#dc2626;
+    color:#fff;
+}
+
+.delete-modal-confirm:hover{
+    background:#b91c1c;
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
 @media(max-width:700px){
-    .driver-search-box{flex-direction:column;align-items:stretch;}
-    .driver-search-btn{width:100%;}
+
+    .driver-search-box{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .driver-search-btn{
+        width:100%;
+    }
+
+    .delete-modal-actions{
+        flex-direction:column-reverse;
+    }
+
+    .delete-modal-btn{
+        width:100%;
+    }
+
 }
+
 </style>
+
 
 <div class="dashboard-grid">
 
+
+    <!-- ========================================================
+         DRIVER STATISTICS
+    ========================================================= -->
+
     <section class="stats-row">
+
         <div class="mini-stat-card">
             <p>Total Drivers</p>
             <h3>{{ total_drivers }}</h3>
             <span>All registered drivers</span>
         </div>
+
 
         <div class="mini-stat-card">
             <p>Active Drivers</p>
@@ -74,44 +363,105 @@
             <span>Currently active accounts</span>
         </div>
 
+
         <div class="mini-stat-card">
             <p>Assigned Vehicles</p>
             <h3>{{ assigned_vehicles }}</h3>
             <span>Vehicles linked to drivers</span>
         </div>
 
+
         <div class="mini-stat-card">
             <p>Total Seats</p>
             <h3>{{ total_seats }}</h3>
             <span>Total capacity of all cabs</span>
         </div>
+
     </section>
 
-    <section class="driver-status-card {% if drivers_without_vehicle > 0 %}warning{% else %}good{% endif %}">
-        <div class="driver-status-icon">🚖</div>
+
+    <!-- ========================================================
+         VEHICLE STATUS
+    ========================================================= -->
+
+    <section
+        class="driver-status-card
+        {% if drivers_without_vehicle > 0 %}
+            warning
+        {% else %}
+            good
+        {% endif %}"
+    >
+
+        <div class="driver-status-icon">
+            🚖
+        </div>
+
         <div>
-            <h3>Driver Vehicle Status</h3>
+
+            <h3>
+                Driver Vehicle Status
+            </h3>
+
             <p>
+
                 {% if drivers_without_vehicle > 0 %}
-                    {{ drivers_without_vehicle }} driver{{ drivers_without_vehicle|pluralize }} without assigned vehicle.
+
+                    {{ drivers_without_vehicle }}
+                    driver{{ drivers_without_vehicle|pluralize }}
+                    without assigned vehicle.
+
                 {% else %}
+
                     All drivers have assigned vehicles.
+
                 {% endif %}
+
             </p>
+
         </div>
+
     </section>
 
-    <section class="panel-card" style="grid-column: 1 / -1;">
+
+    <!-- ========================================================
+         DRIVER DIRECTORY
+    ========================================================= -->
+
+    <section
+        class="panel-card"
+        style="grid-column:1 / -1;"
+    >
+
         <div class="panel-head">
+
             <div>
-                <h3>Driver Directory</h3>
-                <p>Search drivers and check assigned cab details</p>
+
+                <h3>
+                    Driver Directory
+                </h3>
+
+                <p>
+                    Search drivers and check assigned cab details
+                </p>
+
             </div>
+
         </div>
 
-        <form method="get" class="driver-search-form">
+
+        <!-- SEARCH -->
+
+        <form
+            method="get"
+            class="driver-search-form"
+        >
+
             <div class="driver-search-box">
-                <span class="search-icon">🔍</span>
+
+                <span class="search-icon">
+                    🔍
+                </span>
 
                 <input
                     type="text"
@@ -120,89 +470,431 @@
                     placeholder="Search driver, phone number, vehicle number or model..."
                 >
 
-                <button type="submit" class="driver-search-btn">
+                <button
+                    type="submit"
+                    class="driver-search-btn"
+                >
                     Search Driver
                 </button>
+
             </div>
+
         </form>
 
-        <div class="table-wrap" style="margin-top: 18px;">
+
+        <!-- DRIVER TABLE -->
+
+        <div
+            class="table-wrap"
+            style="margin-top:18px;"
+        >
+
             <table class="admin-table">
+
                 <thead>
+
                     <tr>
+
                         <th>ID</th>
+
                         <th>Driver</th>
+
                         <th>Phone</th>
+
                         <th>Address</th>
+
                         <th>Vehicle Number</th>
+
                         <th>Vehicle Model</th>
+
                         <th>Seats</th>
+
                         <th>Status</th>
+
+                        <th>Action</th>
+
                     </tr>
+
                 </thead>
 
+
                 <tbody>
+
                     {% for driver in drivers %}
+
                     <tr>
-                        <td>{{ driver.id }}</td>
+
+                        <!-- ID -->
 
                         <td>
+                            {{ driver.id }}
+                        </td>
+
+
+                        <!-- DRIVER -->
+
+                        <td>
+
                             <div class="driver-profile">
+
                                 <div class="driver-avatar">
+
                                     {{ driver.username|first|upper }}
+
                                 </div>
+
                                 <div>
-                                    <strong>{{ driver.username }}</strong>
-                                    <div class="driver-sub">Driver ID #{{ driver.id }}</div>
+
+                                    <strong>
+                                        {{ driver.username }}
+                                    </strong>
+
+                                    <div class="driver-sub">
+                                        Driver ID #{{ driver.id }}
+                                    </div>
+
                                 </div>
+
                             </div>
+
                         </td>
 
-                        <td>{{ driver.phone_number|default:"--" }}</td>
-                        <td>{{ driver.address|default:"--" }}</td>
+
+                        <!-- PHONE -->
 
                         <td>
+                            {{ driver.phone_number|default:"--" }}
+                        </td>
+
+
+                        <!-- ADDRESS -->
+
+                        <td>
+                            {{ driver.address|default:"--" }}
+                        </td>
+
+
+                        <!-- VEHICLE NUMBER -->
+
+                        <td>
+
                             {% if driver.vehicle %}
-                                <span class="vehicle-badge">🚖 {{ driver.vehicle.vehicle_number }}</span>
+
+                                <span class="vehicle-badge">
+
+                                    🚖
+                                    {{ driver.vehicle.vehicle_number }}
+
+                                </span>
+
                             {% else %}
-                                <span class="vehicle-missing">No Vehicle</span>
+
+                                <span class="vehicle-missing">
+                                    No Vehicle
+                                </span>
+
                             {% endif %}
+
                         </td>
 
+
+                        <!-- VEHICLE MODEL -->
+
                         <td>
+
                             {% if driver.vehicle %}
+
                                 {{ driver.vehicle.vehicle_model|default:"--" }}
+
                             {% else %}
+
                                 --
+
                             {% endif %}
+
                         </td>
 
+
+                        <!-- SEATS -->
+
                         <td>
+
                             {% if driver.vehicle %}
+
                                 {{ driver.vehicle.seat_count|default:"--" }}
+
                             {% else %}
+
                                 --
+
                             {% endif %}
+
                         </td>
 
+
+                        <!-- STATUS -->
+
                         <td>
+
                             {% if driver.is_active %}
-                                <span class="status-pill completed">Active</span>
+
+                                <span class="status-pill completed">
+                                    Active
+                                </span>
+
                             {% else %}
-                                <span class="status-pill warning">Inactive</span>
+
+                                <span class="status-pill warning">
+                                    Inactive
+                                </span>
+
                             {% endif %}
+
                         </td>
+
+
+                        <!-- =================================================
+                             DELETE DRIVER
+                        ================================================== -->
+
+                        <td>
+
+                            <button
+                                type="button"
+                                class="delete-account-btn"
+                                onclick="openDeleteDriverModal(
+                                    '{{ driver.id }}',
+                                    '{{ driver.username|escapejs }}'
+                                )"
+                            >
+                                Delete Account
+                            </button>
+
+                        </td>
+
                     </tr>
+
 
                     {% empty %}
+
                     <tr>
-                        <td colspan="8">No drivers found.</td>
+
+                        <td colspan="9">
+                            No drivers found.
+                        </td>
+
                     </tr>
+
                     {% endfor %}
+
                 </tbody>
+
             </table>
+
         </div>
+
     </section>
 
 </div>
+
+
+
+<!-- ============================================================
+     DELETE DRIVER CONFIRMATION POPUP
+============================================================= -->
+
+<div
+    id="deleteDriverModal"
+    class="delete-modal-overlay"
+    onclick="handleDriverModalOutsideClick(event)"
+>
+
+    <div
+        class="delete-modal"
+        onclick="event.stopPropagation()"
+    >
+
+        <div class="delete-modal-icon">
+            ⚠
+        </div>
+
+
+        <h2>
+            Permanently Delete Driver?
+        </h2>
+
+
+        <p class="delete-modal-description">
+
+            You are about to permanently delete
+
+            <span
+                id="deleteDriverName"
+                class="delete-driver-name"
+            >
+                this driver
+            </span>.
+
+        </p>
+
+
+        <div class="delete-warning-box">
+
+            <span class="delete-warning-title">
+                This will:
+            </span>
+
+            • Cancel the driver's active/upcoming cab assignments
+
+            <br>
+
+            • Remove the driver from assigned routes
+
+            <br>
+
+            • Remove employees from those route assignments
+
+            <br>
+
+            • Move affected employees to
+            <strong>Unassigned Employees</strong>
+
+            <br>
+
+            • Permanently delete the driver account
+
+            <span class="delete-final-warning">
+                This action cannot be undone.
+            </span>
+
+        </div>
+
+
+        <form
+            id="deleteDriverForm"
+            method="post"
+        >
+
+            {% csrf_token %}
+
+
+            <div class="delete-modal-actions">
+
+                <button
+                    type="button"
+                    class="delete-modal-btn delete-modal-cancel"
+                    onclick="closeDeleteDriverModal()"
+                >
+                    Cancel
+                </button>
+
+
+                <button
+                    type="submit"
+                    class="delete-modal-btn delete-modal-confirm"
+                >
+                    Delete Permanently
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<!-- ============================================================
+     JAVASCRIPT
+============================================================= -->
+
+<script>
+
+function openDeleteDriverModal(
+    driverId,
+    driverName
+){
+
+    const modal =
+        document.getElementById(
+            "deleteDriverModal"
+        );
+
+    const driverNameElement =
+        document.getElementById(
+            "deleteDriverName"
+        );
+
+    const deleteForm =
+        document.getElementById(
+            "deleteDriverForm"
+        );
+
+
+    driverNameElement.textContent =
+        driverName;
+
+
+    deleteForm.action =
+        `/admin-web/drivers/${driverId}/delete/`;
+
+
+    modal.style.display =
+        "flex";
+
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+
+
+function closeDeleteDriverModal(){
+
+    const modal =
+        document.getElementById(
+            "deleteDriverModal"
+        );
+
+
+    modal.style.display =
+        "none";
+
+
+    document.body.style.overflow =
+        "";
+
+}
+
+
+
+function handleDriverModalOutsideClick(event){
+
+    if(
+        event.target.id ===
+        "deleteDriverModal"
+    ){
+        closeDeleteDriverModal();
+    }
+
+}
+
+
+
+document.addEventListener(
+    "keydown",
+    function(event){
+
+        if(event.key === "Escape"){
+            closeDeleteDriverModal();
+        }
+
+    }
+);
+
+</script>
+
+
 {% endblock %}

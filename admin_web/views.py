@@ -1028,29 +1028,216 @@ def delete_employee_account(request, employee_id):
 @admin_required
 @require_POST
 @transaction.atomic
+def delete_employee_account(request, employee_id):
+
+    employee = get_object_or_404(
+        User,
+        id=employee_id,
+        role=User.Role.EMPLOYEE,
+    )
+
+    employee_name = employee.username
+
+    # ==========================================================
+    # 1. CANCEL ACTIVE / UPCOMING EMPLOYEE TRIPS
+    # ==========================================================
+
+    employee_trips = Trip.objects.filter(
+        employee=employee,
+    ).exclude(
+        status__in=[
+            "COMPLETED",
+            "CANCELLED",
+        ]
+    )
+
+    cancelled_trip_count = employee_trips.count()
+
+    employee_trips.update(
+        status="CANCELLED",
+    )
+
+    # ==========================================================
+    # 2. REMOVE EMPLOYEE FROM CURRENT ROUTE RUN STOPS
+    # ==========================================================
+    #
+    # This prevents the deleted/resigned employee from remaining
+    # visible in today's pickup/drop execution.
+    # ==========================================================
+
+    RouteRunStop.objects.filter(
+        employee=employee,
+    ).delete()
+
+    # ==========================================================
+    # 3. REMOVE EMPLOYEE FROM PERMANENT ROUTE
+    # ==========================================================
+    #
+    # This is the important part for seat availability.
+    #
+    # Once RouteStop is removed:
+    # driver route occupied seats decrease automatically.
+    # ==========================================================
+
+    removed_route_stops, _ = (
+        RouteStop.objects
+        .filter(employee=employee)
+        .delete()
+    )
+
+    # ==========================================================
+    # 4. DELETE EMPLOYEE ACCOUNT PERMANENTLY
+    # ==========================================================
+
+    employee.delete()
+
+    # ==========================================================
+    # 5. SUCCESS MESSAGE
+    # ==========================================================
+
+    messages.success(
+        request,
+        (
+            f"{employee_name} was permanently deleted. "
+            f"{cancelled_trip_count} active/upcoming trip(s) "
+            f"were cancelled and the route seat is now available."
+        ),
+    )
+
+    return redirect(
+        "admin_web:employees"
+    )
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
 def delete_driver_account(request, driver_id):
+
     driver = get_object_or_404(
         User,
         id=driver_id,
         role=User.Role.DRIVER,
     )
 
-    # Find routes belonging to this driver.
-    # Release all employees assigned under those routes.
-    # Cancel active/upcoming assignments.
-    # Remove/unassign vehicle.
-    # Then permanently delete driver.
+    driver_name = driver.username
+
+    # ==========================================================
+    # 1. FIND ALL PERMANENT ROUTES ASSIGNED TO THIS DRIVER
+    # ==========================================================
+
+    driver_routes = RouteTemplate.objects.filter(
+        driver=driver
+    )
+
+    route_ids = list(
+        driver_routes.values_list(
+            "id",
+            flat=True,
+        )
+    )
+
+    # ==========================================================
+    # 2. FIND EMPLOYEES CURRENTLY UNDER THESE ROUTES
+    # ==========================================================
+
+    affected_employee_ids = list(
+        RouteStop.objects.filter(
+            route_id__in=route_ids
+        )
+        .values_list(
+            "employee_id",
+            flat=True,
+        )
+        .distinct()
+    )
+
+    affected_employee_count = len(
+        affected_employee_ids
+    )
+
+    # ==========================================================
+    # 3. CANCEL DRIVER'S ACTIVE / UPCOMING TRIPS
+    # ==========================================================
+    #
+    # Completed and already cancelled trips are untouched.
+    # ==========================================================
+
+    active_trips = Trip.objects.filter(
+        driver=driver,
+    ).exclude(
+        status__in=[
+            "COMPLETED",
+            "CANCELLED",
+        ]
+    )
+
+    cancelled_trip_count = (
+        active_trips.count()
+    )
+
+    active_trips.update(
+        status="CANCELLED"
+    )
+
+    # ==========================================================
+    # 4. REMOVE EMPLOYEES FROM PERMANENT DRIVER ROUTES
+    # ==========================================================
+    #
+    # Once these RouteStop rows are deleted, those employees
+    # automatically become UNASSIGNED on the employee page.
+    # ==========================================================
+
+    RouteStop.objects.filter(
+        route_id__in=route_ids
+    ).delete()
+
+    # ==========================================================
+    # 5. REMOVE CURRENT / ACTIVE ROUTE RUN STOPS
+    # ==========================================================
+
+    if route_ids:
+
+        RouteRunStop.objects.filter(
+            route_run__route_template_id__in=route_ids
+        ).delete()
+
+    # ==========================================================
+    # 6. CLEAR DRIVER FROM ROUTE TEMPLATES
+    # ==========================================================
+    #
+    # We keep the route template itself.
+    #
+    # Admin can later assign another driver and rebuild the
+    # employee route.
+    # ==========================================================
+
+    driver_routes.update(
+        driver=None
+    )
+
+    # ==========================================================
+    # 7. DELETE DRIVER ACCOUNT PERMANENTLY
+    # ==========================================================
 
     driver.delete()
 
+    # ==========================================================
+    # 8. ADMIN SUCCESS MESSAGE
+    # ==========================================================
+
     messages.success(
         request,
-        "Driver account permanently deleted. "
-        "Employees from the driver's routes are now unassigned.",
+        (
+            f"Driver {driver_name} was permanently deleted. "
+            f"{affected_employee_count} employee(s) are now unassigned. "
+            f"{cancelled_trip_count} active/upcoming trip(s) were cancelled."
+        ),
     )
 
-    return redirect("admin_web:drivers")
-
+    return redirect(
+        "admin_web:drivers"
+    )
 
 # =========================================================
 # REQUEST MANAGEMENT

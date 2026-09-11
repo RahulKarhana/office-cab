@@ -62,20 +62,11 @@ urlpatterns = [
         views.employee_route_search,
         name="employee_route_search",
     ),
+
     path(
         "employees/<int:employee_id>/profile/",
         views.employee_profile_page,
         name="employee_profile",
-    ),
-    path(
-        "reports/route-analytics/",
-        views.route_analytics_page,
-        name="route_analytics",
-    ),
-    path(
-        "employees/<int:employee_id>/assign-route/<int:route_id>/",
-        views.assign_employee_to_route,
-        name="assign_employee_to_route",
     ),
 
     path(
@@ -83,6 +74,19 @@ urlpatterns = [
         views.delete_employee_account,
         name="delete_employee_account",
     ),
+
+    path(
+        "reports/route-analytics/",
+        views.route_analytics_page,
+        name="route_analytics",
+    ),
+
+    path(
+        "employees/<int:employee_id>/assign-route/<int:route_id>/",
+        views.assign_employee_to_route,
+        name="assign_employee_to_route",
+    ),
+  
     
     path("tracking/", views.live_tracking, name="tracking"),
     path(
@@ -158,7 +162,13 @@ urlpatterns = [
         views.reject_driver_account,
         name="reject_driver_account",
     ),
-        
+    
+    path(
+        "drivers/<int:driver_id>/delete/",
+        views.delete_driver_account,
+        name="delete_driver_account",
+    ),   
+
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-route-run/<int:route_run_id>/", views.cancel_route_run_trips, name="cancel_route_run_trips"),
