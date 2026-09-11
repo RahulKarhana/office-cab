@@ -63,6 +63,11 @@ urlpatterns = [
         name="employee_route_search",
     ),
     path(
+        "employees/<int:employee_id>/profile/",
+        views.employee_profile_page,
+        name="employee_profile",
+    ),
+    path(
         "reports/route-analytics/",
         views.route_analytics_page,
         name="route_analytics",
