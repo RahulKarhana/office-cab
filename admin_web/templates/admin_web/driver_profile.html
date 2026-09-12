@@ -781,6 +781,151 @@ Complete driver, vehicle, route, employee, trip and review details
 
 }
 
+
+.driver-route-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:12px;
+}
+.driver-route-btn{
+    min-height:38px;
+    border-radius:11px;
+    padding:0 13px;
+    border:1px solid #ded6cc;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+    transition:.18s ease;
+}
+.driver-route-btn:hover{transform:translateY(-1px);}
+.driver-route-btn.edit{
+    background:#f3eee6;
+    color:#5f4636;
+}
+.driver-route-btn.delete{
+    background:#f8ece9;
+    border-color:#e9c7c1;
+    color:#7f3f39;
+}
+.driver-route-warning{
+    margin-top:12px;
+    padding:11px 12px;
+    border-radius:12px;
+    background:#fbf3e7;
+    border:1px solid #ead5af;
+    color:#7b592c;
+    font-size:11px;
+    line-height:1.5;
+    font-weight:750;
+}
+.resolve-modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:100000;
+    background:rgba(36,33,31,.60);
+    backdrop-filter:blur(4px);
+    padding:18px;
+    align-items:center;
+    justify-content:center;
+}
+.resolve-modal{
+    width:min(560px,100%);
+    background:#fffdf9;
+    border:1px solid #ded6cc;
+    border-radius:22px;
+    box-shadow:0 28px 70px rgba(36,33,31,.24);
+    padding:20px;
+}
+.resolve-modal h3{
+    margin:0;
+    color:#24211f;
+    font-size:20px;
+    font-weight:950;
+}
+.resolve-modal p{
+    color:#746b64;
+    font-size:12px;
+    line-height:1.55;
+}
+.resolve-modal .route-name-box{
+    padding:11px 13px;
+    background:#f8f5ed;
+    border:1px solid #ded6cc;
+    border-radius:13px;
+    color:#5f4636;
+    font-weight:900;
+    margin:12px 0;
+}
+.resolve-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:12px;
+}
+.resolve-field label{
+    font-size:11px;
+    font-weight:900;
+    color:#746b64;
+}
+.resolve-field select{
+    height:44px;
+    border:1px solid #ded6cc;
+    border-radius:12px;
+    background:#fff;
+    padding:0 12px;
+    color:#24211f;
+    font-weight:800;
+}
+.resolve-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:9px;
+    margin-top:18px;
+}
+.resolve-actions button{
+    min-height:40px;
+    border-radius:11px;
+    padding:0 14px;
+    font-size:12px;
+    font-weight:900;
+    cursor:pointer;
+}
+.resolve-cancel{
+    background:#f3eee6;
+    color:#5f4636;
+    border:1px solid #ded6cc;
+}
+.resolve-confirm{
+    background:linear-gradient(135deg,#9b7457,#7e5c43);
+    color:#fff;
+    border:0;
+}
+.resolve-danger{
+    background:#a6584f;
+    color:#fff;
+    border:0;
+}
+.delete-driver-route-list{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    margin-top:12px;
+}
+.delete-driver-route-row{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    align-items:center;
+    background:#f8f5ed;
+    border:1px solid #ded6cc;
+    border-radius:12px;
+    padding:10px 12px;
+}
+.delete-driver-route-row strong{color:#5f4636;font-size:12px;}
+.delete-driver-route-row span{color:#746b64;font-size:10px;}
+
 </style>
 
 {% endblock %}
@@ -1233,6 +1378,29 @@ Complete driver, vehicle, route, employee, trip and review details
 
                 </div>
 
+                <div class="driver-route-actions">
+                    <button
+                        type="button"
+                        class="driver-route-btn edit"
+                        onclick="openReplaceRouteDriverModal(
+                            '{{ route.id }}',
+                            '{{ route.name|escapejs }}'
+                        )"
+                    >
+                        ✏ Edit Route / New Driver
+                    </button>
+
+                    <button
+                        type="button"
+                        class="driver-route-btn delete"
+                        onclick="openArchiveDriverRouteModal(
+                            '{{ route.id }}',
+                            '{{ route.name|escapejs }}'
+                        )"
+                    >
+                        🗑 Delete Route
+                    </button>
+                </div>
 
             </div>
 
@@ -1253,6 +1421,15 @@ Complete driver, vehicle, route, employee, trip and review details
             </div>
 
 
+        {% endif %}
+
+        {% if routes %}
+        <div class="driver-route-warning">
+            Before deactivating this driver, resolve every assigned route:
+            <strong>Edit Route / New Driver</strong> transfers all active/assigned cabs
+            to the replacement driver and cab. <strong>Delete Route</strong> archives
+            the route and automatically cancels its active/assigned trips.
+        </div>
         {% endif %}
 
 
@@ -2044,6 +2221,84 @@ Complete driver, vehicle, route, employee, trip and review details
 
 
 <!-- ============================================================
+     REPLACE ROUTE DRIVER MODAL
+============================================================= -->
+<div id="replaceRouteDriverModal" class="resolve-modal-overlay" onclick="resolveOverlayClose(event,'replaceRouteDriverModal')">
+    <div class="resolve-modal" onclick="event.stopPropagation()">
+        <h3>✏ Assign Route to New Driver</h3>
+        <p>
+            The route employees remain unchanged. All current ASSIGNED/STARTED cab
+            trips under this route will automatically move to the selected driver and
+            that driver's cab.
+        </p>
+
+        <div class="route-name-box" id="replaceRouteDriverName">Selected Route</div>
+
+        <form method="post" id="replaceRouteDriverForm">
+            {% csrf_token %}
+
+            <div class="resolve-field">
+                <label>Select New Driver</label>
+                <select name="new_driver_id" required>
+                    <option value="">Select available driver</option>
+                    {% for replacement_driver in available_replacement_drivers %}
+                    <option value="{{ replacement_driver.id }}">
+                        {{ replacement_driver.username }}
+                        {% if replacement_driver.vehicle %}
+                            — {{ replacement_driver.vehicle.vehicle_number }}
+                        {% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if not available_replacement_drivers %}
+            <div class="driver-route-warning">
+                No free active driver is currently available. Add/free another driver,
+                or use Delete Route to archive and cancel this route.
+            </div>
+            {% endif %}
+
+            <div class="resolve-actions">
+                <button type="button" class="resolve-cancel" onclick="closeResolveModal('replaceRouteDriverModal')">Cancel</button>
+                <button type="submit" class="resolve-confirm" {% if not available_replacement_drivers %}disabled style="opacity:.45;cursor:not-allowed;"{% endif %}>
+                    Transfer Route & Cabs
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- ============================================================
+     ARCHIVE DRIVER ROUTE MODAL
+============================================================= -->
+<div id="archiveDriverRouteModal" class="resolve-modal-overlay" onclick="resolveOverlayClose(event,'archiveDriverRouteModal')">
+    <div class="resolve-modal" onclick="event.stopPropagation()">
+        <h3>🗑 Delete Route from Active System?</h3>
+        <p>
+            This is a safe archive action. The route will disappear from Manage Routes.
+            Any current ASSIGNED/STARTED cab trips for this route will be automatically cancelled.
+        </p>
+
+        <div class="route-name-box" id="archiveDriverRouteName">Selected Route</div>
+
+        <div class="driver-route-warning">
+            Historical Trip, RouteRun, RouteRunStop, chat and report data will not be deleted.
+        </div>
+
+        <form method="post" id="archiveDriverRouteForm">
+            {% csrf_token %}
+            <div class="resolve-actions">
+                <button type="button" class="resolve-cancel" onclick="closeResolveModal('archiveDriverRouteModal')">Cancel</button>
+                <button type="submit" class="resolve-danger">Archive Route & Cancel Cabs</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- ============================================================
      DELETE DRIVER MODAL
 ============================================================= -->
 
@@ -2069,86 +2324,31 @@ Complete driver, vehicle, route, employee, trip and review details
 
         <h2>
 
-            Remove Driver from Active System?
+            Deactivate Driver?
 
         </h2>
 
 
         <p class="delete-description">
-
-            You are about to deactivate
-
-            <strong>
-
-                {{ driver.username }}
-
-            </strong>.
-
+            You are preparing to deactivate
+            <strong>{{ driver.username }}</strong>.
         </p>
 
-
-
         <div class="delete-warning">
+            <strong>Required first:</strong><br><br>
 
-
-            <strong>
-
-                This will:
-
-            </strong>
-
-
-            <br>
-
-
-            • Cancel all active and upcoming cab assignments
-
-
-            <br>
-
-
-            • Archive the driver’s active saved routes
-
-
-            <br>
-
-
-            • Release those route assignments from active operations
-
-
-            <br>
-
-
-            • Move affected employees to
-            <strong>
-                Unassigned Employees
-            </strong>
-
-
-            <br>
-
-
-            • Disable the driver login/account
-
-
-            <br>
-
-
-            • Keep all historical trip/report data
-
+            {% if routes %}
+                Resolve all active saved routes before the driver can be deactivated.
+                Use <strong>Edit Route / New Driver</strong> or
+                <strong>Delete Route</strong> in the Assigned Routes section.
+            {% else %}
+                All saved routes are resolved. You can now deactivate this driver.
+            {% endif %}
 
             <br><br>
-
-
-            <strong>
-
-                Historical trips, route runs, chats and reports will be preserved.
-
-            </strong>
-
-
+            Historical trips, RouteRuns, employee stops, chats and reports
+            will remain preserved.
         </div>
-
 
 
         <form
@@ -2177,10 +2377,14 @@ Complete driver, vehicle, route, employee, trip and review details
                 <button
                     type="submit"
                     class="modal-btn modal-delete"
+                    {% if routes %}disabled title="Resolve assigned routes first"{% endif %}
+                    style="{% if routes %}opacity:.45;cursor:not-allowed;{% endif %}"
                 >
-
-                    Deactivate Driver
-
+                    {% if routes %}
+                        Resolve Routes First
+                    {% else %}
+                        Deactivate Driver
+                    {% endif %}
                 </button>
 
 
@@ -2198,6 +2402,43 @@ Complete driver, vehicle, route, employee, trip and review details
 
 
 <script>
+
+function openReplaceRouteDriverModal(routeId, routeName){
+    const modal = document.getElementById("replaceRouteDriverModal");
+    const form = document.getElementById("replaceRouteDriverForm");
+    const label = document.getElementById("replaceRouteDriverName");
+
+    label.textContent = routeName || ("Route #" + routeId);
+    form.action = `/admin-web/drivers/{{ driver.id }}/routes/${routeId}/replace-driver/`;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+}
+
+function openArchiveDriverRouteModal(routeId, routeName){
+    const modal = document.getElementById("archiveDriverRouteModal");
+    const form = document.getElementById("archiveDriverRouteForm");
+    const label = document.getElementById("archiveDriverRouteName");
+
+    label.textContent = routeName || ("Route #" + routeId);
+    form.action = `/admin-web/drivers/{{ driver.id }}/routes/${routeId}/archive/`;
+
+    modal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+}
+
+function closeResolveModal(modalId){
+    const modal = document.getElementById(modalId);
+    if(modal) modal.style.display = "none";
+    document.body.style.overflow = "";
+}
+
+function resolveOverlayClose(event, modalId){
+    if(event.target && event.target.id === modalId){
+        closeResolveModal(modalId);
+    }
+}
+
 
 function openDeleteDriverModal(){
 
@@ -2247,6 +2488,8 @@ document.addEventListener(
         if(event.key === "Escape"){
 
             closeDeleteDriverModal();
+            closeResolveModal("replaceRouteDriverModal");
+            closeResolveModal("archiveDriverRouteModal");
 
         }
 

@@ -1207,7 +1207,10 @@ def driver_profile_page(request, driver_id):
 
     assigned_stops = (
         RouteStop.objects
-        .filter(route__driver=driver)
+        .filter(
+            route__driver=driver,
+            route__is_active=True,
+        )
         .select_related(
             "employee",
             "route",
@@ -1319,6 +1322,31 @@ def driver_profile_page(request, driver_id):
 
 
     # ==========================================================
+    # AVAILABLE REPLACEMENT DRIVERS
+    # ==========================================================
+    # CabMate currently allows one active saved route per driver.
+    # Only active drivers who are not already attached to another
+    # active route are offered in the replacement popup.
+    used_driver_ids = set(
+        RouteTemplate.objects.filter(
+            is_active=True,
+            driver__isnull=False,
+        ).values_list("driver_id", flat=True)
+    )
+
+    available_replacement_drivers = (
+        User.objects
+        .filter(
+            role=User.Role.DRIVER,
+            is_active=True,
+        )
+        .exclude(id=driver.id)
+        .exclude(id__in=used_driver_ids)
+        .select_related("vehicle")
+        .order_by("username")
+    )
+
+    # ==========================================================
     # RENDER
     # ==========================================================
 
@@ -1346,6 +1374,7 @@ def driver_profile_page(request, driver_id):
         "review_count": review_count,
 
         "average_rating": average_rating,
+        "available_replacement_drivers": available_replacement_drivers,
     }
 
 
@@ -1359,12 +1388,194 @@ def driver_profile_page(request, driver_id):
 @admin_required
 @require_POST
 @transaction.atomic
+def replace_driver_route(request, driver_id, route_id):
+    """
+    Resolve one active route before deactivating a driver.
+
+    The saved route and its employees remain unchanged.
+    All non-completed RouteRuns and ASSIGNED/STARTED trips for this
+    route are transferred to the replacement driver + replacement cab.
+    Completed/cancelled historical trips are NOT rewritten.
+    """
+    old_driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+        is_active=True,
+    )
+
+    route = get_object_or_404(
+        RouteTemplate,
+        id=route_id,
+        driver=old_driver,
+        is_active=True,
+    )
+
+    new_driver_id = request.POST.get("new_driver_id", "").strip()
+
+    if not new_driver_id.isdigit():
+        messages.error(request, "Please select a replacement driver.")
+        return redirect("admin_web:driver_profile", driver_id=old_driver.id)
+
+    new_driver = get_object_or_404(
+        User,
+        id=int(new_driver_id),
+        role=User.Role.DRIVER,
+        is_active=True,
+    )
+
+    if new_driver.id == old_driver.id:
+        messages.error(request, "Please select a different driver.")
+        return redirect("admin_web:driver_profile", driver_id=old_driver.id)
+
+    # Existing project rule: one active saved route per driver.
+    if RouteTemplate.objects.filter(
+        driver=new_driver,
+        is_active=True,
+    ).exclude(id=route.id).exists():
+        messages.error(
+            request,
+            f"{new_driver.username} is already assigned to another active saved route.",
+        )
+        return redirect("admin_web:driver_profile", driver_id=old_driver.id)
+
+    try:
+        new_vehicle = new_driver.vehicle
+    except Exception:
+        messages.error(
+            request,
+            f"{new_driver.username} does not have a vehicle assigned.",
+        )
+        return redirect("admin_web:driver_profile", driver_id=old_driver.id)
+
+    old_driver_name = old_driver.username
+    route_name = route.name
+
+    # Update saved route for future assignments.
+    route.driver = new_driver
+    route.vehicle = new_vehicle
+    route.save(update_fields=["driver", "vehicle"])
+
+    # Transfer only current/future route-runs.
+    active_route_runs = RouteRun.objects.filter(
+        route_template=route,
+        completed_at__isnull=True,
+    )
+
+    route_run_ids = list(active_route_runs.values_list("id", flat=True))
+
+    active_route_runs.update(
+        driver=new_driver,
+        vehicle=new_vehicle,
+    )
+
+    transferred_trip_count = Trip.objects.filter(
+        route_run_id__in=route_run_ids,
+        status__in=[
+            Trip.STATUS_ASSIGNED,
+            Trip.STATUS_STARTED,
+        ],
+    ).update(
+        driver=new_driver,
+        vehicle=new_vehicle,
+    )
+
+    messages.success(
+        request,
+        (
+            f'Route "{route_name}" moved from {old_driver_name} to '
+            f'{new_driver.username}. {transferred_trip_count} active/assigned '
+            "trip(s) were automatically reassigned to the new driver and cab."
+        ),
+    )
+
+    return redirect("admin_web:driver_profile", driver_id=old_driver.id)
+
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
+def archive_driver_route(request, driver_id, route_id):
+    """
+    Resolve one active route by archiving it.
+
+    Active/assigned trips are cancelled, but all Trip / RouteRun /
+    RouteRunStop / chat / report rows are kept for history.
+    """
+    driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+        is_active=True,
+    )
+
+    route = get_object_or_404(
+        RouteTemplate,
+        id=route_id,
+        driver=driver,
+        is_active=True,
+    )
+
+    route_name = route.name
+
+    trips_to_cancel = Trip.objects.filter(
+        route_run__route_template=route,
+        status__in=[
+            Trip.STATUS_ASSIGNED,
+            Trip.STATUS_STARTED,
+        ],
+    ).select_related("employee")
+
+    cancelled_count = 0
+
+    for trip in trips_to_cancel:
+        trip.status = Trip.STATUS_CANCELLED
+        trip.save(update_fields=["status"])
+
+        # Keep a cancellation audit record when one does not already exist.
+        TripCancellation.objects.get_or_create(
+            trip=trip,
+            defaults={
+                "cancelled_by": request.user,
+                "reason": (
+                    f'Route "{route_name}" archived while deactivating '
+                    f"driver {driver.username}."
+                ),
+                "declaration_accepted": False,
+                "declaration_text": "",
+                "cancelled_by_role": getattr(request.user, "role", "ADMIN"),
+            },
+        )
+
+        cancelled_count += 1
+
+    route.archive()
+
+    messages.success(
+        request,
+        (
+            f'Route "{route_name}" archived. {cancelled_count} active/assigned '
+            "trip(s) were automatically cancelled. Historical data was preserved."
+        ),
+    )
+
+    return redirect("admin_web:driver_profile", driver_id=driver.id)
+
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
 def delete_driver_account(request, driver_id):
     """
-    Soft-delete driver account and archive their current saved routes.
+    Final driver deactivation.
 
-    Historical RouteRun, RouteRunStop, Trip, chat, speed and report data
-    remain attached to the inactive driver account.
+    Admin must first resolve every active saved route:
+      - Reassign route to another driver, OR
+      - Archive route (which cancels active/assigned trips).
+
+    Driver row is kept for historical reports.
     """
     driver = get_object_or_404(
         User,
@@ -1375,62 +1586,61 @@ def delete_driver_account(request, driver_id):
 
     driver_name = driver.username
 
-    # Do not deactivate a driver while a route is actively running.
-    if Trip.objects.filter(
-        driver=driver,
-        status=Trip.STATUS_STARTED,
-    ).exists():
-        messages.error(
-            request,
-            (
-                f"Driver {driver_name} has a started trip. "
-                "Complete or cancel the running trip before deactivating the driver."
-            ),
-        )
-        return redirect("admin_web:drivers")
-
-    active_routes = RouteTemplate.objects.filter(
+    unresolved_routes = RouteTemplate.objects.filter(
         driver=driver,
         is_active=True,
     )
-    archived_route_count = active_routes.count()
 
-    affected_employee_count = (
-        RouteStop.objects
-        .filter(route__in=active_routes)
-        .values("employee_id")
-        .distinct()
-        .count()
-    )
+    if unresolved_routes.exists():
+        route_names = ", ".join(
+            unresolved_routes.values_list("name", flat=True)
+        )
+        messages.error(
+            request,
+            (
+                "Please resolve the driver's active route(s) first: "
+                f"{route_names}. Use Edit Route to assign a new driver "
+                "or Delete Route to archive/cancel the route."
+            ),
+        )
+        return redirect("admin_web:driver_profile", driver_id=driver.id)
 
-    # Cancel assigned/future trips but keep all trip rows.
+    # Any direct/orphan active trips not linked to a still-active route
+    # are cancelled, never deleted.
     active_trips = Trip.objects.filter(
         driver=driver,
-        status=Trip.STATUS_ASSIGNED,
+        status__in=[
+            Trip.STATUS_ASSIGNED,
+            Trip.STATUS_STARTED,
+        ],
     )
 
-    cancelled_trip_count = active_trips.count()
-    active_trips.update(status=Trip.STATUS_CANCELLED)
+    cancelled_count = 0
+    for trip in active_trips:
+        trip.status = Trip.STATUS_CANCELLED
+        trip.save(update_fields=["status"])
 
-    # Archive current saved routes; do not delete their stops.
-    now = timezone.now()
-    active_routes.update(
-        is_active=False,
-        archived_at=now,
-    )
+        TripCancellation.objects.get_or_create(
+            trip=trip,
+            defaults={
+                "cancelled_by": request.user,
+                "reason": f"Driver {driver_name} deactivated by admin.",
+                "declaration_accepted": False,
+                "declaration_text": "",
+                "cancelled_by_role": getattr(request.user, "role", "ADMIN"),
+            },
+        )
+        cancelled_count += 1
 
-    # Soft delete the login account.
     driver.is_active = False
     driver.save(update_fields=["is_active"])
 
     messages.success(
         request,
         (
-            f"Driver {driver_name} was deactivated. "
-            f"{archived_route_count} saved route(s) were archived, "
-            f"{affected_employee_count} employee assignment(s) are no longer active, "
-            f"and {cancelled_trip_count} assigned trip(s) were cancelled. "
-            "Historical data was preserved."
+            f"Driver {driver_name} was removed from the active driver directory. "
+            f"{cancelled_count} remaining active trip(s) were cancelled. "
+            "Historical trips, route runs, chats and reports were preserved."
         ),
     )
 
