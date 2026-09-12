@@ -307,7 +307,7 @@
         justify-content: center;
         border-radius: 999px;
         background: #24211f;
-        color: #fffdf9df9;
+        color: #ffffff;
         font-size: 13px;
         font-weight: 950;
         box-shadow: 0 7px 16px rgba(95,70,54,.18);
@@ -317,7 +317,135 @@
     .report-count.orange { background: linear-gradient(135deg,#b8734a,#8b612e); }
     .report-count.teal { background: linear-gradient(135deg,#7e5c43,#5f4636); }
     .report-count.slate { background: linear-gradient(135deg,#514943,#5f4636); }
-    .report-count.pink { background: linear-gradient(135deg,#a66d69,#7f514d); }
+    .report-count.pink { background: linear-gradient(135deg,#a6584f,#7f3f39); }
+
+    .report-count.inactive {
+        background: linear-gradient(135deg,#5f4636,#24211f);
+        color:#ffffff !important;
+        border:2px solid rgba(255,255,255,.92);
+        box-shadow:0 8px 18px rgba(36,33,31,.28);
+    }
+
+    .inactive-account-panel {
+        display:flex;
+        flex-direction:column;
+        gap:14px;
+    }
+
+    .inactive-account-head {
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:14px;
+        margin-bottom:4px;
+    }
+
+    .inactive-account-head h3 {
+        margin:0;
+        color:#24211f;
+        font-size:20px;
+        font-weight:950;
+    }
+
+    .inactive-account-head p {
+        margin:5px 0 0;
+        color:#746b64;
+        font-size:12px;
+        font-weight:700;
+    }
+
+    .inactive-list {
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+    }
+
+    .inactive-row {
+        display:grid;
+        grid-template-columns:52px minmax(170px,1.2fr) minmax(140px,.8fr) minmax(160px,1fr) auto;
+        gap:12px;
+        align-items:center;
+        padding:12px 14px;
+        border:1px solid #ded6cc;
+        border-radius:16px;
+        background:#fffdf9;
+        box-shadow:0 6px 16px rgba(95,70,54,.05);
+    }
+
+    .inactive-avatar {
+        width:42px;
+        height:42px;
+        border-radius:13px;
+        display:grid;
+        place-items:center;
+        background:linear-gradient(135deg,#9b7457,#7e5c43);
+        color:#fff;
+        font-size:19px;
+        font-weight:900;
+    }
+
+    .inactive-name strong {
+        display:block;
+        color:#24211f;
+        font-size:13px;
+        font-weight:950;
+    }
+
+    .inactive-name small,
+    .inactive-meta small {
+        display:block;
+        margin-top:3px;
+        color:#746b64;
+        font-size:10px;
+        font-weight:750;
+    }
+
+    .inactive-meta strong {
+        display:block;
+        color:#514943;
+        font-size:12px;
+        font-weight:850;
+    }
+
+    .inactive-status {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:6px 10px;
+        border-radius:999px;
+        background:#f8ece9;
+        border:1px solid #e9c7c1;
+        color:#7f3f39;
+        font-size:10px;
+        font-weight:950;
+        white-space:nowrap;
+    }
+
+    .activate-btn {
+        min-height:38px;
+        border:0;
+        border-radius:11px;
+        padding:0 14px;
+        background:linear-gradient(135deg,#4f6d58,#3f5d49);
+        color:#fff;
+        font-size:11px;
+        font-weight:950;
+        cursor:pointer;
+        box-shadow:0 7px 14px rgba(79,109,88,.14);
+    }
+
+    .activate-btn:hover {
+        transform:translateY(-1px);
+    }
+
+    @media(max-width:850px){
+        .inactive-row {
+            grid-template-columns:44px 1fr auto;
+        }
+        .inactive-meta {
+            grid-column:2 / -1;
+        }
+    }
 
     .report-tab .icon {
         width: 38px;
@@ -1097,18 +1225,18 @@
             <small>Live Overspeed Monitoring</small>
         </a>
 
-        <a class="report-tab tab-pink {% if active_report == 'unassigned_employees' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=unassigned_employees">
-            <span class="report-count pink">{{ unassigned_employees|length }}</span>
+        <a class="report-tab tab-pink {% if active_report == 'inactive_employees' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=inactive_employees">
+            <span class="report-count inactive">{{ inactive_employees|length }}</span>
             <span class="icon">👤</span>
-            <strong>Unassigned Employees</strong>
-            <small>No trip in selected period</small>
+            <strong>Inactive Employees</strong>
+            <small>Deactivated employee accounts</small>
         </a>
 
-        <a class="report-tab tab-slate {% if active_report == 'unassigned_drivers' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=unassigned_drivers">
-            <span class="report-count slate">{{ unassigned_drivers|length }}</span>
+        <a class="report-tab tab-slate {% if active_report == 'deactivated_drivers' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=deactivated_drivers">
+            <span class="report-count inactive">{{ deactivated_drivers|length }}</span>
             <span class="icon">🧑‍✈️</span>
-            <strong>Unassigned Drivers</strong>
-            <small>No route/trip in selected period</small>
+            <strong>Deactivated Drivers</strong>
+            <small>Inactive driver accounts</small>
         </a>
 
         <a class="report-tab tab-teal" href="{% url 'admin_web:route_analytics' %}?date={{ start_date }}">
@@ -1127,8 +1255,11 @@
                     <p>This report now opens on a dedicated full journey page.</p>
                 </div>
                 <a href="{% url 'admin_web:trip_report_by_driver' %}?start_date={{ start_date }}&end_date={{ end_date }}"
-                   class="export-btn green">Open Full Driver Report →</a>
+                   class="export-btn green">
+                    Open Full Driver Report →
+                </a>
             </div>
+
             <div class="empty" style="padding:34px;">
                 Driver route timelines, employee stop events, chat history and pickup/drop completion details
                 are now available on the separate Trip Report by Driver page.
@@ -1387,6 +1518,98 @@
             </table>
 
         </div>
+        {% elif active_report == "inactive_employees" %}
+
+            <div class="inactive-account-panel">
+                <div class="inactive-account-head">
+                    <div>
+                        <h3>👤 Inactive Employees</h3>
+                        <p>Deactivated employees remain in historical trips and reports. Activate an account here when required.</p>
+                    </div>
+                    <span class="inactive-status">{{ inactive_employees|length }} inactive</span>
+                </div>
+
+                <div class="inactive-list">
+                    {% for employee in inactive_employees %}
+                    <div class="inactive-row">
+                        <div class="inactive-avatar">👤</div>
+
+                        <div class="inactive-name">
+                            <strong>{{ employee.username }}</strong>
+                            <small>
+                                {% if employee.employee_id %}Employee ID: {{ employee.employee_id }}{% else %}User ID: {{ employee.id }}{% endif %}
+                            </small>
+                        </div>
+
+                        <div class="inactive-meta">
+                            <strong>{{ employee.phone_number|default:"--" }}</strong>
+                            <small>Phone</small>
+                        </div>
+
+                        <div class="inactive-meta">
+                            <strong>{{ employee.pickup_location|default:"--" }}</strong>
+                            <small>Pickup location</small>
+                        </div>
+
+                        <form method="post" action="{% url 'admin_web:activate_employee_account' employee.id %}" onsubmit="return confirm('Activate {{ employee.username|escapejs }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="activate-btn">✓ Activate</button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <div class="empty">No inactive employee accounts found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% elif active_report == "deactivated_drivers" %}
+
+            <div class="inactive-account-panel">
+                <div class="inactive-account-head">
+                    <div>
+                        <h3>🧑‍✈️ Deactivated Drivers</h3>
+                        <p>Deactivated drivers stay in historical reports. Activate the account here when they return.</p>
+                    </div>
+                    <span class="inactive-status">{{ deactivated_drivers|length }} inactive</span>
+                </div>
+
+                <div class="inactive-list">
+                    {% for driver in deactivated_drivers %}
+                    <div class="inactive-row">
+                        <div class="inactive-avatar">🧑‍✈️</div>
+
+                        <div class="inactive-name">
+                            <strong>{{ driver.username }}</strong>
+                            <small>Driver ID: #{{ driver.id }}</small>
+                        </div>
+
+                        <div class="inactive-meta">
+                            <strong>{{ driver.phone_number|default:"--" }}</strong>
+                            <small>Phone</small>
+                        </div>
+
+                        <div class="inactive-meta">
+                            <strong>
+                                {% if driver.vehicle %}
+                                    {{ driver.vehicle.vehicle_number }}
+                                {% else %}
+                                    No vehicle
+                                {% endif %}
+                            </strong>
+                            <small>Vehicle</small>
+                        </div>
+
+                        <form method="post" action="{% url 'admin_web:activate_driver_account' driver.id %}" onsubmit="return confirm('Activate {{ driver.username|escapejs }}?');">
+                            {% csrf_token %}
+                            <button type="submit" class="activate-btn">✓ Activate</button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <div class="empty">No deactivated driver accounts found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
         {% else %}
             <div class="placeholder-box">
                 Report table section is already available in your previous file. Keep the same conditional table blocks for {{ active_report }} here.

@@ -4729,6 +4729,29 @@ def reports_page(request):
     ).order_by("username")
 
     # =========================
+    # INACTIVE / DEACTIVATED ACCOUNTS
+    # =========================
+
+    inactive_employees = (
+        User.objects
+        .filter(
+            role=User.Role.EMPLOYEE,
+            is_active=False,
+        )
+        .order_by("username")
+    )
+
+    deactivated_drivers = (
+        User.objects
+        .filter(
+            role=User.Role.DRIVER,
+            is_active=False,
+        )
+        .select_related("vehicle")
+        .order_by("username")
+    )
+
+    # =========================
     # CONTEXT
     # =========================
 
@@ -4752,6 +4775,8 @@ def reports_page(request):
         "late_employees": late_employees,
         "unassigned_employees": unassigned_employees,
         "unassigned_drivers": unassigned_drivers,
+        "inactive_employees": inactive_employees,
+        "deactivated_drivers": deactivated_drivers,
 
         # ✅ SPEED REPORT
         "speed_reports": speed_reports,
@@ -4763,6 +4788,57 @@ def reports_page(request):
         "admin_web/reports.html",
         context
     )
+
+@login_required
+@admin_required
+@require_POST
+def activate_employee_account(request, employee_id):
+    employee = get_object_or_404(
+        User,
+        id=employee_id,
+        role=User.Role.EMPLOYEE,
+        is_active=False,
+    )
+
+    employee.is_active = True
+    employee.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        f"Employee {employee.username} activated successfully.",
+    )
+
+    return redirect(
+        f"{reverse('admin_web:reports')}?report=inactive_employees"
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+def activate_driver_account(request, driver_id):
+    driver = get_object_or_404(
+        User,
+        id=driver_id,
+        role=User.Role.DRIVER,
+        is_active=False,
+    )
+
+    driver.is_active = True
+    driver.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        (
+            f"Driver {driver.username} activated successfully. "
+            "Any archived route remains archived until admin assigns/creates an active route."
+        ),
+    )
+
+    return redirect(
+        f"{reverse('admin_web:reports')}?report=deactivated_drivers"
+    )
+
 
 @login_required
 @admin_required
