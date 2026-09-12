@@ -2470,35 +2470,58 @@ def routes_page(request):
             "remaining_seats": remaining_seats,
         })
 
-    assigned_employee_ids = RouteStop.objects.filter(
-        route__isnull=False
-    ).values_list("employee_id", flat=True)
+    # Keep ALL active employees/drivers/vehicles in the page data.
+    #
+    # Important for Edit Route:
+    # Existing route members are already "assigned", but the edit modal still
+    # needs them in ROUTE_FORM_DATA so it can show the current driver/vehicle
+    # and preserve existing employees while adding/replacing another employee.
+    #
+    # Create Route still blocks already-used resources via is_selectable.
+    assigned_employee_ids = set(
+        RouteStop.objects.filter(
+            route__isnull=False,
+            employee_id__isnull=False,
+        ).values_list("employee_id", flat=True)
+    )
 
-    assigned_driver_ids = RouteTemplate.objects.filter(
-        driver__isnull=False
-    ).values_list("driver_id", flat=True)
+    assigned_driver_ids = set(
+        RouteTemplate.objects.filter(
+            driver__isnull=False
+        ).values_list("driver_id", flat=True)
+    )
 
-    assigned_vehicle_ids = RouteTemplate.objects.filter(
-        vehicle__isnull=False
-    ).values_list("vehicle_id", flat=True)
+    assigned_vehicle_ids = set(
+        RouteTemplate.objects.filter(
+            vehicle__isnull=False
+        ).values_list("vehicle_id", flat=True)
+    )
 
-    employees = User.objects.filter(
-        role="EMPLOYEE",
-        is_active=True,
-    ).exclude(
-        id__in=assigned_employee_ids,
-    ).order_by("username")
+    employees = list(
+        User.objects.filter(
+            role="EMPLOYEE",
+            is_active=True,
+        ).order_by("username")
+    )
+    for employee in employees:
+        employee.is_selectable = employee.id not in assigned_employee_ids
 
-    drivers = User.objects.filter(
-        role="DRIVER",
-        is_active=True,
-    ).exclude(
-        id__in=assigned_driver_ids,
-    ).order_by("username")
+    drivers = list(
+        User.objects.filter(
+            role="DRIVER",
+            is_active=True,
+        ).order_by("username")
+    )
+    for driver in drivers:
+        driver.is_selectable = driver.id not in assigned_driver_ids
 
-    vehicles = Vehicle.objects.select_related("driver").exclude(
-        id__in=assigned_vehicle_ids,
-    ).order_by("vehicle_number")
+    # Do not exclude vehicles here. Edit Route must be able to find the
+    # vehicle already attached to its current driver.
+    vehicles = list(
+        Vehicle.objects.select_related("driver").order_by("vehicle_number")
+    )
+    for vehicle in vehicles:
+        vehicle.is_selectable = vehicle.id not in assigned_vehicle_ids
 
     holiday_dates = []
 

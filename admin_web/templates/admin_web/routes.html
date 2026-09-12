@@ -1,11 +1,3 @@
-{% extends 'admin_web/base.html' %}
-
-{% block title %}Manage Routes{% endblock %}
-{% block nav_routes %}active{% endblock %}
-
-{% block page_heading %}Manage Routes{% endblock %}
-{% block page_subheading %}Create, control, and monitor daily route assignments{% endblock %}
-
 {% block content %}
 <style>
 *,
@@ -18,6 +10,57 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+.route-main-ai-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: -6px;
+}
+
+.route-main-ai-btn {
+    min-height: 46px;
+    border: none;
+    border-radius: 15px;
+    padding: 0 18px;
+    background: linear-gradient(135deg, #5f4636 0%, #9b7457 100%);
+    color: #fffdf9;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(95,70,54,.16);
+    transition: all .2s ease;
+}
+
+.route-main-ai-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(95,70,54,.22);
+}
+
+.route-stop-action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.route-replace-employee-btn {
+    min-width: 92px;
+    height: 40px;
+    border: 1px solid #d9c6b5;
+    border-radius: 12px;
+    background: #f3eee6;
+    color: #5f4636;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 0 14px;
+}
+
+.route-replace-employee-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 15px rgba(95,70,54,.10);
 }
 
 .route-top-panel {
@@ -199,17 +242,17 @@
 
 .route-card.pickup {
     border-color: #d8c3a4;
-    background: linear-gradient(180deg, #fffdf9ef9 0%, #fffdf9fff 100%);
+    background: linear-gradient(180deg, #fffef9 0%, #fffdf9 100%);
 }
 
 .route-card.drop {
     border-color: #ccb6a3;
-    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9fff 100%);
+    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9 100%);
 }
 
 .route-card.both {
     border-color: #cdb59f;
-    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9fff 100%);
+    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9 100%);
 }
 
 .route-card.none {
@@ -425,7 +468,7 @@
 }
 
 .route-employee-head {
-    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9fff 100%);
+    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9 100%);
     border: 1px solid #ded6cc;
     border-radius: 16px;
     padding: 14px 16px;
@@ -451,7 +494,7 @@
 }
 
 .route-employee-card {
-    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9fff 100%);
+    background: linear-gradient(180deg, #fbf8f2 0%, #fffdf9 100%);
     border: 1px solid #e7ded5;
     border-radius: 18px;
     padding: 14px 16px;
@@ -1004,7 +1047,7 @@
     border-radius: 16px;
     margin-bottom: 14px;
     border: 1px solid #e7c98d;
-    background: #fffdf9beb;
+    background: #fffbeb;
     color: #8b612e;
 }
 
@@ -1199,13 +1242,19 @@
 
 <div class="route-page-shell">
 
+    <div class="route-main-ai-row">
+        <button type="button" class="route-main-ai-btn" onclick="openAIRouteModal(event)">
+            ✨ Check AI Route
+        </button>
+    </div>
+
     {% if messages %}
         {% for message in messages %}
         <div class="route-flash" style="
             {% if message.tags == 'error' %}
                 background:#f8ece9; color:#991b1b; border:1px solid #e9c7c1;
             {% elif message.tags == 'warning' %}
-                background:#fffdf9beb; color:#8b612e; border:1px solid #e7c98d;
+                background:#fffbeb; color:#8b612e; border:1px solid #e7c98d;
             {% else %}
                 background:#edf3ed; color:#4f6d58; border:1px solid #d9e7db;
             {% endif %}
@@ -1363,22 +1412,6 @@
                             onclick="openActionModal(event, 'repeat', '{{ route.id }}', '{{ route.name|escapejs }}', '')"
                         >
                             🔁 Repeat Route
-                        </button>
-
-                        <button
-                            type="button"
-                            class="route-action-btn replace"
-                            onclick="openReplaceRouteModal(event, '{{ route.id }}', '{{ route.name|escapejs }}')"
-                        >
-                            🔄 Replace
-                        </button>
-
-                        <button
-                            type="button"
-                            class="route-action-btn ai-route"
-                            onclick="openAIRouteModal(event, '{{ route.id }}', '{{ route.name|escapejs }}')"
-                        >
-                            ✨ Check AI Route
                         </button>
 
                         <button
@@ -1678,54 +1711,6 @@
     </div>
 </div>
 
-<!-- REPLACE ROUTE MODAL -->
-<div class="route-modal-overlay" id="replaceRouteModal">
-    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="replaceRouteTitle">
-        <div class="route-modal-head">
-            <h3 id="replaceRouteTitle">Replace Route Resource</h3>
-            <button type="button" class="route-modal-close" onclick="closeReplaceRouteModal()" aria-label="Close Replace Route Modal">✕</button>
-        </div>
-
-        <div class="route-modal-hero edit">
-            <small>Route Replacement</small>
-            <h4 id="replaceRouteName">Selected Route</h4>
-        </div>
-
-        <div class="route-coming-soon">🚧 Backend action coming next</div>
-
-        <div class="route-info-card teal">
-            <div class="route-info-icon">↻</div>
-            <p>
-                This button is ready in the UI. In the next update we can connect it to replace
-                the assigned driver, cab, or employee without recreating the route.
-            </p>
-        </div>
-
-        <div class="route-feature-grid">
-            <div class="route-feature-card">
-                <strong>👤 Replace Driver</strong>
-                <span>Choose another available driver while keeping the same saved route.</span>
-            </div>
-            <div class="route-feature-card">
-                <strong>🚖 Replace Cab</strong>
-                <span>Move the route to another suitable vehicle based on seat capacity.</span>
-            </div>
-            <div class="route-feature-card">
-                <strong>👥 Replace Employee</strong>
-                <span>Swap an employee while preserving the route order where possible.</span>
-            </div>
-            <div class="route-feature-card">
-                <strong>🧭 Preserve Route</strong>
-                <span>Keep the route template and update only the selected resource.</span>
-            </div>
-        </div>
-
-        <div class="route-modal-actions">
-            <button type="button" class="route-cancel-btn" onclick="closeReplaceRouteModal()">Close</button>
-            <button type="button" class="route-save-btn route-disabled-action" disabled>Replace Now — Coming Soon</button>
-        </div>
-    </div>
-</div>
 
 <!-- AI ROUTE MODAL -->
 <div class="route-modal-overlay" id="aiRouteModal">
@@ -1737,7 +1722,7 @@
 
         <div class="route-modal-hero">
             <small>Future Smart Recommendation</small>
-            <h4 id="aiRouteName">Selected Route</h4>
+            <h4 id="aiRouteName">Smart Route Recommendation</h4>
         </div>
 
         <div class="route-coming-soon">✨ AI recommendation engine — Coming Soon</div>
@@ -1794,29 +1779,13 @@ let ROUTE_FORM_DATA = {
 
 let ROUTE_HOLIDAY_DATES = [];
 
-let selectedReplaceRouteId = null;
 let selectedAIRouteId = null;
 
-function openReplaceRouteModal(event, routeId, routeName) {
+function openAIRouteModal(event) {
     if (event) event.stopPropagation();
-    selectedReplaceRouteId = String(routeId || "");
-    const title = document.getElementById("replaceRouteName");
-    if (title) title.textContent = routeName || "Selected Route";
-    const modal = document.getElementById("replaceRouteModal");
-    if (modal) modal.classList.add("show");
-}
-
-function closeReplaceRouteModal() {
-    selectedReplaceRouteId = null;
-    const modal = document.getElementById("replaceRouteModal");
-    if (modal) modal.classList.remove("show");
-}
-
-function openAIRouteModal(event, routeId, routeName) {
-    if (event) event.stopPropagation();
-    selectedAIRouteId = String(routeId || "");
+    selectedAIRouteId = "GLOBAL";
     const title = document.getElementById("aiRouteName");
-    if (title) title.textContent = routeName || "Selected Route";
+    if (title) title.textContent = "Smart Route Recommendation";
     const modal = document.getElementById("aiRouteModal");
     if (modal) modal.classList.add("show");
 }
@@ -2068,7 +2037,10 @@ function renderStopList(prefix, state) {
                     <strong>Employee ${index + 1} - ${employeeName}</strong>
                     <span>Define employee order for this route</span>
                 </div>
-                <button type="button" class="route-remove-employee-btn" data-index="${index}">Delete</button>
+                <div class="route-stop-action-buttons">
+                    <button type="button" class="route-remove-employee-btn" data-index="${index}">Delete</button>
+                    ${prefix === "edit" ? `<button type="button" class="route-replace-employee-btn" data-index="${index}">Replace</button>` : ""}
+                </div>
             </div>
 
             <div class="route-stop-grid">
@@ -2102,7 +2074,41 @@ function renderStopList(prefix, state) {
         });
     });
 
+    els.stopList.querySelectorAll(".route-replace-employee-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+            const index = Number(this.dataset.index);
+            replaceEmployeeInEditRoute(prefix, state, index);
+        });
+    });
+
     els.addBtn.disabled = !state.vehicle || (seatCount > 0 && state.stops.length >= seatCount);
+}
+
+function replaceEmployeeInEditRoute(prefix, state, index) {
+    if (prefix !== "edit" || !state.stops[index]) return;
+
+    // Keep the stop/order slot, but clear the current employee so admin can
+    // choose a replacement from the same Edit Route screen.
+    state.stops[index] = {
+        employee_id: null,
+        pickup_location: "",
+        pickup_latitude: "",
+        pickup_longitude: ""
+    };
+
+    renderSeatInfo(prefix, state);
+    renderStopList(prefix, state);
+
+    // Move focus directly to the employee dropdown for this same stop.
+    setTimeout(() => {
+        const select = document.querySelector(
+            `#${prefix}StopList .route-stop-employee[data-index="${index}"]`
+        );
+        if (select) {
+            select.focus();
+            try { select.click(); } catch (e) {}
+        }
+    }, 0);
 }
 
 function prepareStopsJson(state) {
@@ -2661,7 +2667,6 @@ document.addEventListener("DOMContentLoaded", function() {
         bindOverlayClose("createRouteModal", closeCreateRouteModal);
         bindOverlayClose("routeActionModal", closeActionModal);
         bindOverlayClose("repeatAllModal", closeRepeatAllModal);
-        bindOverlayClose("replaceRouteModal", closeReplaceRouteModal);
         bindOverlayClose("aiRouteModal", closeAIRouteModal);
     } catch (error) {
         console.error("Routes page init error:", error);
