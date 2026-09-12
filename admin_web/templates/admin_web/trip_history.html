@@ -7,25 +7,25 @@
 
 <style>
 :root{
-    --bg:#f5f7fb;
-    --card:#fff;
-    --dark:#111827;
-    --muted:#6b7280;
-    --line:#e5e7eb;
-    --shadow:0 18px 45px rgba(15,23,42,.08);
+    --bg:#f8f5ed;
+    --card:#fffdf9df9;
+    --dark:#24211f;
+    --muted:#746b64;
+    --line:#ded6cc;
+    --shadow:0 18px 45px rgba(95,70,54,.08);
 }
 *{box-sizing:border-box}
 body{
     margin:0;
     font-family:Inter,Arial,sans-serif;
-    background:linear-gradient(180deg,#eef4ff,#f8fafc 45%,#f5f7fb);
+    background:linear-gradient(180deg,#f3eee6,#fbf8f2 45%,#f8f5ed);
     color:var(--dark);
 }
 .header{
     position:sticky;
     top:0;
     z-index:10;
-    background:rgba(255,255,255,.94);
+    background:rgba(255,253,249,.96);
     backdrop-filter:blur(14px);
     padding:22px 32px;
     display:flex;
@@ -39,8 +39,8 @@ body{
     font-weight:950;
 }
 .back-btn{
-    background:#111827;
-    color:#fff;
+    background:linear-gradient(135deg,#5f4636,#7e5c43);
+    color:#fffdf9;
     padding:12px 18px;
     border-radius:16px;
     text-decoration:none;
@@ -48,7 +48,7 @@ body{
 }
 .page{padding:28px 34px}
 .toolbar{
-    background:#fff;
+    background:#fffdf9;
     border-radius:28px;
     box-shadow:var(--shadow);
     padding:18px;
@@ -59,13 +59,13 @@ body{
 .toolbar input,.toolbar select,.toolbar button{
     height:52px;
     border-radius:16px;
-    border:1px solid #dbe3ef;
+    border:1px solid #ded6cc;
     padding:0 16px;
     font-weight:800;
 }
 .toolbar button{
-    background:#111827;
-    color:#fff;
+    background:linear-gradient(135deg,#5f4636,#7e5c43);
+    color:#fffdf9;
     cursor:pointer;
 }
 .stats{
@@ -75,7 +75,7 @@ body{
     margin:22px 0;
 }
 .stat-card{
-    background:#fff;
+    background:#fffdf9;
     border-radius:24px;
     padding:22px;
     box-shadow:var(--shadow);
@@ -91,7 +91,7 @@ body{
     margin-top:8px;
 }
 .date-section{
-    background:#fff;
+    background:#fffdf9;
     border-radius:30px;
     padding:24px;
     box-shadow:var(--shadow);
@@ -123,11 +123,11 @@ body{
     font-weight:950;
     cursor:pointer;
 }
-.btn-dark{background:#111827;color:#fff}
+.btn-dark{background:#5f4636;color:#fffdf9}
 .trip-tabs{
     display:grid;
     grid-template-columns:1fr 1fr;
-    background:#eef2f7;
+    background:#f3eee6;
     padding:6px;
     border-radius:22px;
     margin:20px 0;
@@ -140,11 +140,11 @@ body{
     font-weight:950;
     cursor:pointer;
     background:transparent;
-    color:#64748b;
+    color:#746b64;
 }
 .tab-btn.active{
-    background:#111827;
-    color:#fff;
+    background:linear-gradient(135deg,#5f4636,#7e5c43);
+    color:#fffdf9;
 }
 .cards{
     display:grid;
@@ -152,11 +152,11 @@ body{
     gap:18px;
 }
 .trip-card{
-    background:#fff;
+    background:#fffdf9;
     border:1px solid var(--line);
     border-radius:26px;
     padding:16px 18px;
-    box-shadow:0 10px 26px rgba(15,23,42,.06);
+    box-shadow:0 10px 26px rgba(95,70,54,.06);
     position:relative;
     overflow:hidden;
 }
@@ -166,8 +166,8 @@ body{
     top:0;left:0;right:0;
     height:7px;
 }
-.trip-card.pickup::before{background:linear-gradient(90deg,#0d9488,#14b8a6)}
-.trip-card.drop::before{background:linear-gradient(90deg,#7c3aed,#a855f7)}
+.trip-card.pickup::before{background:linear-gradient(90deg,#9b7457,#7e5c43)}
+.trip-card.drop::before{background:linear-gradient(90deg,#9b7457,#7e5c43)}
 .card-top{
     display:flex;
     justify-content:space-between;
@@ -185,8 +185,8 @@ body{
     font-weight:950;
     height:max-content;
 }
-.type-pill.PICKUP{background:#ccfbf1;color:#0f766e}
-.type-pill.DROP{background:#ede9fe;color:#6d28d9}
+.type-pill.PICKUP{background:#eee4db;color:#7e5c43}
+.type-pill.DROP{background:#f2e9e1;color:#7e5c43}
 .status{
     display:inline-block;
     margin-top:12px;
@@ -195,19 +195,19 @@ body{
     font-size:12px;
     font-weight:950;
 }
-.status.COMPLETED{background:#dcfce7;color:#15803d}
-.status.CANCELLED{background:#fee2e2;color:#b91c1c}
-.status.MIXED{background:#fef3c7;color:#92400e}
+.status.COMPLETED{background:#edf3ed;color:#4f6d58}
+.status.CANCELLED{background:#f8ece9;color:#7f3f39}
+.status.MIXED{background:#fbf3e7;color:#8b612e}
 .card-mini{
     margin-top:14px;
-    color:#64748b;
+    color:#746b64;
     font-weight:800;
 }
 .details{
     margin-top:16px;
     display:grid;
     gap:10px;
-    color:#475569;
+    color:#5b524c;
     font-weight:800;
 }
 .trip-card.collapsed .status,
@@ -223,15 +223,15 @@ body{
     height:44px;
     border:0;
     border-radius:15px;
-    background:#eef2ff;
-    color:#3730a3;
+    background:#f2e9e1;
+    color:#7e5c43;
     font-weight:950;
     cursor:pointer;
 }
 .employee-box{
     display:none;
     margin-top:14px;
-    background:#f8fafc;
+    background:#fbf8f2;
     border:1px solid var(--line);
     border-radius:18px;
     padding:14px;
@@ -239,34 +239,34 @@ body{
 .employee-row{
     padding:13px 0;
     border-bottom:1px solid var(--line);
-    color:#475569;
+    color:#5b524c;
     font-weight:700;
     line-height:1.6;
 }
 .employee-row:last-child{border-bottom:0}
-.employee-row strong{color:#111827}
+.employee-row strong{color:#5f4636}
 .card-expand-arrow{
     width:38px;
     height:38px;
     border:0;
     border-radius:12px;
-    background:#f1f5f9;
-    color:#111827;
+    background:#f3eee6;
+    color:#5f4636;
     font-size:18px;
     font-weight:950;
     cursor:pointer;
 }
 .trip-card:not(.collapsed) .card-expand-arrow{
-    background:#111827;
-    color:#fff;
+    background:linear-gradient(135deg,#5f4636,#7e5c43);
+    color:#fffdf9;
 }
 .restore-btn{
     margin-top:10px;
     border:0;
     border-radius:12px;
     padding:9px 12px;
-    background:#dcfce7;
-    color:#15803d;
+    background:#edf3ed;
+    color:#4f6d58;
     font-weight:900;
     cursor:pointer;
 }
@@ -281,25 +281,25 @@ body{
 .toast{
     min-width:280px;
     max-width:420px;
-    background:#fff;
+    background:#fffdf9;
     border-radius:18px;
     padding:15px 18px;
-    box-shadow:0 18px 45px rgba(15,23,42,.18);
-    border-left:6px solid #2563eb;
+    box-shadow:0 18px 45px rgba(95,70,54,.18);
+    border-left:6px solid #9b7457;
     font-weight:900;
     animation:slideToast .35s ease, fadeToast .4s ease 4.5s forwards;
 }
-.toast.success{border-left-color:#16a34a;color:#166534}
-.toast.error{border-left-color:#dc2626;color:#991b1b}
-.toast.warning{border-left-color:#f59e0b;color:#92400e}
-.toast.info{border-left-color:#2563eb;color:#1e40af}
+.toast.success{border-left-color:#4f6d58;color:#4f6d58}
+.toast.error{border-left-color:#a6584f;color:#7f3f39}
+.toast.warning{border-left-color:#b88746;color:#8b612e}
+.toast.info{border-left-color:#9b7457;color:#7e5c43}
 .empty{
     padding:34px;
     text-align:center;
     border-radius:22px;
-    background:#f8fafc;
-    border:1px dashed #cbd5e1;
-    color:#64748b;
+    background:#fbf8f2;
+    border:1px dashed #d2c5b8;
+    color:#746b64;
     font-weight:900;
 }
 @keyframes slideToast{
@@ -332,7 +332,7 @@ body{
     <h1>🕘 Trip History</h1>
 
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <a href="{% url 'admin_web:assigned_trips' %}" class="back-btn" style="background:#2563eb;">
+        <a href="{% url 'admin_web:assigned_trips' %}" class="back-btn" style="background:linear-gradient(135deg,#9b7457,#7e5c43);">
             🚖 Assigned Trips
         </a>
 

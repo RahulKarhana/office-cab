@@ -21,11 +21,11 @@
     display:flex;
     align-items:center;
     gap:12px;
-    background:#fff;
-    border:1px solid #e5e7eb;
+    background:#fffdf9;
+    border:1px solid #ded6cc;
     border-radius:18px;
     padding:10px 14px;
-    box-shadow:0 10px 30px rgba(15,23,42,.06);
+    box-shadow:0 10px 30px rgba(95,70,54,.06);
 }
 
 .search-icon{
@@ -39,7 +39,7 @@
     font-size:15px;
     background:transparent;
     font-weight:700;
-    color:#111827;
+    color:#24211f;
 }
 
 .driver-search-btn{
@@ -48,14 +48,14 @@
     border-radius:12px;
     font-weight:900;
     cursor:pointer;
-    color:#fff;
-    background:linear-gradient(135deg,#2563eb,#3b82f6);
+    color:#fffdf9;
+    background:linear-gradient(135deg,#7e5c43,#9b7457);
     transition:.2s ease;
 }
 
 .driver-search-btn:hover{
     transform:translateY(-1px);
-    box-shadow:0 8px 20px rgba(37,99,235,.22);
+    box-shadow:0 8px 20px rgba(155,116,87,.22);
 }
 
 
@@ -73,8 +73,8 @@
     width:42px;
     height:42px;
     border-radius:50%;
-    background:linear-gradient(135deg,#2563eb,#60a5fa);
-    color:#fff;
+    background:linear-gradient(135deg,#9b7457,#c49a77);
+    color:#fffdf9;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -83,16 +83,29 @@
 }
 
 .driver-name{
-    color:#111827;
+    color:#24211f;
     font-weight:900;
 }
 
 .driver-sub{
     font-size:12px;
-    color:#64748b;
+    color:#746b64;
     font-weight:800;
     margin-top:3px;
 }
+
+
+
+.dummy-driver-icon{
+    width:24px;
+    height:24px;
+    fill:rgba(255,255,255,.95);
+    stroke:rgba(255,255,255,.95);
+    stroke-width:2;
+    stroke-linecap:round;
+}
+
+/* Decorative profile marker only. No driver photo upload is required. */
 
 
 /* ============================================================
@@ -103,8 +116,8 @@
     display:inline-flex;
     align-items:center;
     gap:6px;
-    background:#eff6ff;
-    color:#1d4ed8;
+    background:#f2e9e1;
+    color:#7e5c43;
     padding:8px 12px;
     border-radius:999px;
     font-weight:900;
@@ -113,8 +126,8 @@
 
 .vehicle-missing{
     display:inline-flex;
-    background:#fee2e2;
-    color:#991b1b;
+    background:#f8ece9;
+    color:#7f3f39;
     padding:8px 12px;
     border-radius:999px;
     font-weight:900;
@@ -128,14 +141,14 @@
 
 .driver-status-card{
     grid-column:1/-1;
-    background:linear-gradient(135deg,#ffffff,#f8fbff);
-    border:1px solid #dbeafe;
+    background:linear-gradient(135deg,#fffdf9fff,#fbf8f2);
+    border:1px solid #ded6cc;
     border-radius:26px;
     padding:24px;
     display:flex;
     align-items:center;
     gap:18px;
-    box-shadow:0 18px 40px rgba(15,23,42,.07);
+    box-shadow:0 18px 40px rgba(95,70,54,.07);
 }
 
 .driver-status-icon{
@@ -145,26 +158,26 @@
     display:grid;
     place-items:center;
     font-size:30px;
-    background:#eff6ff;
-    color:#2563eb;
+    background:#f2e9e1;
+    color:#9b7457;
     flex-shrink:0;
 }
 
 .driver-status-card.warning .driver-status-icon{
-    background:#fff7ed;
-    color:#ea580c;
+    background:#fffdf97ed;
+    color:#8b612e;
 }
 
 .driver-status-card h3{
     margin:0;
     font-size:28px;
     font-weight:950;
-    color:#14213d;
+    color:#5f4636;
 }
 
 .driver-status-card p{
     margin:5px 0 0;
-    color:#64748b;
+    color:#746b64;
     font-weight:850;
 }
 
@@ -177,8 +190,8 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    background:#dbeafe;
-    color:#2563eb;
+    background:#edf3ed;
+    color:#4f6d58;
     padding:7px 18px;
     border-radius:999px;
     font-size:11px;
@@ -189,8 +202,8 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    background:#fee2e2;
-    color:#b91c1c;
+    background:#f8ece9;
+    color:#7f3f39;
     padding:7px 18px;
     border-radius:999px;
     font-size:11px;
@@ -209,8 +222,8 @@
     gap:6px;
     text-decoration:none;
     border:none;
-    background:linear-gradient(135deg,#2563eb,#3b82f6);
-    color:#fff;
+    background:linear-gradient(135deg,#7e5c43,#9b7457);
+    color:#fffdf9;
     padding:9px 15px;
     border-radius:11px;
     font-size:11px;
@@ -221,9 +234,9 @@
 }
 
 .view-driver-btn:hover{
-    color:#fff;
+    color:#fffdf9;
     transform:translateY(-1px);
-    box-shadow:0 8px 18px rgba(37,99,235,.22);
+    box-shadow:0 8px 18px rgba(155,116,87,.22);
 }
 
 
@@ -236,7 +249,7 @@
 }
 
 .admin-table tbody tr:hover{
-    background:#f8fafc;
+    background:#fbf8f2;
 }
 
 .admin-table th{
@@ -255,7 +268,7 @@
 .empty-drivers{
     text-align:center;
     padding:35px 20px !important;
-    color:#64748b;
+    color:#746b64;
     font-weight:800;
 }
 
@@ -546,10 +559,11 @@
 
                             <div class="driver-profile">
 
-                                <div class="driver-avatar">
-
-                                    {{ driver.username|first|upper }}
-
+                                <div class="driver-avatar" title="Driver profile avatar">
+                                    <svg class="dummy-driver-icon" viewBox="0 0 64 64" aria-hidden="true">
+                                        <circle cx="32" cy="22" r="12"></circle>
+                                        <path d="M12 56c1.8-12.5 9.8-20 20-20s18.2 7.5 20 20"></path>
+                                    </svg>
                                 </div>
 
 

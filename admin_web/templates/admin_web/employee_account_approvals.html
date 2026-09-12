@@ -16,12 +16,12 @@ Review new employee registrations before allowing login
     }
 
     .approval-header {
-        background: linear-gradient(135deg, #eef2ff, #ffffff);
-        border: 1px solid #c7d2fe;
+        background: linear-gradient(135deg, #f8f5ed, #fbf8f2);
+        border: 1px solid #ded6cc;
         border-radius: 22px;
         padding: 22px 24px;
         margin-bottom: 18px;
-        box-shadow: 0 10px 30px rgba(15,23,42,0.05);
+        box-shadow: 0 10px 30px rgba(95,70,54,0.05);
     }
 
     .approval-header-top {
@@ -42,25 +42,25 @@ Review new employee registrations before allowing login
         width: 52px;
         height: 52px;
         border-radius: 16px;
-        background: #e0e7ff;
-        color: #4338ca;
+        background: #eee4db;
+        color: #7e5c43;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 26px;
-        border: 1px solid #c7d2fe;
+        border: 1px solid #ded6cc;
     }
 
     .approval-title {
         margin: 0;
-        color: #0f172a;
+        color: #24211f;
         font-size: 24px;
         font-weight: 950;
     }
 
     .approval-subtitle {
         margin: 5px 0 0;
-        color: #64748b;
+        color: #746b64;
         font-size: 13px;
         font-weight: 700;
     }
@@ -71,9 +71,9 @@ Review new employee registrations before allowing login
         gap: 6px;
         padding: 10px 15px;
         border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        color: #334155;
+        background: #fffdf9;
+        border: 1px solid #ded6cc;
+        color: #514943;
         text-decoration: none;
         font-size: 12px;
         font-weight: 900;
@@ -89,20 +89,20 @@ Review new employee registrations before allowing login
     .summary-card {
         border-radius: 20px;
         padding: 18px;
-        color: #ffffff;
-        box-shadow: 0 12px 28px rgba(15,23,42,0.08);
+        color: #fffdf9;
+        box-shadow: 0 12px 28px rgba(95,70,54,0.08);
     }
 
     .summary-pending {
-        background: linear-gradient(135deg, #f59e0b, #b45309);
+        background: linear-gradient(135deg, #b98a67, #8b612e);
     }
 
     .summary-info {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        background: linear-gradient(135deg, #9b7457, #7e5c43);
     }
 
     .summary-secure {
-        background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        background: linear-gradient(135deg, #7e5c43, #5f4636);
     }
 
     .summary-label {
@@ -129,16 +129,16 @@ Review new employee registrations before allowing login
     }
 
     .approval-panel {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: #fffdf9;
+        border: 1px solid #ded6cc;
         border-radius: 22px;
         overflow: hidden;
-        box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+        box-shadow: 0 12px 30px rgba(95,70,54,0.06);
     }
 
     .panel-header {
         padding: 18px 20px;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid #ded6cc;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -148,14 +148,14 @@ Review new employee registrations before allowing login
 
     .panel-header h3 {
         margin: 0;
-        color: #0f172a;
+        color: #24211f;
         font-size: 17px;
         font-weight: 950;
     }
 
     .panel-header p {
         margin: 4px 0 0;
-        color: #64748b;
+        color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
@@ -163,8 +163,8 @@ Review new employee registrations before allowing login
     .count-pill {
         padding: 7px 12px;
         border-radius: 999px;
-        background: #fff7ed;
-        color: #c2410c;
+        background: #fbf3e7;
+        color: #8b612e;
         font-size: 11px;
         font-weight: 950;
     }
@@ -176,15 +176,15 @@ Review new employee registrations before allowing login
     }
 
     .employee-card {
-        border: 1px solid #e5e7eb;
+        border: 1px solid #ded6cc;
         border-radius: 18px;
         padding: 18px;
-        background: #ffffff;
+        background: #fffdf9;
         transition: 0.2s ease;
     }
 
     .employee-card:hover {
-        box-shadow: 0 10px 24px rgba(15,23,42,0.07);
+        box-shadow: 0 10px 24px rgba(95,70,54,0.07);
         transform: translateY(-1px);
     }
 
@@ -207,8 +207,8 @@ Review new employee registrations before allowing login
         width: 48px;
         height: 48px;
         border-radius: 15px;
-        background: linear-gradient(135deg, #6366f1, #2563eb);
-        color: #ffffff;
+        background: linear-gradient(135deg, #b98a67, #9b7457);
+        color: #fffdf9;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -216,16 +216,28 @@ Review new employee registrations before allowing login
         font-weight: 950;
     }
 
+
+    .dummy-employee-icon {
+        width: 27px;
+        height: 27px;
+        fill: rgba(255,255,255,.95);
+        stroke: rgba(255,255,255,.95);
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+
+    /* Decorative profile marker only. Employee photo upload is not required. */
+
     .employee-main h4 {
         margin: 0;
-        color: #0f172a;
+        color: #24211f;
         font-size: 16px;
         font-weight: 950;
     }
 
     .employee-main p {
         margin: 4px 0 0;
-        color: #64748b;
+        color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
@@ -236,8 +248,8 @@ Review new employee registrations before allowing login
         gap: 5px;
         padding: 7px 11px;
         border-radius: 999px;
-        background: #fef3c7;
-        color: #92400e;
+        background: #fbf3e7;
+        color: #8b612e;
         font-size: 10px;
         font-weight: 950;
     }
@@ -251,21 +263,21 @@ Review new employee registrations before allowing login
     .detail-box {
         padding: 12px;
         border-radius: 13px;
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
+        background: #fbf8f2;
+        border: 1px solid #ded6cc;
     }
 
     .detail-box span {
         display: block;
         margin-bottom: 4px;
-        color: #64748b;
+        color: #746b64;
         font-size: 10px;
         font-weight: 900;
         text-transform: uppercase;
     }
 
     .detail-box strong {
-        color: #0f172a;
+        color: #24211f;
         font-size: 12px;
         font-weight: 900;
         word-break: break-word;
@@ -277,7 +289,7 @@ Review new employee registrations before allowing login
         flex-wrap: wrap;
         margin-top: 15px;
         padding-top: 15px;
-        border-top: 1px solid #edf2f7;
+        border-top: 1px solid #eee6de;
     }
 
     .approve-btn,
@@ -291,13 +303,13 @@ Review new employee registrations before allowing login
     }
 
     .approve-btn {
-        background: linear-gradient(135deg, #16a34a, #15803d);
-        color: #ffffff;
+        background: linear-gradient(135deg, #6f8b74, #4f6d58);
+        color: #fffdf9;
     }
 
     .reject-btn {
-        background: #fee2e2;
-        color: #b91c1c;
+        background: #f8ece9;
+        color: #7f3f39;
     }
 
     .reject-form {
@@ -312,15 +324,15 @@ Review new employee registrations before allowing login
         min-width: 180px;
         height: 38px;
         border-radius: 11px;
-        border: 1px solid #dbe3ee;
+        border: 1px solid #ded6cc;
         padding: 0 11px;
         outline: none;
         font-size: 12px;
     }
 
     .reject-form input:focus {
-        border-color: #dc2626;
-        box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+        border-color: #a6584f;
+        box-shadow: 0 0 0 3px rgba(166,88,79,0.08);
     }
 
     .empty-state {
@@ -333,7 +345,7 @@ Review new employee registrations before allowing login
         height: 66px;
         margin: 0 auto 13px;
         border-radius: 20px;
-        background: #dcfce7;
+        background: #edf3ed;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -342,14 +354,14 @@ Review new employee registrations before allowing login
 
     .empty-state h3 {
         margin: 0 0 6px;
-        color: #0f172a;
+        color: #24211f;
         font-size: 18px;
         font-weight: 950;
     }
 
     .empty-state p {
         margin: 0;
-        color: #64748b;
+        color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
@@ -480,8 +492,11 @@ Review new employee registrations before allowing login
 
                     <div class="employee-main">
 
-                        <div class="employee-avatar">
-                            {{ employee.username|slice:":1"|upper }}
+                        <div class="employee-avatar" title="Employee profile avatar">
+                            <svg class="dummy-employee-icon" viewBox="0 0 64 64" aria-hidden="true">
+                                <circle cx="32" cy="22" r="12"></circle>
+                                <path d="M12 56c1.8-12.5 9.8-20 20-20s18.2 7.5 20 20"></path>
+                            </svg>
                         </div>
 
                         <div>

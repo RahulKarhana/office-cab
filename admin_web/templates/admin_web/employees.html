@@ -13,15 +13,15 @@
     }
 
     .employee-hero {
-        background: linear-gradient(135deg, #111827, #1f2937);
-        color: white;
+        background: linear-gradient(135deg, #5f4636, #7e5c43, #9b7457);
+        color: #fffdf9;
         border-radius: 28px;
         padding: 26px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 18px;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+        box-shadow: 0 18px 40px rgba(95,70,54,.18);
     }
 
     .employee-hero h2 {
@@ -32,7 +32,7 @@
 
     .employee-hero p {
         margin: 8px 0 0;
-        color: #cbd5e1;
+        color: #f0e8e1;
         font-weight: 600;
     }
 
@@ -42,7 +42,7 @@
         padding: 12px 16px;
         border-radius: 999px;
         font-weight: 900;
-        color: #dbeafe;
+        color: #eee4db;
         white-space: nowrap;
     }
 
@@ -54,24 +54,24 @@
 
     .emp-stat {
         text-decoration: none;
-        color: white;
+        color: #fffdf9;
         border-radius: 22px;
         padding: 18px;
         min-height: 118px;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+        box-shadow: 0 14px 30px rgba(95,70,54,.12);
         transition: 0.22s ease;
     }
 
     .emp-stat:hover {
         transform: translateY(-4px);
-        box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+        box-shadow: 0 20px 42px rgba(95,70,54,.18);
     }
 
     .emp-stat.active-filter {
         outline: 4px solid rgba(255,255,255,0.96);
-        box-shadow: 0 0 0 4px rgba(37,99,235,0.16), 0 20px 42px rgba(15, 23, 42, 0.20);
+        box-shadow: 0 0 0 4px rgba(155,116,87,.16), 0 20px 42px rgba(95,70,54,.20);
         transform: translateY(-2px);
     }
 
@@ -103,19 +103,19 @@
         font-weight: 700;
     }
 
-    .stat-total { background: linear-gradient(135deg, #2563eb, #1e3a8a); }
-    .stat-assigned { background: linear-gradient(135deg, #16a34a, #065f46); }
-    .stat-unassigned { background: linear-gradient(135deg, #f97316, #c2410c); }
-    .stat-active { background: linear-gradient(135deg, #7c3aed, #4c1d95); }
-    .stat-inactive { background: linear-gradient(135deg, #64748b, #0f172a); }
-    .stat-pickup { background: linear-gradient(135deg, #0891b2, #164e63); }
+    .stat-total { background: linear-gradient(135deg, #9b7457, #5f4636); }
+    .stat-assigned { background: linear-gradient(135deg, #4f6d58, #3f5c48); }
+    .stat-unassigned { background: linear-gradient(135deg, #b88746, #8b612e); }
+    .stat-active { background: linear-gradient(135deg, #8f6b50, #6f513d); }
+    .stat-inactive { background: linear-gradient(135deg, #746b64, #514943); }
+    .stat-pickup { background: linear-gradient(135deg, #b98a67, #7e5c43); }
 
     .employee-panel {
-        background: white;
+        background: #fffdf9;
         border-radius: 28px;
         padding: 22px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+        border: 1px solid #ded6cc;
+        box-shadow: 0 14px 30px rgba(95,70,54,.06);
     }
 
     .panel-top {
@@ -135,7 +135,7 @@
 
     .panel-top p {
         margin: 5px 0 0;
-        color: #64748b;
+        color: #746b64;
         font-weight: 600;
     }
 
@@ -151,15 +151,15 @@
         max-width: 100%;
         height: 46px;
         border-radius: 16px;
-        border: 1px solid #dbe2ea;
+        border: 1px solid #ded6cc;
         padding: 0 15px;
         font-weight: 700;
         outline: none;
     }
 
     .employee-search input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+        border-color: #9b7457;
+        box-shadow: 0 0 0 4px rgba(155,116,87,.12);
     }
 
     .search-btn {
@@ -167,8 +167,8 @@
         border: none;
         border-radius: 16px;
         padding: 0 20px;
-        background: #111827;
-        color: white;
+        background: #5f4636;
+        color: #fffdf9;
         font-weight: 900;
         cursor: pointer;
     }
@@ -176,7 +176,7 @@
     .employee-table-wrap {
         overflow-x: auto;
         border-radius: 22px;
-        border: 1px solid #edf0f4;
+        border: 1px solid #eee6de;
     }
 
     .employee-table {
@@ -189,8 +189,8 @@
     .employee-table th {
         text-align: left;
         padding: 14px;
-        background: #f8fafc;
-        color: #64748b;
+        background: #fbf8f2;
+        color: #746b64;
         font-size: 12px;
         text-transform: uppercase;
         font-weight: 900;
@@ -199,15 +199,15 @@
 
     .employee-table td {
         padding: 15px 14px;
-        border-bottom: 1px solid #edf0f4;
+        border-bottom: 1px solid #eee6de;
         font-weight: 700;
-        color: #334155;
+        color: #514943;
         vertical-align: middle;
-        background: white;
+        background: #fffdf9;
     }
 
     .employee-table tbody tr:hover td {
-        background: #f8fafc;
+        background: #fbf8f2;
     }
 
     .emp-user {
@@ -223,18 +223,30 @@
         display: grid;
         place-items: center;
         font-weight: 900;
-        color: white;
-        background: linear-gradient(135deg, #6366f1, #2563eb);
+        color: #fffdf9;
+        background: linear-gradient(135deg, #9b7457, #9b7457);
     }
+
+
+    .dummy-employee-icon {
+        width: 24px;
+        height: 24px;
+        fill: rgba(255,255,255,.95);
+        stroke: rgba(255,255,255,.95);
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+
+    /* Decorative default avatar only; profile photo upload is optional. */
 
     .emp-user strong {
         display: block;
-        color: #111827;
+        color: #5f4636;
         font-weight: 900;
     }
 
     .emp-user small {
-        color: #64748b;
+        color: #746b64;
         font-weight: 700;
     }
 
@@ -249,10 +261,10 @@
         white-space: nowrap;
     }
 
-    .pill-active { background: #dcfce7; color: #166534; }
-    .pill-inactive { background: #fee2e2; color: #991b1b; }
-    .pill-assigned { background: #dbeafe; color: #1d4ed8; }
-    .pill-unassigned { background: #ffedd5; color: #c2410c; }
+    .pill-active { background: #edf3ed; color: #4f6d58; }
+    .pill-inactive { background: #f8ece9; color: #7f3f39; }
+    .pill-assigned { background: #eee4db; color: #7e5c43; }
+    .pill-unassigned { background: #fbf3e7; color: #8b612e; }
 
     .action-group {
         display: flex;
@@ -272,24 +284,24 @@
     }
 
     .mini-action.assign {
-        background: #111827;
-        color: white;
+        background: #5f4636;
+        color: #fffdf9;
     }
 
     .mini-action.change {
-        background: #2563eb;
-        color: white;
+        background: #9b7457;
+        color: #fffdf9;
     }
 
     .mini-action.view {
-        background: #eef2ff;
-        color: #4338ca;
+        background: #f2e9e1;
+        color: #7e5c43;
     }
 
     .empty-row {
         text-align: center;
         padding: 28px !important;
-        color: #64748b !important;
+        color: #746b64 !important;
         font-weight: 900 !important;
     }
 
@@ -425,8 +437,11 @@
                     <tr>
                         <td>
                             <div class="emp-user">
-                                <div class="emp-avatar">
-                                    {{ row.employee.username|slice:":1"|upper }}
+                                <div class="emp-avatar" title="Employee profile avatar">
+                                    <svg class="dummy-employee-icon" viewBox="0 0 64 64" aria-hidden="true">
+                                        <circle cx="32" cy="22" r="12"></circle>
+                                        <path d="M12 56c1.8-12.5 9.8-20 20-20s18.2 7.5 20 20"></path>
+                                    </svg>
                                 </div>
                                 <div>
                                     <strong>{{ row.employee.username }}</strong>

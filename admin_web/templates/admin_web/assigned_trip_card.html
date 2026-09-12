@@ -1,3 +1,5 @@
+
+<!-- Iridori / CabMate themed trip card -->
 <div class="trip-card {{ card_type }} collapsed" id="card{{ run.id }}">
     <div class="premium-card-bg"></div>
 
@@ -9,40 +11,28 @@
             </div>
 
             <div class="badge-row">
-
                 <span class="status {{ run.status }}">{{ run.status }}</span>
                 <span class="type-pill {{ run.trip_type }}">{{ run.trip_type }}</span>
             </div>
-            <div class="smart-badges">
 
+            <div class="smart-badges">
                 {% if run.is_live %}
-                    <div class="smart-badge live">
-                        🟢 Live
-                    </div>
+                    <div class="smart-badge live">🟢 Live</div>
                 {% endif %}
 
                 {% if run.trip_type == "PICKUP" %}
-                    <div class="smart-badge pickup-chip">
-                        🚖 Pickup Running
-                    </div>
+                    <div class="smart-badge pickup-chip">🚖 Pickup Running</div>
                 {% else %}
-                    <div class="smart-badge drop-chip">
-                        🌙 Drop Running
-                    </div>
+                    <div class="smart-badge drop-chip">🌙 Drop Running</div>
                 {% endif %}
 
                 {% if run.is_delayed %}
-                    <div class="smart-badge delayed">
-                        ⏰ Delayed
-                    </div>
+                    <div class="smart-badge delayed">⏰ Delayed</div>
                 {% endif %}
 
                 {% if run.is_overspeed %}
-                    <div class="smart-badge overspeed">
-                        🚨 Overspeed
-                    </div>
+                    <div class="smart-badge overspeed">🚨 Overspeed</div>
                 {% endif %}
-
             </div>
         </div>
 
@@ -55,6 +45,7 @@
             ▾
         </button>
     </div>
+
     <div class="route-health {{ run.health_status|lower }}">
         {% if run.health_status == "EXCELLENT" %}
             🟢 Route Healthy
@@ -64,6 +55,7 @@
             🔴 Critical Route
         {% endif %}
     </div>
+
     <div class="route-progress-wrap">
         <div class="route-progress-top">
             <span>Route Progress</span>
@@ -104,7 +96,6 @@
         <div class="
             employee-row
             premium-employee
-
             {% if emp.is_no_show %}
                 employee-no-show
             {% elif emp.is_picked %}
@@ -123,9 +114,7 @@
                         <strong>{{ forloop.counter }}. {{ emp.employee_name }}</strong>
 
                         {% if emp.is_current %}
-                            <span class="live-current-badge">
-                                LIVE
-                            </span>
+                            <span class="live-current-badge">LIVE</span>
                         {% endif %}
                     </div>
 
@@ -177,3 +166,444 @@
         </button>
     </div>
 </div>
+
+<style>
+:root{
+    --cm-brown:#9b7457;
+    --cm-brown-dark:#7e5c43;
+    --cm-brown-deep:#5f4636;
+    --cm-cream:#f8f5ed;
+    --cm-cream-soft:#f3eee6;
+    --cm-card:#fffdf9;
+    --cm-border:#ded6cc;
+    --cm-text:#24211f;
+    --cm-muted:#746b64;
+    --cm-green:#4f6d58;
+    --cm-green-soft:#edf3ed;
+    --cm-red:#a6584f;
+    --cm-red-dark:#7f3f39;
+    --cm-red-soft:#f8ece9;
+    --cm-amber:#b88746;
+    --cm-amber-soft:#fbf3e7;
+}
+
+.trip-card{
+    position:relative;
+    overflow:hidden;
+    background:linear-gradient(145deg,var(--cm-card),#fbf8f2);
+    border:1px solid var(--cm-border);
+    border-radius:24px;
+    padding:20px;
+    box-shadow:0 16px 38px rgba(95,70,54,.08);
+    color:var(--cm-text);
+}
+
+.premium-card-bg{
+    position:absolute;
+    width:180px;
+    height:180px;
+    right:-70px;
+    top:-80px;
+    border-radius:50%;
+    background:rgba(155,116,87,.08);
+    pointer-events:none;
+}
+
+.card-top{
+    position:relative;
+    z-index:2;
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    align-items:flex-start;
+}
+
+.route-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:22px;
+    font-weight:950;
+    color:var(--cm-text);
+}
+
+.route-index{
+    min-width:34px;
+    height:34px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:12px;
+    background:linear-gradient(135deg,var(--cm-brown-dark),var(--cm-brown));
+    color:#fff;
+    font-size:13px;
+    font-weight:950;
+    box-shadow:0 8px 18px rgba(126,92,67,.18);
+}
+
+.badge-row,
+.smart-badges{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:12px;
+}
+
+.status,
+.type-pill,
+.smart-badge,
+.route-health,
+.emp-status,
+.live-current-badge{
+    display:inline-flex;
+    align-items:center;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:900;
+}
+
+.status,
+.type-pill{
+    padding:7px 10px;
+}
+
+.status.ASSIGNED{
+    background:#eee4db;
+    color:var(--cm-brown-deep);
+}
+.status.STARTED{
+    background:var(--cm-green-soft);
+    color:var(--cm-green);
+}
+.status.COMPLETED{
+    background:#e7efe8;
+    color:#43624c;
+}
+.status.CANCELLED{
+    background:var(--cm-red-soft);
+    color:var(--cm-red-dark);
+}
+
+.type-pill.PICKUP{
+    background:#f2e9e1;
+    color:var(--cm-brown-dark);
+}
+.type-pill.DROP{
+    background:#ebe4df;
+    color:#67544a;
+}
+
+.smart-badge{
+    padding:7px 10px;
+    border:1px solid transparent;
+}
+
+.smart-badge.live{
+    background:var(--cm-green-soft);
+    color:var(--cm-green);
+    border-color:#d8e4da;
+}
+.smart-badge.pickup-chip,
+.smart-badge.eta,
+.smart-badge.current{
+    background:#f3ece5;
+    color:var(--cm-brown-deep);
+    border-color:#e6d8cc;
+}
+.smart-badge.drop-chip{
+    background:#ece5df;
+    color:#635148;
+    border-color:#ded2c8;
+}
+.smart-badge.delayed{
+    background:var(--cm-amber-soft);
+    color:#8b612e;
+    border-color:#ead4b4;
+}
+.smart-badge.overspeed{
+    background:var(--cm-red-soft);
+    color:var(--cm-red-dark);
+    border-color:#e9c7c1;
+}
+
+.card-expand-arrow{
+    position:relative;
+    z-index:2;
+    width:38px;
+    height:38px;
+    border:1px solid var(--cm-border);
+    border-radius:12px;
+    background:#fff;
+    color:var(--cm-brown-deep);
+    cursor:pointer;
+    font-size:18px;
+    font-weight:950;
+    box-shadow:0 8px 18px rgba(95,70,54,.06);
+}
+
+.route-health{
+    margin-top:14px;
+    padding:8px 11px;
+    border:1px solid transparent;
+}
+.route-health.excellent{
+    background:var(--cm-green-soft);
+    color:var(--cm-green);
+    border-color:#d8e4da;
+}
+.route-health.moderate{
+    background:var(--cm-amber-soft);
+    color:#8b612e;
+    border-color:#ead4b4;
+}
+.route-health.critical{
+    background:var(--cm-red-soft);
+    color:var(--cm-red-dark);
+    border-color:#e9c7c1;
+}
+
+.route-progress-wrap{
+    margin-top:16px;
+    background:var(--cm-cream);
+    border:1px solid var(--cm-border);
+    border-radius:18px;
+    padding:14px;
+}
+
+.route-progress-top,
+.route-progress-meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+
+.route-progress-top{
+    font-size:12px;
+    color:var(--cm-muted);
+    font-weight:850;
+}
+.route-progress-top strong{
+    color:var(--cm-brown-deep);
+}
+
+.route-progress-bar{
+    height:10px;
+    border-radius:999px;
+    background:#e8e0d8;
+    overflow:hidden;
+    margin:10px 0;
+}
+
+.route-progress-fill{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg,var(--cm-brown-dark),var(--cm-brown));
+}
+
+.route-progress-meta{
+    font-size:11px;
+    color:var(--cm-muted);
+    font-weight:800;
+}
+
+.details{
+    margin-top:16px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+}
+
+.details > div{
+    background:#fbf8f2;
+    border:1px solid var(--cm-border);
+    border-radius:14px;
+    padding:11px 12px;
+    color:#514943;
+    font-weight:750;
+    font-size:13px;
+}
+.details b{
+    color:var(--cm-brown-deep);
+}
+
+.employee-toggle{
+    width:100%;
+    margin-top:16px;
+    border:1px solid #d7c6b7;
+    background:linear-gradient(135deg,#f4ece5,#eee2d7);
+    color:var(--cm-brown-deep);
+    border-radius:14px;
+    padding:11px 14px;
+    font-weight:950;
+    cursor:pointer;
+}
+
+.employee-box{
+    margin-top:14px;
+}
+
+.employee-row{
+    position:relative;
+    display:flex;
+    gap:12px;
+    padding:14px;
+    border:1px solid var(--cm-border);
+    border-radius:16px;
+    background:#fff;
+    margin-bottom:10px;
+}
+
+.employee-completed{
+    background:#f5f8f4;
+    border-color:#d8e4da;
+}
+.employee-current{
+    background:#f5eee8;
+    border-color:#d8c5b5;
+}
+.employee-no-show{
+    background:#fcf1ef;
+    border-color:#e9c7c1;
+}
+.employee-pending{
+    background:#fbf8f2;
+}
+
+.timeline-dot{
+    width:13px;
+    height:13px;
+    border-radius:50%;
+    flex:0 0 13px;
+    margin-top:5px;
+    background:#c9beb5;
+    box-shadow:0 0 0 4px rgba(201,190,181,.18);
+}
+.timeline-dot.done{
+    background:var(--cm-green);
+}
+.timeline-dot.no-show{
+    background:var(--cm-red);
+}
+
+.employee-main{
+    flex:1;
+}
+
+.employee-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+.employee-head strong{
+    color:var(--cm-text);
+}
+
+.emp-location{
+    margin-top:8px;
+    color:var(--cm-muted);
+    font-size:12px;
+    font-weight:700;
+    line-height:1.55;
+}
+
+.live-current-badge{
+    padding:5px 8px;
+    background:var(--cm-brown);
+    color:#fff;
+}
+
+.emp-status{
+    padding:6px 9px;
+}
+.emp-status.done{
+    background:var(--cm-green-soft);
+    color:var(--cm-green);
+}
+.emp-status.pending{
+    background:#eee4db;
+    color:var(--cm-brown-deep);
+}
+.emp-status.no-show{
+    background:var(--cm-red-soft);
+    color:var(--cm-red-dark);
+}
+
+.single-cancel{
+    margin-top:10px;
+    border:1px solid #e2c3bd;
+    background:#fbefed;
+    color:var(--cm-red-dark);
+    border-radius:11px;
+    padding:8px 10px;
+    font-size:11px;
+    font-weight:900;
+    cursor:pointer;
+}
+
+.actions{
+    margin-top:16px;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.actions form{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.card-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border:0;
+    border-radius:12px;
+    padding:10px 13px;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:950;
+    cursor:pointer;
+}
+
+.live-map-btn{
+    background:linear-gradient(135deg,var(--cm-brown-dark),var(--cm-brown));
+    color:#fff;
+}
+
+.card-btn.cancel{
+    background:var(--cm-red-soft);
+    color:var(--cm-red-dark);
+    border:1px solid #e8c6c0;
+}
+
+.card-btn.more{
+    background:#eee4db;
+    color:var(--cm-brown-deep);
+    border:1px solid #decec0;
+}
+
+@media(max-width:700px){
+    .details{
+        grid-template-columns:1fr;
+    }
+
+    .actions,
+    .employee-head{
+        align-items:stretch;
+    }
+
+    .actions form{
+        width:100%;
+    }
+
+    .card-btn{
+        flex:1;
+    }
+}
+</style>

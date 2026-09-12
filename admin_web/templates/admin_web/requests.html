@@ -17,9 +17,9 @@
         margin-bottom: 20px;
         padding: 20px;
         border-radius: 24px;
-        background: linear-gradient(135deg, #ffffff, #f8fbff);
-        border: 1px solid #dbeafe;
-        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+        background: linear-gradient(135deg, #fffdf9, #f8f5ed);
+        border: 1px solid #ded6cc;
+        box-shadow: 0 14px 34px rgba(95, 70, 54, 0.07);
     }
 
     .requests-header-left {
@@ -35,21 +35,21 @@
         display: grid;
         place-items: center;
         font-size: 26px;
-        background: linear-gradient(135deg, #1e3a8a, #2563eb);
-        color: white;
-        box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+        background: linear-gradient(135deg, #5f4636, #7e5c43, #9b7457);
+        color: #fffdf9;
+        box-shadow: 0 12px 24px rgba(126, 92, 67, 0.22);
     }
 
     .requests-header h1 {
         margin: 0;
         font-size: 28px;
         font-weight: 900;
-        color: #14213d;
+        color: #24211f;
     }
 
     .requests-header p {
         margin: 5px 0 0;
-        color: #64748b;
+        color: #746b64;
         font-size: 13px;
         font-weight: 600;
     }
@@ -58,21 +58,21 @@
         min-width: 110px;
         padding: 12px 16px;
         border-radius: 18px;
-        background: #fff1f2;
-        border: 1px solid #fecaca;
+        background: #f8ece9;
+        border: 1px solid #e9c7c1;
         text-align: center;
     }
 
     .total-pending strong {
         display: block;
         font-size: 26px;
-        color: #b91c1c;
+        color: #7f3f39;
         font-weight: 900;
     }
 
     .total-pending span {
         font-size: 12px;
-        color: #7f1d1d;
+        color: #7f3f39;
         font-weight: 700;
     }
 
@@ -86,24 +86,24 @@
         position: relative;
         display: block;
         text-decoration: none;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+        background: #fffdf9;
+        border: 1px solid #ded6cc;
         border-radius: 22px;
         padding: 20px;
         min-height: 170px;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 12px 28px rgba(95, 70, 54, 0.06);
         transition: 0.2s ease;
-        color: #111827;
+        color: #24211f;
     }
 
     .request-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.10);
+        box-shadow: 0 18px 36px rgba(95, 70, 54, 0.10);
     }
 
     .request-card.active {
-        border-color: #93c5fd;
-        background: linear-gradient(135deg, #ffffff, #eff6ff);
+        border-color: #cdb59f;
+        background: linear-gradient(135deg, #fffdf9, #f3eee6);
     }
 
     .request-card.disabled {
@@ -117,23 +117,28 @@
         border-radius: 16px;
         display: grid;
         place-items: center;
-        background: #eff6ff;
+        background: #f2e9e1;
+        color: #7e5c43;
         font-size: 23px;
         margin-bottom: 15px;
     }
 
-    .request-card h3 {
+    .request-card h3,
+    .request-card > strong {
         margin: 0;
         font-size: 17px;
         font-weight: 900;
-        color: #14213d;
+        color: #24211f;
+        display: block;
     }
 
-    .request-card p {
+    .request-card p,
+    .request-card small {
         margin: 7px 0 0;
-        color: #64748b;
+        color: #746b64;
         font-size: 13px;
         line-height: 1.4;
+        display: block;
     }
 
     .request-count {
@@ -147,11 +152,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #dc2626;
-        color: #fff;
+        background: #a6584f;
+        color: #fffdf9;
         font-size: 11px;
         font-weight: 900;
-        border: 3px solid #fff;
+        border: 3px solid #fffdf9;
     }
 
     .coming-soon {
@@ -159,10 +164,11 @@
         margin-top: 14px;
         padding: 5px 9px;
         border-radius: 999px;
-        background: #f3f4f6;
-        color: #6b7280;
+        background: #f3eee6;
+        color: #746b64;
         font-size: 11px;
         font-weight: 800;
+        border: 1px solid #ded6cc;
     }
 
     @media (max-width: 1000px) {

@@ -215,10 +215,27 @@
 </div>
 
 <style>
+:root{
+    --iridori-brown:#9b7457;
+    --iridori-brown-dark:#7e5c43;
+    --iridori-brown-deep:#5f4636;
+    --iridori-cream:#f8f5ed;
+    --iridori-cream-soft:#f3eee6;
+    --iridori-card:#fffdf9;
+    --iridori-border:#ded6cc;
+    --iridori-text:#24211f;
+    --iridori-muted:#746b64;
+    --iridori-green:#4f6d58;
+    --iridori-green-soft:#edf3ed;
+    --iridori-danger:#a6584f;
+    --iridori-danger-dark:#7f3f39;
+    --iridori-danger-soft:#f8ece9;
+}
+
 .sos-hero{
     position:relative;
     overflow:hidden;
-    background:linear-gradient(135deg,#7f1d1d,#dc2626,#f97316);
+    background:linear-gradient(135deg,var(--iridori-brown-deep),var(--iridori-brown-dark),var(--iridori-brown));
     color:#fff;
     border-radius:30px;
     padding:28px;
@@ -227,7 +244,7 @@
     align-items:center;
     justify-content:space-between;
     gap:18px;
-    box-shadow:0 24px 55px rgba(127,29,29,.22);
+    box-shadow:0 24px 55px rgba(95,70,54,.20);
 }
 .sos-hero::after{
     content:"";
@@ -237,7 +254,7 @@
     border-radius:999px;
     right:-45px;
     top:-55px;
-    background:rgba(255,255,255,.16);
+    background:rgba(255,255,255,.14);
 }
 .sos-hero h2{
     margin:0;
@@ -252,7 +269,7 @@
 }
 .sos-kicker{
     display:inline-flex;
-    background:rgba(255,255,255,.16);
+    background:rgba(255,255,255,.15);
     border:1px solid rgba(255,255,255,.20);
     padding:8px 12px;
     border-radius:999px;
@@ -264,13 +281,13 @@
     position:relative;
     z-index:2;
     border:0;
-    background:#fff;
-    color:#991b1b;
+    background:var(--iridori-card);
+    color:var(--iridori-brown-deep);
     border-radius:16px;
     padding:14px 18px;
     font-weight:950;
     cursor:pointer;
-    box-shadow:0 12px 26px rgba(0,0,0,.16);
+    box-shadow:0 12px 26px rgba(0,0,0,.12);
 }
 .sos-stats-grid{
     display:grid;
@@ -285,7 +302,7 @@
     border-radius:24px;
     padding:22px;
     min-height:132px;
-    box-shadow:0 16px 38px rgba(15,23,42,.12);
+    box-shadow:0 16px 38px rgba(95,70,54,.12);
 }
 .sos-stat::after{
     content:"";
@@ -295,11 +312,11 @@
     border-radius:999px;
     right:-24px;
     top:-24px;
-    background:rgba(255,255,255,.18);
+    background:rgba(255,255,255,.16);
 }
-.sos-stat.total{background:linear-gradient(135deg,#2563eb,#172554)}
-.sos-stat.active{background:linear-gradient(135deg,#dc2626,#7f1d1d)}
-.sos-stat.resolved{background:linear-gradient(135deg,#16a34a,#064e3b)}
+.sos-stat.total{background:linear-gradient(135deg,#a78266,var(--iridori-brown-dark))}
+.sos-stat.active{background:linear-gradient(135deg,var(--iridori-danger),var(--iridori-danger-dark))}
+.sos-stat.resolved{background:linear-gradient(135deg,#738b78,var(--iridori-green))}
 .sos-stat span{
     color:rgba(255,255,255,.82);
     font-size:12px;
@@ -313,6 +330,9 @@
 
 .page-content{
     padding:20px !important;
+    background:
+        radial-gradient(circle at top left, rgba(155,116,87,.06), transparent 34%),
+        linear-gradient(135deg,var(--iridori-cream),var(--iridori-cream-soft)) !important;
 }
 .sos-stat strong{
     display:block;
@@ -325,11 +345,11 @@
     font-weight:800;
 }
 .sos-panel{
-    background:rgba(255,255,255,.94);
-    border:1px solid rgba(226,232,240,.95);
+    background:rgba(255,253,249,.96);
+    border:1px solid var(--iridori-border);
     border-radius:28px;
     padding:22px;
-    box-shadow:0 18px 45px rgba(15,23,42,.08);
+    box-shadow:0 18px 45px rgba(95,70,54,.08);
 }
 .sos-panel-head{
     display:flex;
@@ -342,15 +362,17 @@
     margin:0;
     font-size:24px;
     font-weight:950;
+    color:var(--iridori-text);
 }
 .sos-panel-head p{
     margin:5px 0 0;
-    color:#64748b;
+    color:var(--iridori-muted);
     font-weight:750;
 }
 .live-chip{
-    background:#dcfce7;
-    color:#166534;
+    background:var(--iridori-green-soft);
+    color:var(--iridori-green);
+    border:1px solid #d5e1d6;
     padding:9px 13px;
     border-radius:999px;
     font-size:12px;
@@ -365,20 +387,22 @@
 .sos-search-input{
     height:48px;
     min-width:290px;
-    border:1px solid #dbe3ef;
+    border:1px solid var(--iridori-border);
     border-radius:16px;
     padding:0 15px;
     font-weight:850;
     outline:none;
+    background:#fff;
+    color:var(--iridori-text);
 }
 .sos-search-input:focus{
-    border-color:#dc2626;
-    box-shadow:0 0 0 4px rgba(220,38,38,.10);
+    border-color:var(--iridori-brown);
+    box-shadow:0 0 0 4px rgba(155,116,87,.10);
 }
 .sos-apply-btn{
     height:48px;
     border:0;
-    background:#111827;
+    background:linear-gradient(135deg,var(--iridori-brown-dark),var(--iridori-brown));
     color:white;
     padding:0 22px;
     border-radius:16px;
@@ -395,23 +419,23 @@
 .sos-table th{
     text-align:left;
     padding:14px;
-    color:#64748b;
+    color:var(--iridori-muted);
     font-size:12px;
     text-transform:uppercase;
-    border-bottom:1px solid #e5e7eb;
-    background:#f8fafc;
+    border-bottom:1px solid var(--iridori-border);
+    background:var(--iridori-cream-soft);
 }
 .sos-table td{
     padding:15px 14px;
-    border-bottom:1px solid #eef2f7;
+    border-bottom:1px solid #eee6de;
     font-weight:800;
-    color:#334155;
+    color:#4f4741;
     background:#fff;
 }
-.sos-table tbody tr:hover td{background:#f8fafc}
+.sos-table tbody tr:hover td{background:#fbf8f2}
 .id-pill{
-    background:#eef2ff;
-    color:#3730a3;
+    background:#eee4db;
+    color:var(--iridori-brown-deep);
     border-radius:999px;
     padding:7px 10px;
     font-size:12px;
@@ -425,13 +449,13 @@
     font-weight:950;
 }
 .sos-status.active{
-    background:#fee2e2;
-    color:#991b1b;
+    background:var(--iridori-danger-soft);
+    color:var(--iridori-danger-dark);
     animation:sosPulse 1.2s infinite;
 }
 .sos-status.resolved{
-    background:#dcfce7;
-    color:#166534;
+    background:var(--iridori-green-soft);
+    color:var(--iridori-green);
 }
 .sos-actions,.modal-actions{
     display:flex;
@@ -450,23 +474,32 @@
     font-weight:950;
     cursor:pointer;
 }
-.sos-btn.view{background:#eef2ff;color:#3730a3}
-.sos-btn.track{background:#dbeafe;color:#1d4ed8}
-.sos-btn.resolve{background:#dcfce7;color:#166534}
+.sos-btn.view{
+    background:#eee4db;
+    color:var(--iridori-brown-deep);
+}
+.sos-btn.track{
+    background:#f2e9e1;
+    color:var(--iridori-brown-dark);
+}
+.sos-btn.resolve{
+    background:var(--iridori-green-soft);
+    color:var(--iridori-green);
+}
 .empty-state{
     text-align:center;
     padding:32px!important;
-    color:#64748b!important;
+    color:var(--iridori-muted)!important;
 }
 .alert-row-active td{
-    background:#fff5f5!important;
+    background:#fcf1ef!important;
     animation:alertBlink 1.3s infinite;
 }
 .trip-modal-overlay{
     display:none;
     position:fixed;
     inset:0;
-    background:rgba(15,23,42,.60);
+    background:rgba(36,33,31,.62);
     z-index:9999;
     align-items:center;
     justify-content:center;
@@ -477,9 +510,9 @@
     max-width:1100px;
     max-height:92vh;
     overflow-y:auto;
-    background:#fff;
+    background:var(--iridori-card);
     border-radius:28px;
-    box-shadow:0 28px 70px rgba(0,0,0,.24);
+    box-shadow:0 28px 70px rgba(45,34,26,.24);
 }
 .trip-modal-header{
     padding:20px 22px;
@@ -489,23 +522,24 @@
     gap:12px;
 }
 .danger-header{
-    background:linear-gradient(135deg,#fee2e2,#fff7ed);
-    border-bottom:1px solid #fecaca;
+    background:linear-gradient(135deg,#f7e7e3,#f8f2ea);
+    border-bottom:1px solid #dfc4bc;
 }
 .trip-modal-header h3{
     margin:0;
     font-size:25px;
     font-weight:950;
-    color:#991b1b;
+    color:var(--iridori-danger-dark);
 }
 .trip-modal-header p{
     margin:4px 0 0;
-    color:#7f1d1d;
+    color:#8c5149;
     font-weight:800;
 }
 .trip-modal-close{
-    border:0;
+    border:1px solid var(--iridori-border);
     background:#fff;
+    color:var(--iridori-brown-deep);
     width:42px;
     height:42px;
     border-radius:13px;
@@ -514,8 +548,8 @@
 }
 .trip-modal-body{padding:20px}
 .sos-warning-box{
-    background:#fef2f2;
-    border:1px solid #fecaca;
+    background:#fbefed;
+    border:1px solid #dfc4bc;
     border-radius:20px;
     padding:16px;
     margin-bottom:16px;
@@ -523,12 +557,12 @@
 .sos-warning-box div{
     font-size:16px;
     font-weight:950;
-    color:#991b1b;
+    color:var(--iridori-danger-dark);
     margin-bottom:8px;
 }
 .sos-warning-box p{
     margin:0;
-    color:#7f1d1d;
+    color:#8c5149;
     font-weight:750;
 }
 .trip-modal-info-grid{
@@ -537,20 +571,20 @@
     gap:12px;
 }
 .trip-info-box,.trip-route-line{
-    background:#f8fafc;
-    border:1px solid #e5e7eb;
+    background:#fbf8f2;
+    border:1px solid var(--iridori-border);
     border-radius:16px;
     padding:14px;
 }
 .trip-info-box small,.trip-route-label{
     display:block;
-    color:#6b7280;
+    color:var(--iridori-muted);
     margin-bottom:6px;
     font-size:13px;
     font-weight:800;
 }
 .trip-info-box strong,.trip-route-line strong{
-    color:#111827;
+    color:var(--iridori-text);
     font-size:15px;
 }
 .trip-route-text-wrap{
@@ -564,18 +598,18 @@
     border-radius:20px;
     overflow:hidden;
     margin-top:16px;
-    border:1px solid #e5e7eb;
+    border:1px solid var(--iridori-border);
 }
 .modal-actions{margin-top:18px}
 @keyframes alertBlink{
-    0%{background:#fff5f5}
-    50%{background:#ffe4e6}
-    100%{background:#fff5f5}
+    0%{background:#fcf1ef}
+    50%{background:#f6dfdb}
+    100%{background:#fcf1ef}
 }
 @keyframes sosPulse{
-    0%{box-shadow:0 0 0 0 rgba(220,38,38,.35)}
-    70%{box-shadow:0 0 0 9px rgba(220,38,38,0)}
-    100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}
+    0%{box-shadow:0 0 0 0 rgba(166,88,79,.35)}
+    70%{box-shadow:0 0 0 9px rgba(166,88,79,0)}
+    100%{box-shadow:0 0 0 0 rgba(166,88,79,0)}
 }
 @media(max-width:900px){
     .sos-hero,.sos-panel-head{flex-direction:column;align-items:flex-start}
@@ -646,8 +680,8 @@ function openAlertModal(alertId){
     document.getElementById("alertDrop").innerText = data.drop_location || "--";
     document.getElementById("alertRouteName").innerText = data.route_name || "--";
     document.getElementById("alertDriverUpdatedAt").innerText = data.driver_updated_at || "--";
-    const resolveBtn =
-        document.getElementById("resolveAlertBtn");
+
+    const resolveBtn = document.getElementById("resolveAlertBtn");
 
     if (data.status === "ACTIVE") {
         resolveBtn.style.display = "inline-flex";
@@ -668,6 +702,7 @@ function openAlertModal(alertId){
     if(alertRefreshTimer){
         clearInterval(alertRefreshTimer);
     }
+
     alertRefreshTimer = setInterval(refreshAlertDriverLocation, 5000);
 }
 
@@ -729,7 +764,7 @@ function renderAlertMap(data){
         alertLine = new google.maps.Polyline({
             path:[driver,sos],
             geodesic:true,
-            strokeColor:"#DC2626",
+            strokeColor:"#9B7457",
             strokeOpacity:1,
             strokeWeight:4,
         });
@@ -756,8 +791,10 @@ function animateAlertDriverMarker(newPosition){
     const deltaLng = (newPosition.lng - startLng) / 30;
 
     let i = 0;
+
     const animation = setInterval(() => {
         i++;
+
         alertDriverMarker.setPosition({
             lat:startLat + (deltaLat * i),
             lng:startLng + (deltaLng * i),
@@ -770,11 +807,11 @@ function animateAlertDriverMarker(newPosition){
     }, 35);
 }
 
-
 function formatStatusPill(status){
     if(status === "ACTIVE"){
         return `<span class="sos-status active">🔴 ACTIVE</span>`;
     }
+
     return `<span class="sos-status resolved">🟢 RESOLVED</span>`;
 }
 
@@ -799,7 +836,6 @@ function getCookie(name) {
     return cookieValue;
 }
 
-
 async function resolveAlertLive(alertId) {
     try {
         const response = await fetch(
@@ -814,14 +850,10 @@ async function resolveAlertLive(alertId) {
         );
 
         if (!response.ok) {
-            console.error(
-                "Resolve failed:",
-                response.status
-            );
+            console.error("Resolve failed:", response.status);
             return;
         }
 
-        // Close modal if this alert is currently open
         if (
             selectedAlertId &&
             String(selectedAlertId) === String(alertId)
@@ -832,10 +864,7 @@ async function resolveAlertLive(alertId) {
         await refreshAlertsTableLive();
 
     } catch (error) {
-        console.error(
-            "Failed to resolve SOS:",
-            error
-        );
+        console.error("Failed to resolve SOS:", error);
     }
 }
 
@@ -878,10 +907,7 @@ async function refreshAlertDriverLocation() {
     const data = alertModalData[String(selectedAlertId)];
 
     if (!data) {
-        console.warn(
-            "Alert data not found:",
-            selectedAlertId
-        );
+        console.warn("Alert data not found:", selectedAlertId);
         return;
     }
 
@@ -891,10 +917,7 @@ async function refreshAlertDriverLocation() {
         );
 
         if (!response.ok) {
-            console.warn(
-                "Driver location request failed:",
-                response.status
-            );
+            console.warn("Driver location request failed:", response.status);
             return;
         }
 
@@ -917,29 +940,21 @@ async function refreshAlertDriverLocation() {
 
         data.driver_live_lat = newPosition.lat;
         data.driver_live_lng = newPosition.lng;
-        data.driver_updated_at =
-            payload.updated_at || "";
+        data.driver_updated_at = payload.updated_at || "";
 
         document.getElementById(
             "alertDriverUpdatedAt"
-        ).innerText =
-            data.driver_updated_at || "--";
+        ).innerText = data.driver_updated_at || "--";
 
         if (alertDriverMarker) {
-            animateAlertDriverMarker(
-                newPosition
-            );
+            animateAlertDriverMarker(newPosition);
         } else if (alertMap) {
-            alertDriverMarker =
-                new google.maps.Marker({
-                    position: newPosition,
-                    map: alertMap,
-                    title:
-                        data.driver_name ||
-                        "Driver",
-                    icon:
-                        "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                });
+            alertDriverMarker = new google.maps.Marker({
+                position: newPosition,
+                map: alertMap,
+                title: data.driver_name || "Driver",
+                icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            });
         }
 
         const sosPosition = validLatLng(
@@ -957,25 +972,21 @@ async function refreshAlertDriverLocation() {
             newPosition &&
             alertMap
         ) {
-            alertLine =
-                new google.maps.Polyline({
-                    path: [
-                        newPosition,
-                        sosPosition
-                    ],
-                    geodesic: true,
-                    strokeColor: "#DC2626",
-                    strokeOpacity: 1,
-                    strokeWeight: 4,
-                    map: alertMap,
-                });
+            alertLine = new google.maps.Polyline({
+                path: [
+                    newPosition,
+                    sosPosition
+                ],
+                geodesic: true,
+                strokeColor: "#9B7457",
+                strokeOpacity: 1,
+                strokeWeight: 4,
+                map: alertMap,
+            });
         }
 
     } catch (error) {
-        console.error(
-            "Failed to refresh SOS driver location:",
-            error
-        );
+        console.error("Failed to refresh SOS driver location:", error);
     }
 }
 
@@ -996,33 +1007,21 @@ async function refreshAlertsTableLive() {
         const payload = await response.json();
         const alerts = payload.results || [];
 
-        // ==========================================
-        // UPDATE DASHBOARD COUNTS
-        // ==========================================
-
         document.getElementById(
             "totalAlertsCount"
-        ).innerText =
-            payload.total_alerts ?? 0;
+        ).innerText = payload.total_alerts ?? 0;
 
         document.getElementById(
             "activeAlertsCount"
-        ).innerText =
-            payload.active_alerts ?? 0;
+        ).innerText = payload.active_alerts ?? 0;
 
         document.getElementById(
             "resolvedAlertsCount"
-        ).innerText =
-            payload.resolved_alerts ?? 0;
+        ).innerText = payload.resolved_alerts ?? 0;
 
-        // ==========================================
-        // UPDATE ALERT TABLE
-        // ==========================================
-
-        const tableBody =
-            document.getElementById(
-                "alertsTableBody"
-            );
+        const tableBody = document.getElementById(
+            "alertsTableBody"
+        );
 
         if (!alerts.length) {
             tableBody.innerHTML = `
@@ -1046,19 +1045,11 @@ async function refreshAlertsTableLive() {
                 )
                 .join("");
 
-        // ==========================================
-        // UPDATE MODAL DATA
-        // ==========================================
-
         alerts.forEach(alert => {
             alertModalData[
                 String(alert.id)
             ] = alert;
         });
-
-        // ==========================================
-        // FIND NEWEST ACTIVE SOS
-        // ==========================================
 
         const newestActive =
             alerts
@@ -1096,7 +1087,6 @@ async function refreshAlertsTableLive() {
 
                 playAlertSound();
 
-                // Automatically open new SOS
                 openAlertModal(
                     newestId
                 );
@@ -1110,6 +1100,7 @@ async function refreshAlertsTableLive() {
         );
     }
 }
+
 window.addEventListener(
     "load",
     () => {
@@ -1132,7 +1123,6 @@ window.addEventListener(
         }
     }
 );
-
 
 // Refresh SOS table every 5 seconds
 setInterval(() => {
