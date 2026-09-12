@@ -2304,7 +2304,14 @@ def employees_page(request):
     query = request.GET.get("q", "").strip()
     filter_type = request.GET.get("filter", "all").strip()
 
-    employees = User.objects.filter(role="EMPLOYEE").order_by("username")
+    # Employee Directory is an operational screen:
+    # show only active employees here. Deactivated employees remain
+    # in the database so historical Trip / RouteRun / chat / report
+    # records continue to resolve correctly.
+    employees = User.objects.filter(
+        role="EMPLOYEE",
+        is_active=True,
+    ).order_by("username")
 
     today = timezone.localdate()
 
@@ -2313,8 +2320,8 @@ def employees_page(request):
     )
 
     total_employees = employees.count()
-    active_employees = employees.filter(is_active=True).count()
-    inactive_employees = employees.filter(is_active=False).count()
+    active_employees = employees.count()
+    inactive_employees = 0
     employees_with_pickup = employees.exclude(
         pickup_location__isnull=True
     ).exclude(
