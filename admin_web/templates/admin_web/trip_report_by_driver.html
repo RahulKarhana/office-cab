@@ -1,0 +1,125 @@
+{% extends "admin_web/base.html" %}
+
+{% block title %}Trip Report by Driver | CabMate Admin{% endblock %}
+{% block nav_reports %}active{% endblock %}
+{% block page_heading %}Trip Report by Driver{% endblock %}
+{% block page_subheading %}Complete pickup and drop journey timeline with employee events and chat history{% endblock %}
+
+{% block content %}
+<style>
+:root{--b:#9b7457;--bd:#7e5c43;--deep:#5f4636;--cream:#f8f5ed;--soft:#f3eee6;--card:#fffdf9;--line:#ded6cc;--text:#24211f;--muted:#746b64;--green:#4f6d58;--gsoft:#edf3ed;--red:#a6584f;--rsoft:#f8ece9;--amber:#b88746;--asoft:#fbf3e7;}
+.driver-report-page{display:flex;flex-direction:column;gap:16px}
+.report-hero{background:linear-gradient(135deg,var(--deep),var(--bd),var(--b));color:#fff;border-radius:24px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 16px 35px rgba(95,70,54,.18)}
+.report-hero h2{margin:0;font-size:27px;font-weight:950}.report-hero p{margin:6px 0 0;opacity:.86;font-size:13px;font-weight:700}
+.back-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:13px;background:#fffdf9;color:var(--deep);text-decoration:none;font-weight:900;font-size:13px;white-space:nowrap}
+.filter-card,.summary-card,.journey-card,.empty-state{background:var(--card);border:1px solid var(--line);box-shadow:0 9px 24px rgba(95,70,54,.06)}
+.filter-card{border-radius:20px;padding:16px}.filter-grid{display:grid;grid-template-columns:1fr 1fr 1fr .8fr .8fr auto;gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:11px;font-weight:900;color:var(--muted)}.field input,.field select{height:43px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 12px;font-size:13px;font-weight:700;color:var(--text);outline:none}
+.field input:focus,.field select:focus{border-color:var(--b);box-shadow:0 0 0 3px rgba(155,116,87,.10)}
+.apply-btn{height:43px;border:0;border-radius:12px;padding:0 17px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;font-weight:900;cursor:pointer}
+.summary-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.summary-card{border-radius:17px;padding:14px}.summary-card span{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase}.summary-card strong{display:block;margin-top:5px;color:var(--deep);font-size:25px;font-weight:950}.summary-card.chat strong{color:var(--green)}
+.report-note{padding:12px 14px;border-radius:15px;background:var(--asoft);border:1px solid #ead5af;color:#725329;font-size:12px;font-weight:750;line-height:1.55}
+.journey-list{display:flex;flex-direction:column;gap:14px}.journey-card{border-radius:22px;overflow:hidden}.journey-head{padding:17px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;background:linear-gradient(135deg,#fffdf9,#f8f5ed);border-bottom:1px solid var(--line)}
+.journey-title h3{margin:0;color:var(--text);font-size:20px;font-weight:950}.journey-title p{margin:5px 0 0;color:var(--muted);font-size:12px;font-weight:750}.badge-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.badge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;background:var(--soft);color:var(--deep);font-size:10px;font-weight:900}.badge.completed{background:var(--gsoft);color:var(--green)}.badge.started{background:var(--asoft);color:#8b612e}
+.run-time-grid{display:grid;grid-template-columns:repeat(3,minmax(100px,1fr));gap:8px;min-width:340px}.time-box{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px 11px}.time-box small{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase}.time-box strong{display:block;margin-top:4px;color:var(--text);font-size:12px;font-weight:950}
+.journey-body{padding:17px}.start-end-strip{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:15px}.main-event{background:var(--soft);border:1px solid var(--line);border-radius:15px;padding:12px}.main-event.end{background:var(--gsoft)}.main-event small{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase}.main-event strong{display:block;margin-top:3px;font-size:14px;color:var(--deep)}.route-arrow{font-size:21px;color:var(--b);font-weight:950}
+.stop-list{display:flex;flex-direction:column;gap:9px}.stop-row{display:grid;grid-template-columns:44px minmax(180px,1.4fr) repeat(4,minmax(100px,.75fr)) auto auto;gap:8px;align-items:stretch;border:1px solid var(--line);border-radius:16px;padding:10px;background:#fff}.stop-index{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#eee4db;color:var(--bd);font-weight:950;align-self:center}.stop-person{align-self:center;min-width:0}.stop-person strong{display:block;color:var(--text);font-size:13px;font-weight:950}.stop-person span{display:block;color:var(--muted);font-size:10px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.segment-text{font-size:9px;color:var(--muted);font-weight:800;margin-top:3px}
+.event-box{align-self:center;padding:7px 8px;border-radius:10px;background:var(--cream)}.event-box small{display:block;color:var(--muted);font-size:8px;font-weight:900;text-transform:uppercase}.event-box strong{display:block;margin-top:2px;color:var(--text);font-size:11px;font-weight:900}.stop-status{align-self:center;display:inline-flex;justify-content:center;padding:6px 8px;border-radius:999px;font-size:9px;font-weight:950;white-space:nowrap}.stop-status.PICKED,.stop-status.DROPPED{background:var(--gsoft);color:var(--green)}.stop-status.ARRIVED{background:var(--asoft);color:#8b612e}.stop-status.NO_SHOW{background:var(--rsoft);color:var(--red)}.stop-status.PENDING{background:var(--soft);color:var(--muted)}
+.chat-btn{align-self:center;border:0;border-radius:10px;padding:8px 10px;cursor:pointer;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;font-size:10px;font-weight:900;white-space:nowrap}.no-chat{align-self:center;color:#aaa;font-size:10px;font-weight:800;padding:8px}
+.chat-modal{display:none;position:fixed;inset:0;z-index:99999;background:rgba(36,33,31,.58);padding:18px;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.chat-modal.show{display:flex}.chat-card{width:min(680px,100%);max-height:82vh;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 28px 70px rgba(0,0,0,.22)}.chat-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 17px;background:linear-gradient(135deg,var(--deep),var(--bd));color:#fff}.chat-head h3{margin:0;font-size:16px}.chat-close{border:0;background:rgba(255,255,255,.16);color:#fff;width:34px;height:34px;border-radius:10px;cursor:pointer}.chat-body{padding:15px;max-height:65vh;overflow-y:auto}.chat-group{margin-bottom:14px}.chat-group-title{font-size:10px;color:var(--muted);font-weight:900;margin-bottom:7px}.message{max-width:82%;padding:9px 11px;border-radius:13px;margin-bottom:7px;background:var(--soft);border:1px solid var(--line)}.message.driver{margin-left:auto;background:#eee4db}.message strong{display:block;font-size:10px;color:var(--deep)}.message p{margin:3px 0;font-size:12px;line-height:1.45;color:var(--text)}.message time{display:block;font-size:9px;color:var(--muted)}.empty-state{padding:34px;border-radius:20px;text-align:center;color:var(--muted);font-weight:850}
+@media(max-width:1200px){.filter-grid{grid-template-columns:repeat(3,1fr)}.summary-grid{grid-template-columns:repeat(3,1fr)}.stop-row{grid-template-columns:40px minmax(180px,1fr) repeat(2,110px) auto auto}.stop-row .optional-event{display:none}}
+@media(max-width:760px){.report-hero{flex-direction:column;align-items:flex-start}.filter-grid,.summary-grid{grid-template-columns:1fr 1fr}.journey-head{flex-direction:column}.run-time-grid{min-width:0;width:100%}.stop-row{grid-template-columns:38px 1fr auto}.stop-row .event-box{grid-column:2 / -1}.start-end-strip{grid-template-columns:1fr}.route-arrow{transform:rotate(90deg);text-align:center}}
+</style>
+
+<div class="driver-report-page">
+<section class="report-hero"><div><h2>🚖 Driver Journey Control Report</h2><p>Complete route history — start, every employee stop, chat, pickup/drop and final completion.</p></div><a href="{% url 'admin_web:reports' %}" class="back-btn">← Back to Reports</a></section>
+
+<form method="get" class="filter-card"><div class="filter-grid">
+<div class="field"><label>Start Date</label><input type="date" name="start_date" value="{{ start_date }}"></div>
+<div class="field"><label>End Date</label><input type="date" name="end_date" value="{{ end_date }}"></div>
+<div class="field"><label>Driver</label><select name="driver"><option value="">All Drivers</option>{% for driver in drivers %}<option value="{{ driver.id }}" {% if selected_driver == driver.id|stringformat:"s" %}selected{% endif %}>{{ driver.username }}</option>{% endfor %}</select></div>
+<div class="field"><label>Trip Type</label><select name="trip_type"><option value="">All</option><option value="PICKUP" {% if selected_trip_type == "PICKUP" %}selected{% endif %}>Pickup</option><option value="DROP" {% if selected_trip_type == "DROP" %}selected{% endif %}>Drop</option></select></div>
+<div class="field"><label>Status</label><select name="status"><option value="">All</option><option value="ASSIGNED" {% if selected_status == "ASSIGNED" %}selected{% endif %}>Assigned</option><option value="STARTED" {% if selected_status == "STARTED" %}selected{% endif %}>Started</option><option value="COMPLETED" {% if selected_status == "COMPLETED" %}selected{% endif %}>Completed</option></select></div>
+<button class="apply-btn" type="submit">Apply Filter</button>
+</div></form>
+
+<section class="summary-grid">
+<div class="summary-card"><span>Route Runs</span><strong>{{ total_runs }}</strong></div>
+<div class="summary-card"><span>Completed</span><strong>{{ completed_runs }}</strong></div>
+<div class="summary-card"><span>Running</span><strong>{{ active_runs }}</strong></div>
+<div class="summary-card"><span>Pickup</span><strong>{{ pickup_runs }}</strong></div>
+<div class="summary-card"><span>Drop</span><strong>{{ drop_runs }}</strong></div>
+<div class="summary-card chat"><span>Chat Messages</span><strong>{{ total_chat_messages }}</strong></div>
+</section>
+
+<div class="report-note">ℹ️ This is an event timeline using actual timestamps stored by CabMate. Pickup shows driver arrival, pickup completion and final office arrival. Drop shows employee boarding time when available, each employee drop and final route completion.</div>
+
+<section class="journey-list">
+{% for route in timeline_rows %}
+<article class="journey-card">
+<div class="journey-head">
+<div class="journey-title">
+<h3>{{ route.route_name }}</h3>
+<p>{{ route.run_date|date:"d M Y" }} • Driver {{ route.driver_name }} • {{ route.vehicle_number }}{% if route.vehicle_model %} ({{ route.vehicle_model }}){% endif %}</p>
+<div class="badge-row"><span class="badge">{{ route.trip_type }}</span><span class="badge {{ route.status|lower }}">{{ route.status }}</span><span class="badge">Run #{{ route.run_id }}</span><span class="badge">👥 {{ route.total_stops }}</span>{% if route.message_count %}<span class="badge">💬 {{ route.message_count }}</span>{% endif %}</div>
+</div>
+<div class="run-time-grid">
+<div class="time-box"><small>Cab Started</small><strong>{% if route.started_at %}{{ route.started_at|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+<div class="time-box"><small>{{ route.completion_label }}</small><strong>{% if route.completed_at %}{{ route.completed_at|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+<div class="time-box"><small>Total Duration</small><strong>{% if route.duration_minutes is not None %}{{ route.duration_minutes }} min{% else %}--{% endif %}</strong></div>
+</div>
+</div>
+
+<div class="journey-body">
+<div class="start-end-strip"><div class="main-event"><small>Journey Start</small><strong>🚦 {% if route.started_at %}{{ route.started_at|date:"h:i A" }}{% else %}Not started{% endif %}</strong></div><div class="route-arrow">→</div><div class="main-event end"><small>{{ route.completion_label }}</small><strong>🏁 {% if route.completed_at %}{{ route.completed_at|date:"h:i A" }}{% else %}Pending{% endif %}</strong></div></div>
+
+<div class="stop-list">
+{% for stop in route.stops %}
+<div class="stop-row">
+<div class="stop-index">{{ stop.stop_order }}</div>
+<div class="stop-person"><strong>{{ stop.employee_name }}</strong><span title="{{ stop.pickup_location }}">📍 {{ stop.pickup_location }}</span>{% if stop.segment_minutes is not None %}<div class="segment-text">↳ {{ stop.segment_minutes }} min from previous event</div>{% endif %}</div>
+
+{% if route.trip_type == "PICKUP" %}
+<div class="event-box"><small>Driver Reached</small><strong>{% if stop.arrival_time %}{{ stop.arrival_time|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+<div class="event-box"><small>Employee Picked</small><strong>{% if stop.completed_stop_at %}{{ stop.completed_stop_at|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+<div class="event-box optional-event"><small>Waiting</small><strong>{% if stop.waiting_minutes_actual is not None %}{{ stop.waiting_minutes_actual }} min{% else %}--{% endif %}</strong></div>
+<div class="event-box optional-event"><small>No-show At</small><strong>{% if stop.no_show_at %}{{ stop.no_show_at|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+{% else %}
+<div class="event-box"><small>Employee In Cab</small><strong>{% if stop.boarded_at %}{{ stop.boarded_at|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+<div class="event-box"><small>Employee Dropped</small><strong>{% if stop.completed_stop_at %}{{ stop.completed_stop_at|date:"h:i A" }}{% else %}--{% endif %}</strong></div>
+<div class="event-box optional-event"><small>Drop Segment</small><strong>{% if stop.segment_minutes is not None %}{{ stop.segment_minutes }} min{% else %}--{% endif %}</strong></div>
+<div class="event-box optional-event"><small>Stop Status</small><strong>{{ stop.status }}</strong></div>
+{% endif %}
+
+<span class="stop-status {{ stop.status }}">{{ stop.status }}</span>
+{% if stop.has_chat %}<button type="button" class="chat-btn" onclick="openTripChat('chat-{{ route.run_id }}-{{ stop.stop_order }}')">💬 View Chat ({{ stop.message_count }})</button>{% else %}<span class="no-chat">No chat</span>{% endif %}
+</div>
+
+{% if stop.has_chat %}
+<div id="chat-{{ route.run_id }}-{{ stop.stop_order }}" style="display:none;">
+<div class="chat-source-title">{{ route.route_name }} • {{ stop.employee_name }}</div>
+{% for chat in stop.chat_groups %}
+<div class="chat-group"><div class="chat-group-title">Chat #{{ chat.id }} • {% if chat.created_at %}{{ chat.created_at|date:"h:i A" }}{% endif %}</div>
+{% for msg in chat.messages %}
+<div class="message {% if msg.sender_role == 'DRIVER' %}driver{% endif %}"><strong>{{ msg.sender }}{% if msg.sender_role %} • {{ msg.sender_role }}{% endif %}</strong><p>{{ msg.message }}</p><time>{{ msg.sent_at|date:"d M Y, h:i A" }}</time></div>
+{% empty %}<div class="no-chat">No messages in this chat.</div>{% endfor %}
+</div>{% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+</div>
+</div>
+</article>
+{% empty %}<div class="empty-state">No driver journey data found for the selected filters.</div>{% endfor %}
+</section>
+</div>
+
+<div class="chat-modal" id="tripChatModal" onclick="chatBackdropClose(event)"><div class="chat-card"><div class="chat-head"><h3 id="tripChatTitle">Pickup Chat History</h3><button type="button" class="chat-close" onclick="closeTripChat()">✕</button></div><div class="chat-body" id="tripChatBody"></div></div></div>
+
+<script>
+function openTripChat(sourceId){const source=document.getElementById(sourceId),modal=document.getElementById("tripChatModal"),body=document.getElementById("tripChatBody");if(!source||!modal||!body)return;const titleNode=source.querySelector(".chat-source-title");document.getElementById("tripChatTitle").textContent=titleNode?"💬 "+titleNode.textContent:"Pickup Chat History";body.innerHTML=source.innerHTML;const copiedTitle=body.querySelector(".chat-source-title");if(copiedTitle)copiedTitle.remove();modal.classList.add("show")}
+function closeTripChat(){const modal=document.getElementById("tripChatModal");if(modal)modal.classList.remove("show")}
+function chatBackdropClose(event){if(event.target&&event.target.id==="tripChatModal")closeTripChat()}
+document.addEventListener("keydown",function(event){if(event.key==="Escape")closeTripChat()});
+</script>
+{% endblock %}

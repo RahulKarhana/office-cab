@@ -1027,10 +1027,10 @@
     </div>
 
     <div class="report-tabs">
-        <a class="report-tab tab-blue {% if active_report == 'trip_by_driver' %}active{% endif %}" href="?start_date={{ start_date }}&end_date={{ end_date }}&report=trip_by_driver">
+        <a class="report-tab tab-blue" href="{% url 'admin_web:trip_report_by_driver' %}?start_date={{ start_date }}&end_date={{ end_date }}">
             <span class="icon">🚖</span>
             <strong>Trip Report by Driver</strong>
-            <small>Driver-wise trip summary</small>
+            <small>Full driver journey timeline</small>
         </a>
 
         <a
@@ -1123,159 +1123,15 @@
         {% if active_report == "trip_by_driver" %}
             <div class="section-title">
                 <div>
-                    <h3>Driver Route Timeline Report</h3>
-                    <p>Full route journey details from {{ start_date }} to {{ end_date }}</p>
+                    <h3>🚖 Trip Report by Driver</h3>
+                    <p>This report now opens on a dedicated full journey page.</p>
                 </div>
+                <a href="{% url 'admin_web:trip_report_by_driver' %}?start_date={{ start_date }}&end_date={{ end_date }}"
+                   class="export-btn green">Open Full Driver Report →</a>
             </div>
-
-            <div class="timeline-summary-strip">
-                <div class="timeline-summary-box">
-                    <span>Total Routes</span>
-                    <strong>{{ driver_timeline_reports|length }}</strong>
-                </div>
-                <div class="timeline-summary-box">
-                    <span>Total Trips</span>
-                    <strong>{{ total_trips }}</strong>
-                </div>
-                <div class="timeline-summary-box">
-                    <span>Completed</span>
-                    <strong>{{ completed_trips }}</strong>
-                </div>
-                <div class="timeline-summary-box">
-                    <span>Cancelled</span>
-                    <strong>{{ cancelled_trips_count }}</strong>
-                </div>
-            </div>
-
-            <div class="route-timeline-list">
-                {% for route in driver_timeline_reports %}
-                <div class="route-timeline-card">
-                    <div class="route-timeline-head">
-                        <div>
-                            <div class="route-title-line">
-                                <h3>🚖 {{ route.route_name }}</h3>
-                                <span class="status {{ route.status|lower }}">{{ route.status }}</span>
-                            </div>
-                            <div class="route-sub-line">
-                                <span>Driver: <strong>{{ route.driver_name }}</strong></span>
-                                <span>Vehicle: <strong>{{ route.vehicle_number }}</strong></span>
-                                <span>Model: <strong>{{ route.vehicle_model|default:"--" }}</strong></span>
-                                <span>Type: <strong>{{ route.trip_type }}</strong></span>
-                            </div>
-                        </div>
-
-                        <div class="route-meta-grid">
-                            <div class="route-meta-box">
-                                <small>Started</small>
-                                <strong>{% if route.started_at %}{{ route.started_at|date:"h:i A" }}{% else %}--{% endif %}</strong>
-                            </div>
-                            <div class="route-meta-box">
-                                <small>Completed</small>
-                                <strong>{% if route.completed_at %}{{ route.completed_at|date:"h:i A" }}{% else %}--{% endif %}</strong>
-                            </div>
-                            <div class="route-meta-box">
-                                <small>Duration</small>
-                                <strong>{% if route.total_duration_minutes is not None %}{{ route.total_duration_minutes }} min{% else %}--{% endif %}</strong>
-                            </div>
-                            <div class="route-meta-box">
-                                <small>Route Run ID</small>
-                                <strong>#{{ route.route_run_id }}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="timeline-count-strip">
-                        <span class="timeline-pill info">👥 Stops: {{ route.total_stops }}</span>
-                        <span class="timeline-pill good">✅ Picked: {{ route.completed_stops }}</span>
-                        <span class="timeline-pill bad">🚫 No Show: {{ route.no_show_count }}</span>
-                        <span class="timeline-pill warn">❌ Cancelled: {{ route.cancelled_count }}</span>
-                        <span class="timeline-pill purple">🔔 Notifications: {{ route.notification_count|default:0 }}</span>
-                        <span class="timeline-pill purple">💬 Messages: {{ route.message_count|default:0 }}</span>
-                        <span class="timeline-pill purple">📞 Calls: {{ route.call_count|default:0 }}</span>
-                    </div>
-
-                    <div class="employee-timeline">
-                        <h4 class="employee-timeline-title">▼ Employee Timeline</h4>
-
-                        {% for stop in route.stops %}
-                        <div class="employee-timeline-item">
-                            <div class="timeline-number {% if stop.status == 'NO_SHOW' %}no-show{% elif stop.status == 'CANCELLED' %}cancelled{% elif stop.status == 'PENDING' %}pending{% endif %}">
-                                {{ stop.stop_order }}
-                            </div>
-
-                            <div class="timeline-detail-card">
-                                <div class="timeline-detail-top">
-                                    <div>
-                                        <div class="timeline-employee-name">{{ stop.employee_name }}</div>
-                                        <div class="timeline-location">📍 {{ stop.pickup_location }}</div>
-                                    </div>
-                                    <span class="timeline-status {{ stop.status }}">
-                                        {% if stop.status == "PICKED" %}✅ PICKED{% elif stop.status == "NO_SHOW" %}🚫 NO SHOW{% elif stop.status == "CANCELLED" %}❌ CANCELLED{% else %}⏳ PENDING{% endif %}
-                                    </span>
-                                </div>
-
-                                <div class="timeline-data-grid">
-                                    <div class="timeline-data-box">
-                                        <small>Reached / Waiting Started</small>
-                                        <strong>{% if stop.reached_time %}{{ stop.reached_time|date:"h:i A" }}{% else %}--{% endif %}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>Waiting Time</small>
-                                        <strong>{% if stop.waiting_minutes is not None %}{{ stop.waiting_minutes }} min{% else %}--{% endif %}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>Picked Time</small>
-                                        <strong>{% if stop.picked_time %}{{ stop.picked_time|date:"h:i A" }}{% else %}--{% endif %}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>Trip Status</small>
-                                        <strong>{{ stop.trip_status|default:"--" }}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>Notification Sent</small>
-                                        <strong>{{ stop.notification_count|default:0 }}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>Message Sent</small>
-                                        <strong>{{ stop.message_count|default:0 }}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>Call Attempt</small>
-                                        <strong>{% if stop.call_done %}Yes{% else %}No{% endif %}</strong>
-                                    </div>
-
-                                    <div class="timeline-data-box">
-                                        <small>No-show Marked By</small>
-                                        <strong>{{ stop.no_show_marked_by|default:"Driver" }}</strong>
-                                    </div>
-                                </div>
-
-                                {% if stop.status == "NO_SHOW" %}
-                                <div class="no-show-reason-box">
-                                    🚫 No-show reason: Employee did not respond / not available at pickup point.
-                                    {% if stop.cancel_reason %}<br>Cancellation reason: {{ stop.cancel_reason }}{% endif %}
-                                </div>
-                                {% elif stop.status == "CANCELLED" %}
-                                <div class="no-show-reason-box">
-                                    ❌ Cancelled reason: {{ stop.cancel_reason|default:"Reason not available" }}
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div class="empty">No employee timeline found for this route.</div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% empty %}
-                    <div class="empty">No driver route timeline data found for selected date range.</div>
-                {% endfor %}
+            <div class="empty" style="padding:34px;">
+                Driver route timelines, employee stop events, chat history and pickup/drop completion details
+                are now available on the separate Trip Report by Driver page.
             </div>
 
         {% elif active_report == "driver_speed" %}

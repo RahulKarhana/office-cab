@@ -82,6 +82,12 @@ urlpatterns = [
     ),
 
     path(
+        "reports/trip-by-driver/",
+        views.trip_report_by_driver_page,
+        name="trip_report_by_driver",
+    ),
+
+    path(
         "employees/<int:employee_id>/assign-route/<int:route_id>/",
         views.assign_employee_to_route,
         name="assign_employee_to_route",
@@ -162,7 +168,7 @@ urlpatterns = [
         views.reject_driver_account,
         name="reject_driver_account",
     ),
-    
+
     path(
         "drivers/<int:driver_id>/profile/",
         views.driver_profile_page,

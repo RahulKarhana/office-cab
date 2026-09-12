@@ -3722,6 +3722,245 @@ def live_cab_cards_api(request):
 
 
 
+
+# =========================================================
+# TRIP REPORT BY DRIVER - FULL JOURNEY TIMELINE
+# =========================================================
+@login_required
+@admin_required
+@require_GET
+def trip_report_by_driver_page(request):
+    today = timezone.localdate()
+
+    start_raw = request.GET.get("start_date", "").strip()
+    end_raw = request.GET.get("end_date", "").strip()
+    driver_raw = request.GET.get("driver", "").strip()
+    trip_type_filter = request.GET.get("trip_type", "").strip().upper()
+    status_filter = request.GET.get("status", "").strip().upper()
+
+    start_date = parse_date(start_raw) if start_raw else today
+    end_date = parse_date(end_raw) if end_raw else start_date
+
+    if not start_date:
+        start_date = today
+    if not end_date:
+        end_date = start_date
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+
+    route_runs = (
+        RouteRun.objects
+        .select_related("driver", "vehicle", "route_template")
+        .prefetch_related(
+            "stops__employee",
+            "stops__pickup_chats__messages__sender",
+            "trips__employee",
+        )
+        .filter(run_date__range=(start_date, end_date))
+        .order_by("-run_date", "driver__username", "started_at", "id")
+    )
+
+    if driver_raw:
+        route_runs = route_runs.filter(driver_id=driver_raw)
+
+    if trip_type_filter in [Trip.TRIP_TYPE_PICKUP, Trip.TRIP_TYPE_DROP]:
+        route_runs = route_runs.filter(trip_type=trip_type_filter)
+
+    report_drivers = (
+        User.objects
+        .filter(role="DRIVER", is_active=True)
+        .order_by("username")
+    )
+
+    timeline_rows = []
+    total_chat_messages = 0
+    total_stops = 0
+    completed_runs = 0
+    active_runs = 0
+    pickup_runs = 0
+    drop_runs = 0
+
+    for run in route_runs:
+        if run.completed_at:
+            run_status = "COMPLETED"
+        elif run.started_at:
+            run_status = "STARTED"
+        else:
+            run_status = "ASSIGNED"
+
+        if status_filter and run_status != status_filter:
+            continue
+
+        if run_status == "COMPLETED":
+            completed_runs += 1
+        elif run_status == "STARTED":
+            active_runs += 1
+
+        if run.trip_type == Trip.TRIP_TYPE_PICKUP:
+            pickup_runs += 1
+        elif run.trip_type == Trip.TRIP_TYPE_DROP:
+            drop_runs += 1
+
+        stops_data = []
+        previous_event_time = run.started_at
+
+        for stop in run.stops.all().order_by("stop_order"):
+            total_stops += 1
+
+            arrival_time = (
+                getattr(stop, "arrival_time", None)
+                or getattr(stop, "waiting_started_at", None)
+            )
+            boarded_at = getattr(stop, "boarded_at", None)
+            completed_stop_at = getattr(stop, "picked_at", None)
+            no_show_at = getattr(stop, "no_show_at", None)
+
+            chat_groups = []
+            message_count = 0
+
+            try:
+                chats = list(stop.pickup_chats.all())
+            except Exception:
+                chats = []
+
+            for chat in chats:
+                messages_data = []
+                try:
+                    chat_messages = list(chat.messages.all())
+                except Exception:
+                    chat_messages = []
+
+                for msg in chat_messages:
+                    message_count += 1
+                    messages_data.append({
+                        "sender": msg.sender.username if msg.sender else "--",
+                        "sender_role": getattr(msg.sender, "role", "") if msg.sender else "",
+                        "message": msg.message,
+                        "sent_at": msg.sent_at,
+                    })
+
+                chat_groups.append({
+                    "id": chat.id,
+                    "created_at": chat.created_at,
+                    "closed_at": chat.closed_at,
+                    "is_active": chat.is_active,
+                    "messages": messages_data,
+                    "message_count": len(messages_data),
+                })
+
+            total_chat_messages += message_count
+
+            if stop.is_no_show:
+                stop_status = "NO_SHOW"
+                main_event_time = no_show_at or arrival_time
+            elif run.trip_type == Trip.TRIP_TYPE_DROP and completed_stop_at:
+                stop_status = "DROPPED"
+                main_event_time = completed_stop_at
+            elif completed_stop_at:
+                stop_status = "PICKED"
+                main_event_time = completed_stop_at
+            elif arrival_time:
+                stop_status = "ARRIVED"
+                main_event_time = arrival_time
+            else:
+                stop_status = "PENDING"
+                main_event_time = None
+
+            segment_minutes = None
+            if previous_event_time and main_event_time:
+                try:
+                    segment_minutes = max(
+                        0,
+                        round((main_event_time - previous_event_time).total_seconds() / 60)
+                    )
+                except Exception:
+                    segment_minutes = None
+
+            waiting_minutes_actual = None
+            if arrival_time and completed_stop_at:
+                try:
+                    waiting_minutes_actual = max(
+                        0,
+                        round((completed_stop_at - arrival_time).total_seconds() / 60)
+                    )
+                except Exception:
+                    waiting_minutes_actual = None
+
+            stops_data.append({
+                "stop_order": stop.stop_order,
+                "employee_name": stop.employee.username if stop.employee else "--",
+                "pickup_location": stop.pickup_location or "--",
+                "arrival_time": arrival_time,
+                "boarded_at": boarded_at,
+                "completed_stop_at": completed_stop_at,
+                "no_show_at": no_show_at,
+                "status": stop_status,
+                "segment_minutes": segment_minutes,
+                "waiting_minutes_actual": waiting_minutes_actual,
+                "message_count": message_count,
+                "chat_groups": chat_groups,
+                "has_chat": message_count > 0,
+            })
+
+            if main_event_time:
+                previous_event_time = main_event_time
+
+        duration_minutes = None
+        if run.started_at and run.completed_at:
+            duration_minutes = max(
+                0,
+                round((run.completed_at - run.started_at).total_seconds() / 60)
+            )
+
+        completion_label = (
+            "Reached Office"
+            if run.trip_type == Trip.TRIP_TYPE_PICKUP
+            else "Drop Completed"
+        )
+
+        timeline_rows.append({
+            "run_id": run.id,
+            "run_date": run.run_date,
+            "route_name": run.route_template.name if run.route_template else "Manual Route",
+            "driver_name": run.driver.username if run.driver else "--",
+            "driver_id": run.driver_id,
+            "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
+            "vehicle_model": getattr(run.vehicle, "vehicle_model", "") if run.vehicle else "",
+            "trip_type": run.trip_type,
+            "status": run_status,
+            "started_at": run.started_at,
+            "completed_at": run.completed_at,
+            "duration_minutes": duration_minutes,
+            "completion_label": completion_label,
+            "total_stops": len(stops_data),
+            "message_count": sum(s["message_count"] for s in stops_data),
+            "stops": stops_data,
+        })
+
+    context = {
+        "start_date": str(start_date),
+        "end_date": str(end_date),
+        "selected_driver": driver_raw,
+        "selected_trip_type": trip_type_filter,
+        "selected_status": status_filter,
+        "drivers": report_drivers,
+        "timeline_rows": timeline_rows,
+        "total_runs": len(timeline_rows),
+        "completed_runs": completed_runs,
+        "active_runs": active_runs,
+        "pickup_runs": pickup_runs,
+        "drop_runs": drop_runs,
+        "total_stops": total_stops,
+        "total_chat_messages": total_chat_messages,
+    }
+
+    return render(
+        request,
+        "admin_web/trip_report_by_driver.html",
+        context,
+    )
+
+
 # =========================
 # REPORTS
 # =========================
