@@ -7,7 +7,7 @@ from django.utils import timezone
 class Vehicle(models.Model):
     driver = models.OneToOneField(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         limit_choices_to={"role": "DRIVER"},
         related_name="vehicle",
     )
@@ -42,21 +42,21 @@ class Trip(models.Model):
 
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="employee_trips",
         limit_choices_to={"role": "EMPLOYEE"},
     )
 
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="driver_trips",
         limit_choices_to={"role": "DRIVER"},
     )
 
     vehicle = models.ForeignKey(
         "Vehicle",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="trips",
     )
 
@@ -132,12 +132,12 @@ class Trip(models.Model):
 class Review(models.Model):
     trip = models.OneToOneField(
         Trip,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="review",
     )
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
     rating = models.IntegerField()
     comment = models.TextField(blank=True)
@@ -254,12 +254,12 @@ class DriverLocation(models.Model):
 class TripCancellation(models.Model):
     trip = models.ForeignKey(
         Trip,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="cancellations",
     )
     cancelled_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
     reason = models.TextField(blank=True)
 
@@ -285,7 +285,7 @@ class TripCancellation(models.Model):
 class EmployeeLeave(models.Model):
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="cab_leaves",
         limit_choices_to={"role": "EMPLOYEE"},
     )
@@ -304,15 +304,21 @@ class EmployeeLeave(models.Model):
 class RouteTemplate(models.Model):
     name = models.CharField(max_length=200)
 
+    # Soft-delete / archive support.
+    # Archived routes disappear from operational screens but remain in DB
+    # so RouteRun / Trip / chat / report history is never lost.
+    is_active = models.BooleanField(default=True, db_index=True)
+    archived_at = models.DateTimeField(null=True, blank=True)
+
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         limit_choices_to={"role": "DRIVER"},
     )
 
     vehicle = models.ForeignKey(
         Vehicle,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="routes",
     )
 
@@ -323,8 +329,27 @@ class RouteTemplate(models.Model):
             if self.vehicle.driver != self.driver:
                 raise ValidationError("Vehicle must belong to the selected driver.")
 
+    def archive(self):
+        if self.is_active:
+            self.is_active = False
+            self.archived_at = timezone.now()
+            self.save(update_fields=["is_active", "archived_at"])
+
+    def restore(self):
+        self.is_active = True
+        self.archived_at = None
+        self.save(update_fields=["is_active", "archived_at"])
+
+    def delete(self, using=None, keep_parents=False):
+        """
+        Route 'delete' is intentionally a soft delete.
+        Historical RouteRun/Trip data must never be removed.
+        """
+        self.archive()
+
     def __str__(self):
         return self.name
+
 
 
 class RouteStop(models.Model):
@@ -336,7 +361,7 @@ class RouteStop(models.Model):
 
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         limit_choices_to={"role": "EMPLOYEE"},
     )
 
@@ -356,19 +381,19 @@ class RouteStop(models.Model):
 class RouteRun(models.Model):
     route_template = models.ForeignKey(
         RouteTemplate,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="runs",
     )
 
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="route_runs",
     )
 
     vehicle = models.ForeignKey(
         Vehicle,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="route_runs",
     )
 
@@ -437,7 +462,7 @@ class RouteRunStop(models.Model):
 
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
 
     pickup_location = models.CharField(max_length=255)
@@ -485,27 +510,27 @@ class RouteRunStop(models.Model):
 class PickupChat(models.Model):
     route_run = models.ForeignKey(
         RouteRun,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="pickup_chats",
     )
 
     stop = models.ForeignKey(
         RouteRunStop,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="pickup_chats",
     )
 
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="driver_pickup_chats",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         limit_choices_to={"role": "DRIVER"},
     )
 
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="employee_pickup_chats",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         limit_choices_to={"role": "EMPLOYEE"},
     )
 
@@ -539,12 +564,12 @@ class PickupChatMessage(models.Model):
     chat = models.ForeignKey(
         PickupChat,
         related_name="messages",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
 
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
     )
 
     message = models.TextField()
@@ -595,7 +620,7 @@ class EmergencyAlert(models.Model):
 
     employee = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="emergency_alerts",
         limit_choices_to={"role": "EMPLOYEE"},
     )
@@ -682,7 +707,7 @@ class EmergencyAlert(models.Model):
 class DriverLocationHistory(models.Model):
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="location_history",
         limit_choices_to={"role": "DRIVER"},
     )

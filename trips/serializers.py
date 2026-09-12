@@ -633,7 +633,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
         return self._is_trip_type_assigned_for_date(obj, Trip.TRIP_TYPE_DROP)
 
     def validate_name(self, value):
-        qs = RouteTemplate.objects.filter(name__iexact=value.strip())
+        qs = RouteTemplate.objects.filter(is_active=True, name__iexact=value.strip())
 
         if self.instance:
             qs = qs.exclude(id=self.instance.id)
@@ -646,7 +646,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
         return value.strip()
 
     def validate_driver(self, driver):
-        qs = RouteTemplate.objects.filter(driver=driver)
+        qs = RouteTemplate.objects.filter(is_active=True, driver=driver)
 
         if self.instance:
             qs = qs.exclude(id=self.instance.id)
@@ -666,7 +666,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
                 "Duplicate employees are not allowed in the same route."
             )
 
-        qs = RouteStop.objects.filter(employee_id__in=employee_ids)
+        qs = RouteStop.objects.filter(route__is_active=True, employee_id__in=employee_ids)
 
         if self.instance:
             qs = qs.exclude(route=self.instance)
@@ -753,7 +753,10 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
                     {"stops": "Duplicate employees are not allowed in the same route."}
                 )
 
-            qs = RouteStop.objects.filter(employee_id__in=employee_ids).exclude(
+            qs = RouteStop.objects.filter(
+                route__is_active=True,
+                employee_id__in=employee_ids,
+            ).exclude(
                 route=instance
             )
             already_assigned_ids = set(qs.values_list("employee_id", flat=True))

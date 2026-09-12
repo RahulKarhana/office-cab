@@ -226,9 +226,9 @@ def admin_logout_page(request):
 def dashboard(request):
     today = timezone.localdate()
 
-    total_employees = User.objects.filter(role="EMPLOYEE").count()
-    total_drivers = User.objects.filter(role="DRIVER").count()
-    total_routes = RouteTemplate.objects.count()
+    total_employees = User.objects.filter(role="EMPLOYEE", is_active=True).count()
+    total_drivers = User.objects.filter(role="DRIVER", is_active=True).count()
+    total_routes = RouteTemplate.objects.filter(is_active=True).count()
     total_vehicles = Vehicle.objects.count()
 
     today_trips_qs = Trip.objects.select_related(
@@ -1094,34 +1094,12 @@ def no_show_report_page(request):
 @require_POST
 @transaction.atomic
 def delete_employee_account(request, employee_id):
-    employee = get_object_or_404(
-        User,
-        id=employee_id,
-        role=User.Role.EMPLOYEE,
-    )
+    """
+    Soft-delete employee account.
 
-    # 1. Cancel/remove active + upcoming trip assignments
-    # 2. Remove employee from route stops
-    # 3. Remove current RouteRunStop if required
-    # 4. Permanently delete account
-
-    employee.delete()
-
-    messages.success(
-        request,
-        "Employee account permanently deleted. "
-        "All cab assignments were removed.",
-    )
-
-    return redirect("admin_web:employees")
-
-
-@login_required
-@admin_required
-@require_POST
-@transaction.atomic
-def delete_employee_account(request, employee_id):
-
+    The user row, completed/cancelled trips, RouteRunStop history,
+    chats, reviews and reports remain in the database.
+    """
     employee = get_object_or_404(
         User,
         id=employee_id,
@@ -1129,76 +1107,58 @@ def delete_employee_account(request, employee_id):
     )
 
     employee_name = employee.username
+    now = timezone.now()
 
-    # ==========================================================
-    # 1. CANCEL ACTIVE / UPCOMING EMPLOYEE TRIPS
-    # ==========================================================
-
+    # Cancel only operational trips. Historical completed/cancelled rows remain.
     employee_trips = Trip.objects.filter(
         employee=employee,
     ).exclude(
         status__in=[
-            "COMPLETED",
-            "CANCELLED",
+            Trip.STATUS_COMPLETED,
+            Trip.STATUS_CANCELLED,
         ]
     )
 
     cancelled_trip_count = employee_trips.count()
+    employee_trips.update(status=Trip.STATUS_CANCELLED)
 
-    employee_trips.update(
-        status="CANCELLED",
-    )
-
-    # ==========================================================
-    # 2. REMOVE EMPLOYEE FROM CURRENT ROUTE RUN STOPS
-    # ==========================================================
-    #
-    # This prevents the deleted/resigned employee from remaining
-    # visible in today's pickup/drop execution.
-    # ==========================================================
-
+    # Preserve RouteRunStop rows. For an unfinished run, mark the employee
+    # unavailable/no-show instead of deleting the historical stop row.
     RouteRunStop.objects.filter(
         employee=employee,
-    ).delete()
+        route_run__completed_at__isnull=True,
+        is_picked=False,
+    ).update(
+        is_no_show=True,
+        no_show_at=now,
+    )
 
-    # ==========================================================
-    # 3. REMOVE EMPLOYEE FROM PERMANENT ROUTE
-    # ==========================================================
-    #
-    # This is the important part for seat availability.
-    #
-    # Once RouteStop is removed:
-    # driver route occupied seats decrease automatically.
-    # ==========================================================
-
+    # Remove only CURRENT saved-route membership so the seat is released.
+    # Historical RouteRunStop/Trip data is untouched.
     removed_route_stops, _ = (
         RouteStop.objects
-        .filter(employee=employee)
+        .filter(
+            employee=employee,
+            route__is_active=True,
+        )
         .delete()
     )
 
-    # ==========================================================
-    # 4. DELETE EMPLOYEE ACCOUNT PERMANENTLY
-    # ==========================================================
-
-    employee.delete()
-
-    # ==========================================================
-    # 5. SUCCESS MESSAGE
-    # ==========================================================
+    # Soft delete: user remains for historical reports.
+    employee.is_active = False
+    employee.save(update_fields=["is_active"])
 
     messages.success(
         request,
         (
-            f"{employee_name} was permanently deleted. "
-            f"{cancelled_trip_count} active/upcoming trip(s) "
-            f"were cancelled and the route seat is now available."
+            f"{employee_name} was deactivated. "
+            f"{cancelled_trip_count} active/upcoming trip(s) were cancelled. "
+            "Historical trips, route runs, chats, reviews and reports were preserved."
         ),
     )
 
-    return redirect(
-        "admin_web:employees"
-    )
+    return redirect("admin_web:employees")
+
 
 @login_required
 @admin_required
@@ -1234,7 +1194,7 @@ def driver_profile_page(request, driver_id):
 
     routes = (
         RouteTemplate.objects
-        .filter(driver=driver)
+        .filter(driver=driver, is_active=True)
         .select_related("vehicle")
         .order_by("name")
     )
@@ -1399,7 +1359,12 @@ def driver_profile_page(request, driver_id):
 @require_POST
 @transaction.atomic
 def delete_driver_account(request, driver_id):
+    """
+    Soft-delete driver account and archive their current saved routes.
 
+    Historical RouteRun, RouteRunStop, Trip, chat, speed and report data
+    remain attached to the inactive driver account.
+    """
     driver = get_object_or_404(
         User,
         id=driver_id,
@@ -1408,122 +1373,66 @@ def delete_driver_account(request, driver_id):
 
     driver_name = driver.username
 
-    # ==========================================================
-    # 1. FIND ALL PERMANENT ROUTES ASSIGNED TO THIS DRIVER
-    # ==========================================================
+    # Do not deactivate a driver while a route is actively running.
+    if Trip.objects.filter(
+        driver=driver,
+        status=Trip.STATUS_STARTED,
+    ).exists():
+        messages.error(
+            request,
+            (
+                f"Driver {driver_name} has a started trip. "
+                "Complete or cancel the running trip before deactivating the driver."
+            ),
+        )
+        return redirect("admin_web:drivers")
 
-    driver_routes = RouteTemplate.objects.filter(
-        driver=driver
+    active_routes = RouteTemplate.objects.filter(
+        driver=driver,
+        is_active=True,
     )
 
-    route_ids = list(
-        driver_routes.values_list(
-            "id",
-            flat=True,
-        )
-    )
-
-    # ==========================================================
-    # 2. FIND EMPLOYEES CURRENTLY UNDER THESE ROUTES
-    # ==========================================================
-
-    affected_employee_ids = list(
-        RouteStop.objects.filter(
-            route_id__in=route_ids
-        )
-        .values_list(
-            "employee_id",
-            flat=True,
-        )
+    affected_employee_count = (
+        RouteStop.objects
+        .filter(route__in=active_routes)
+        .values("employee_id")
         .distinct()
+        .count()
     )
 
-    affected_employee_count = len(
-        affected_employee_ids
-    )
-
-    # ==========================================================
-    # 3. CANCEL DRIVER'S ACTIVE / UPCOMING TRIPS
-    # ==========================================================
-    #
-    # Completed and already cancelled trips are untouched.
-    # ==========================================================
-
+    # Cancel assigned/future trips but keep all trip rows.
     active_trips = Trip.objects.filter(
         driver=driver,
-    ).exclude(
-        status__in=[
-            "COMPLETED",
-            "CANCELLED",
-        ]
+        status=Trip.STATUS_ASSIGNED,
     )
 
-    cancelled_trip_count = (
-        active_trips.count()
+    cancelled_trip_count = active_trips.count()
+    active_trips.update(status=Trip.STATUS_CANCELLED)
+
+    # Archive current saved routes; do not delete their stops.
+    now = timezone.now()
+    active_routes.update(
+        is_active=False,
+        archived_at=now,
     )
 
-    active_trips.update(
-        status="CANCELLED"
-    )
-
-    # ==========================================================
-    # 4. REMOVE EMPLOYEES FROM PERMANENT DRIVER ROUTES
-    # ==========================================================
-    #
-    # Once these RouteStop rows are deleted, those employees
-    # automatically become UNASSIGNED on the employee page.
-    # ==========================================================
-
-    RouteStop.objects.filter(
-        route_id__in=route_ids
-    ).delete()
-
-    # ==========================================================
-    # 5. REMOVE CURRENT / ACTIVE ROUTE RUN STOPS
-    # ==========================================================
-
-    if route_ids:
-
-        RouteRunStop.objects.filter(
-            route_run__route_template_id__in=route_ids
-        ).delete()
-
-    # ==========================================================
-    # 6. CLEAR DRIVER FROM ROUTE TEMPLATES
-    # ==========================================================
-    #
-    # We keep the route template itself.
-    #
-    # Admin can later assign another driver and rebuild the
-    # employee route.
-    # ==========================================================
-
-    driver_routes.update(
-        driver=None
-    )
-
-    # ==========================================================
-    # 7. DELETE DRIVER ACCOUNT PERMANENTLY
-    # ==========================================================
-
-    driver.delete()
-
-    # ==========================================================
-    # 8. ADMIN SUCCESS MESSAGE
-    # ==========================================================
+    # Soft delete the login account.
+    driver.is_active = False
+    driver.save(update_fields=["is_active"])
 
     messages.success(
         request,
         (
-            f"Driver {driver_name} was permanently deleted. "
-            f"{affected_employee_count} employee(s) are now unassigned. "
-            f"{cancelled_trip_count} active/upcoming trip(s) were cancelled."
+            f"Driver {driver_name} was deactivated. "
+            f"{active_routes.count()} saved route(s) were archived, "
+            f"{affected_employee_count} employee assignment(s) are no longer active, "
+            f"and {cancelled_trip_count} assigned trip(s) were cancelled. "
+            "Historical data was preserved."
         ),
     )
 
-    return redirect(
-        "admin_web:drivers"
-    )
+    return redirect("admin_web:drivers")
+
 
 # =========================================================
 # REQUEST MANAGEMENT
@@ -2187,7 +2096,7 @@ def employees_page(request):
     today = timezone.localdate()
 
     assigned_employee_ids = set(
-        RouteStop.objects.values_list("employee_id", flat=True)
+        RouteStop.objects.filter(route__is_active=True).values_list("employee_id", flat=True)
     )
 
     total_employees = employees.count()
@@ -2459,7 +2368,9 @@ def routes_page(request):
     parsed_selected_date = parse_date(selected_date) if selected_date else None
     selected_day = str(parsed_selected_date.day) if parsed_selected_date else ""
 
-    routes = RouteTemplate.objects.select_related(
+    routes = RouteTemplate.objects.filter(
+        is_active=True,
+    ).select_related(
         "driver",
         "vehicle",
     ).prefetch_related(
@@ -2570,20 +2481,22 @@ def routes_page(request):
     # Create Route still blocks already-used resources via is_selectable.
     assigned_employee_ids = set(
         RouteStop.objects.filter(
-            route__isnull=False,
+            route__is_active=True,
             employee_id__isnull=False,
         ).values_list("employee_id", flat=True)
     )
 
     assigned_driver_ids = set(
         RouteTemplate.objects.filter(
-            driver__isnull=False
+            is_active=True,
+            driver__isnull=False,
         ).values_list("driver_id", flat=True)
     )
 
     assigned_vehicle_ids = set(
         RouteTemplate.objects.filter(
-            vehicle__isnull=False
+            is_active=True,
+            vehicle__isnull=False,
         ).values_list("vehicle_id", flat=True)
     )
 
@@ -2719,10 +2632,37 @@ def edit_route(request, route_id):
 @admin_required
 @require_POST
 def delete_route(request, route_id):
-    route = get_object_or_404(RouteTemplate, id=route_id)
+    route = get_object_or_404(
+        RouteTemplate,
+        id=route_id,
+        is_active=True,
+    )
     route_name = route.name or f"Route {route.id}"
-    route.delete()
-    messages.success(request, f'Route "{route_name}" deleted successfully.')
+
+    has_active_trips = Trip.objects.filter(
+        route_run__route_template=route,
+        status__in=[
+            Trip.STATUS_ASSIGNED,
+            Trip.STATUS_STARTED,
+        ],
+    ).exists()
+
+    if has_active_trips:
+        messages.error(
+            request,
+            "Please cancel assigned/started trips before archiving this route.",
+        )
+        return redirect("/admin-web/routes/")
+
+    route.archive()
+
+    messages.success(
+        request,
+        (
+            f'Route "{route_name}" archived successfully. '
+            "Historical trips and reports were preserved."
+        ),
+    )
     return redirect("/admin-web/routes/")
 
 
@@ -2730,7 +2670,7 @@ def delete_route(request, route_id):
 @admin_required
 @require_POST
 def assign_route_trip(request, route_id, trip_type):
-    route = get_object_or_404(RouteTemplate, id=route_id)
+    route = get_object_or_404(RouteTemplate, id=route_id, is_active=True)
     trip_type = (trip_type or "").upper()
 
     if trip_type not in ["PICKUP", "DROP"]:
@@ -2791,7 +2731,7 @@ def assign_route_trip(request, route_id, trip_type):
 @admin_required
 @require_POST
 def repeat_route_action(request, route_id):
-    route = get_object_or_404(RouteTemplate, id=route_id)
+    route = get_object_or_404(RouteTemplate, id=route_id, is_active=True)
 
     trip_type = request.POST.get("trip_type", "").strip().upper()
     date = request.POST.get("date", "").strip()
@@ -2864,7 +2804,7 @@ def repeat_all_routes_action(request):
         messages.error(request, "End date cannot be earlier than start date.")
         return redirect("/admin-web/routes/")
 
-    routes = RouteTemplate.objects.all().order_by("id")
+    routes = RouteTemplate.objects.filter(is_active=True).order_by("id")
 
     if not routes.exists():
         messages.warning(request, "No saved routes found to repeat.")
@@ -3721,6 +3661,280 @@ def live_cab_cards_api(request):
     )
 
 
+
+
+
+# =========================================================
+# EXPORT - TRIP REPORT BY DRIVER JOURNEY
+# =========================================================
+@login_required
+@admin_required
+@require_GET
+def export_trip_report_by_driver_excel(request):
+    today = timezone.localdate()
+
+    start_raw = request.GET.get("start_date", "").strip()
+    end_raw = request.GET.get("end_date", "").strip()
+    driver_raw = request.GET.get("driver", "").strip()
+    trip_type_filter = request.GET.get("trip_type", "").strip().upper()
+    status_filter = request.GET.get("status", "").strip().upper()
+
+    start_date = parse_date(start_raw) if start_raw else today
+    end_date = parse_date(end_raw) if end_raw else start_date
+
+    if not start_date:
+        start_date = today
+    if not end_date:
+        end_date = start_date
+    if end_date < start_date:
+        start_date, end_date = end_date, start_date
+
+    route_runs = (
+        RouteRun.objects
+        .select_related("driver", "vehicle", "route_template")
+        .prefetch_related(
+            "stops__employee",
+            "stops__pickup_chats__messages__sender",
+        )
+        .filter(run_date__range=(start_date, end_date))
+        .order_by("-run_date", "driver__username", "started_at", "id")
+    )
+
+    if driver_raw:
+        route_runs = route_runs.filter(driver_id=driver_raw)
+
+    if trip_type_filter in [Trip.TRIP_TYPE_PICKUP, Trip.TRIP_TYPE_DROP]:
+        route_runs = route_runs.filter(trip_type=trip_type_filter)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Driver Journey Report"
+
+    title_fill = PatternFill("solid", fgColor="5F4636")
+    header_fill = PatternFill("solid", fgColor="9B7457")
+    soft_fill = PatternFill("solid", fgColor="F8F5ED")
+    green_fill = PatternFill("solid", fgColor="EDF3ED")
+    red_fill = PatternFill("solid", fgColor="F8ECE9")
+    white_font = Font(color="FFFFFF", bold=True)
+    bold_font = Font(bold=True, color="5F4636")
+    thin_border = Border(
+        left=Side(style="thin", color="DED6CC"),
+        right=Side(style="thin", color="DED6CC"),
+        top=Side(style="thin", color="DED6CC"),
+        bottom=Side(style="thin", color="DED6CC"),
+    )
+
+    headers = [
+        "Date",
+        "Run ID",
+        "Route",
+        "Driver",
+        "Vehicle",
+        "Trip Type",
+        "Route Status",
+        "Cab Started",
+        "Stop Order",
+        "Employee",
+        "Location",
+        "Driver Reached",
+        "Employee In Cab",
+        "Pickup / Drop Completed",
+        "No Show At",
+        "Stop Status",
+        "Waiting Minutes",
+        "Minutes From Previous Event",
+        "Chat Messages",
+        "Route Completed / Reached Office",
+        "Total Route Duration (Min)",
+    ]
+
+    last_col = get_column_letter(len(headers))
+    ws.merge_cells(f"A1:{last_col}1")
+    ws["A1"] = "CabMate - Trip Report by Driver"
+    ws["A1"].fill = title_fill
+    ws["A1"].font = Font(color="FFFFFF", bold=True, size=16)
+    ws["A1"].alignment = Alignment(horizontal="left", vertical="center")
+    ws.row_dimensions[1].height = 28
+
+    ws.merge_cells(f"A2:{last_col}2")
+    ws["A2"] = (
+        f"Date Range: {start_date.strftime('%d %b %Y')} to "
+        f"{end_date.strftime('%d %b %Y')}"
+    )
+    ws["A2"].font = Font(color="746B64", italic=True)
+
+    ws.append([])
+    ws.append(headers)
+
+    for cell in ws[4]:
+        cell.fill = header_fill
+        cell.font = white_font
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    def fmt_dt(value):
+        if not value:
+            return ""
+        try:
+            return timezone.localtime(value).strftime("%d %b %Y %I:%M:%S %p")
+        except Exception:
+            return str(value)
+
+    for run in route_runs:
+        if run.completed_at:
+            run_status = "COMPLETED"
+        elif run.started_at:
+            run_status = "STARTED"
+        else:
+            run_status = "ASSIGNED"
+
+        if status_filter and run_status != status_filter:
+            continue
+
+        duration_minutes = ""
+        if run.started_at and run.completed_at:
+            duration_minutes = max(
+                0,
+                round((run.completed_at - run.started_at).total_seconds() / 60),
+            )
+
+        stops = list(run.stops.all().order_by("stop_order"))
+        previous_event_time = run.started_at
+
+        if not stops:
+            ws.append([
+                run.run_date,
+                run.id,
+                run.route_template.name if run.route_template else "Manual Route",
+                run.driver.username if run.driver else "--",
+                run.vehicle.vehicle_number if run.vehicle else "--",
+                run.trip_type,
+                run_status,
+                fmt_dt(run.started_at),
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                0,
+                fmt_dt(run.completed_at),
+                duration_minutes,
+            ])
+            continue
+
+        for stop in stops:
+            arrival_time = (
+                getattr(stop, "arrival_time", None)
+                or getattr(stop, "waiting_started_at", None)
+            )
+            boarded_at = getattr(stop, "boarded_at", None)
+            stop_completed_at = getattr(stop, "picked_at", None)
+            no_show_at = getattr(stop, "no_show_at", None)
+
+            if stop.is_no_show:
+                stop_status = "NO_SHOW"
+                main_event_time = no_show_at or arrival_time
+            elif run.trip_type == Trip.TRIP_TYPE_DROP and stop_completed_at:
+                stop_status = "DROPPED"
+                main_event_time = stop_completed_at
+            elif stop_completed_at:
+                stop_status = "PICKED"
+                main_event_time = stop_completed_at
+            elif arrival_time:
+                stop_status = "ARRIVED"
+                main_event_time = arrival_time
+            else:
+                stop_status = "PENDING"
+                main_event_time = None
+
+            waiting_minutes = ""
+            if arrival_time and stop_completed_at:
+                waiting_minutes = max(
+                    0,
+                    round((stop_completed_at - arrival_time).total_seconds() / 60),
+                )
+
+            segment_minutes = ""
+            if previous_event_time and main_event_time:
+                segment_minutes = max(
+                    0,
+                    round((main_event_time - previous_event_time).total_seconds() / 60),
+                )
+
+            chat_count = 0
+            try:
+                for chat in stop.pickup_chats.all():
+                    chat_count += len(list(chat.messages.all()))
+            except Exception:
+                chat_count = 0
+
+            ws.append([
+                run.run_date,
+                run.id,
+                run.route_template.name if run.route_template else "Manual Route",
+                run.driver.username if run.driver else "--",
+                run.vehicle.vehicle_number if run.vehicle else "--",
+                run.trip_type,
+                run_status,
+                fmt_dt(run.started_at),
+                stop.stop_order,
+                stop.employee.username if stop.employee else "--",
+                stop.pickup_location or "--",
+                fmt_dt(arrival_time),
+                fmt_dt(boarded_at),
+                fmt_dt(stop_completed_at),
+                fmt_dt(no_show_at),
+                stop_status,
+                waiting_minutes,
+                segment_minutes,
+                chat_count,
+                fmt_dt(run.completed_at),
+                duration_minutes,
+            ])
+
+            if main_event_time:
+                previous_event_time = main_event_time
+
+    # Style data rows.
+    for row_idx in range(5, ws.max_row + 1):
+        for cell in ws[row_idx]:
+            cell.border = thin_border
+            cell.alignment = Alignment(vertical="top", wrap_text=True)
+            if row_idx % 2 == 0:
+                cell.fill = soft_fill
+
+        status_cell = ws.cell(row=row_idx, column=16)
+        if status_cell.value in ("PICKED", "DROPPED"):
+            status_cell.fill = green_fill
+        elif status_cell.value == "NO_SHOW":
+            status_cell.fill = red_fill
+
+    ws.freeze_panes = "A5"
+    ws.auto_filter.ref = f"A4:{last_col}{ws.max_row}"
+
+    for col_idx in range(1, len(headers) + 1):
+        max_len = 12
+        for row_idx in range(1, ws.max_row + 1):
+            value = ws.cell(row=row_idx, column=col_idx).value
+            if value is not None:
+                max_len = max(max_len, len(str(value)) + 2)
+        ws.column_dimensions[get_column_letter(col_idx)].width = min(max_len, 35)
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    filename = (
+        f"CabMate_Driver_Journey_Report_"
+        f"{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}.xlsx"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
 
 
 # =========================================================
@@ -8526,7 +8740,9 @@ def employee_route_search(request, employee_id):
 
     route_suggestions = []
 
-    routes = RouteTemplate.objects.select_related(
+    routes = RouteTemplate.objects.filter(
+        is_active=True,
+    ).select_related(
         "driver",
         "vehicle",
     ).prefetch_related(
@@ -8600,7 +8816,7 @@ def assign_employee_to_route(request, employee_id, route_id):
     )
 
     route = get_object_or_404(
-        RouteTemplate.objects.select_related("vehicle"),
+        RouteTemplate.objects.filter(is_active=True).select_related("vehicle"),
         id=route_id,
     )
 
@@ -8616,7 +8832,7 @@ def assign_employee_to_route(request, employee_id, route_id):
         return redirect("admin_web:employee_route_search", employee_id=employee.id)
 
     with transaction.atomic():
-        old_stops = RouteStop.objects.filter(employee=employee)
+        old_stops = RouteStop.objects.filter(employee=employee, route__is_active=True)
 
         for old_stop in old_stops:
             old_route = old_stop.route

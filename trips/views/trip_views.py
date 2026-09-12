@@ -1014,10 +1014,51 @@ class TripViewSet(ModelViewSet):
             raise PermissionDenied("Only Admin can update trips.")
         serializer.save()
 
-    def perform_destroy(self, instance):
-        if self.request.user.role != "ADMIN":
-            raise PermissionDenied("Only Admin can delete trips.")
-        instance.delete()
+    def destroy(self, request, *args, **kwargs):
+        """
+        Historical trips are never physically deleted.
+
+        DELETE /trips/<id>/ now behaves as an admin cancellation request.
+        Completed trips stay immutable.
+        """
+        if request.user.role != "ADMIN" and not request.user.is_superuser:
+            raise PermissionDenied("Only Admin can cancel trips.")
+
+        instance = self.get_object()
+
+        if instance.status == Trip.STATUS_COMPLETED:
+            return Response(
+                {
+                    "detail": (
+                        "Completed trips are historical records and cannot be deleted."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if instance.status != Trip.STATUS_CANCELLED:
+            instance.status = Trip.STATUS_CANCELLED
+            instance.save(update_fields=["status"])
+
+            TripCancellation.objects.get_or_create(
+                trip=instance,
+                defaults={
+                    "cancelled_by": request.user,
+                    "reason": "Cancelled from admin/API delete action.",
+                    "declaration_accepted": False,
+                    "declaration_text": "",
+                    "cancelled_by_role": getattr(request.user, "role", "ADMIN"),
+                },
+            )
+
+        return Response(
+            {
+                "detail": (
+                    "Trip cancelled successfully. Historical record was preserved."
+                )
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["post"], url_path="mark-leave")
     def mark_leave(self, request):

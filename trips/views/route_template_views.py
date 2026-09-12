@@ -47,7 +47,8 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             return RouteTemplate.objects.none()
 
         return (
-            RouteTemplate.objects.prefetch_related("stops__employee")
+            RouteTemplate.objects.filter(is_active=True)
+            .prefetch_related("stops__employee")
             .select_related("driver", "vehicle")
             .order_by("-created_at")
         )
@@ -63,7 +64,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         if not is_admin_user(request.user):
             return Response(
-                {"error": "Only admin can delete routes."},
+                {"error": "Only admin can archive routes."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -76,11 +77,21 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
         if has_active_trips:
             return Response(
-                {"detail": "Please cancel assigned trips before deleting this route."},
+                {"detail": "Please cancel assigned/started trips before archiving this route."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        return super().destroy(request, *args, **kwargs)
+        route.archive()
+
+        return Response(
+            {
+                "detail": (
+                    f'Route "{route.name}" archived successfully. '
+                    "Historical trips, route runs, stops and chats were preserved."
+                )
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=["get"], url_path="create_form_data")
     def create_form_data(self, request):
@@ -91,15 +102,15 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             )
 
         used_driver_ids = set(
-            RouteTemplate.objects.values_list("driver_id", flat=True)
+            RouteTemplate.objects.filter(is_active=True).values_list("driver_id", flat=True)
         )
 
         used_employee_ids = set(
-            RouteStop.objects.values_list("employee_id", flat=True)
+            RouteStop.objects.filter(route__is_active=True).values_list("employee_id", flat=True)
         )
 
-        drivers_qs = User.objects.filter(role="DRIVER").order_by("username")
-        employees_qs = User.objects.filter(role="EMPLOYEE").order_by("username")
+        drivers_qs = User.objects.filter(role="DRIVER", is_active=True).order_by("username")
+        employees_qs = User.objects.filter(role="EMPLOYEE", is_active=True).order_by("username")
         vehicles_qs = Vehicle.objects.select_related("driver").all()
 
         drivers_data = []
@@ -582,7 +593,9 @@ class RouteStopViewSet(viewsets.ModelViewSet):
         if not is_admin_user(user):
             return RouteStop.objects.none()
 
-        return RouteStop.objects.select_related(
+        return RouteStop.objects.filter(
+            route__is_active=True,
+        ).select_related(
             "route",
             "employee",
         ).order_by("route_id", "stop_order")

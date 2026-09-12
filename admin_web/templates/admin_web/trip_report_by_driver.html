@@ -11,7 +11,7 @@
 .driver-report-page{display:flex;flex-direction:column;gap:16px}
 .report-hero{background:linear-gradient(135deg,var(--deep),var(--bd),var(--b));color:#fff;border-radius:24px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 16px 35px rgba(95,70,54,.18)}
 .report-hero h2{margin:0;font-size:27px;font-weight:950}.report-hero p{margin:6px 0 0;opacity:.86;font-size:13px;font-weight:700}
-.back-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:13px;background:#fffdf9;color:var(--deep);text-decoration:none;font-weight:900;font-size:13px;white-space:nowrap}
+.hero-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.excel-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:13px;background:#edf3ed;color:#3f5d49;border:1px solid #cdddcf;text-decoration:none;font-weight:900;font-size:13px;white-space:nowrap}.excel-btn:hover{transform:translateY(-1px);box-shadow:0 8px 16px rgba(79,109,88,.14)}.back-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:13px;background:#fffdf9;color:var(--deep);text-decoration:none;font-weight:900;font-size:13px;white-space:nowrap}
 .filter-card,.summary-card,.journey-card,.empty-state{background:var(--card);border:1px solid var(--line);box-shadow:0 9px 24px rgba(95,70,54,.06)}
 .filter-card{border-radius:20px;padding:16px}.filter-grid{display:grid;grid-template-columns:1fr 1fr 1fr .8fr .8fr auto;gap:10px;align-items:end}
 .field{display:flex;flex-direction:column;gap:5px}.field label{font-size:11px;font-weight:900;color:var(--muted)}.field input,.field select{height:43px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 12px;font-size:13px;font-weight:700;color:var(--text);outline:none}
@@ -32,7 +32,16 @@
 </style>
 
 <div class="driver-report-page">
-<section class="report-hero"><div><h2>🚖 Driver Journey Control Report</h2><p>Complete route history — start, every employee stop, chat, pickup/drop and final completion.</p></div><a href="{% url 'admin_web:reports' %}" class="back-btn">← Back to Reports</a></section>
+<section class="report-hero">
+<div>
+    <h2>🚖 Driver Journey Control Report</h2>
+    <p>Complete route history — start, every employee stop, chat, pickup/drop and final completion.</p>
+</div>
+<div class="hero-actions">
+    <a href="{% url 'admin_web:export_trip_report_by_driver_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&driver={{ selected_driver }}&trip_type={{ selected_trip_type }}&status={{ selected_status }}" class="excel-btn">⬇ Export Excel</a>
+    <a href="{% url 'admin_web:reports' %}" class="back-btn">← Back to Reports</a>
+</div>
+</section>
 
 <form method="get" class="filter-card"><div class="filter-grid">
 <div class="field"><label>Start Date</label><input type="date" name="start_date" value="{{ start_date }}"></div>

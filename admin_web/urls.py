@@ -88,6 +88,11 @@ urlpatterns = [
     ),
 
     path(
+        "reports/trip-by-driver/export-excel/",
+        views.export_trip_report_by_driver_excel,
+        name="export_trip_report_by_driver_excel",
+    ),
+    path(
         "employees/<int:employee_id>/assign-route/<int:route_id>/",
         views.assign_employee_to_route,
         name="assign_employee_to_route",
