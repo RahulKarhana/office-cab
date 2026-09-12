@@ -185,6 +185,17 @@ urlpatterns = [
         views.delete_driver_account,
         name="delete_driver_account",
     ),   
+    path(
+        "drivers/<int:driver_id>/routes/<int:route_id>/replace-driver/",
+        views.replace_driver_route,
+        name="replace_driver_route",
+    ),
+
+    path(
+        "drivers/<int:driver_id>/routes/<int:route_id>/archive/",
+        views.archive_driver_route,
+        name="archive_driver_route",
+    ),
 
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
