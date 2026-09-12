@@ -5,196 +5,517 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CabMate Admin{% endblock %}</title>
+
     <link rel="stylesheet" href="{% static 'admin_web/css/admin.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        :root{
-            --cab-bg:#f6f8fc;
-            --cab-sidebar:#fffaf4;
-            --cab-sidebar-2:#eef7ff;
-            --cab-border:#e5e7eb;
-            --cab-text:#132238;
-            --cab-muted:#64748b;
-            --cab-navy:#14213d;
-            --cab-blue:#2563eb;
-            --cab-red:#b42335;
-            --cab-soft-red:#fff1f2;
-            --cab-green:#16a34a;
+        :root {
+            --cm-bg: #f5f7fb;
+            --cm-surface: #ffffff;
+            --cm-surface-2: #f8fafc;
+            --cm-sidebar: #0f172a;
+            --cm-sidebar-soft: #18233a;
+            --cm-text: #172033;
+            --cm-muted: #6b7280;
+            --cm-border: #e5e7eb;
+
+            --cm-blue: #3b82f6;
+            --cm-blue-soft: #eff6ff;
+            --cm-indigo: #6366f1;
+            --cm-indigo-soft: #eef2ff;
+            --cm-teal: #14b8a6;
+            --cm-teal-soft: #ecfeff;
+            --cm-green: #22c55e;
+            --cm-green-soft: #f0fdf4;
+            --cm-amber: #f59e0b;
+            --cm-amber-soft: #fffbeb;
+            --cm-orange: #f97316;
+            --cm-orange-soft: #fff7ed;
+            --cm-red: #ef4444;
+            --cm-red-soft: #fef2f2;
+            --cm-violet: #8b5cf6;
+            --cm-violet-soft: #f5f3ff;
+            --cm-pink: #ec4899;
+            --cm-pink-soft: #fdf2f8;
+            --cm-cyan: #06b6d4;
+            --cm-cyan-soft: #ecfeff;
+
+            --cm-radius-sm: 10px;
+            --cm-radius: 14px;
+            --cm-radius-lg: 18px;
+            --cm-shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.04);
+            --cm-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+
+            --sidebar-width: 224px;
+            --sidebar-collapsed-width: 74px;
         }
 
-        body{
-            background:linear-gradient(135deg,#f8fafc,#eef6ff) !important;
-            color:var(--cab-text);
+        * {
+            box-sizing: border-box;
         }
 
-        .admin-layout{
-            background:linear-gradient(135deg,#f8fafc,#eef6ff) !important;
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            font-family: "Inter", sans-serif;
+            background: var(--cm-bg);
+            color: var(--cm-text);
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        .admin-layout {
+            min-height: 100vh;
+            background: var(--cm-bg);
+        }
+
+        /* =========================
+           SIDEBAR
+        ========================== */
+
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background:
+                radial-gradient(circle at 12% 0%, rgba(59, 130, 246, 0.18), transparent 28%),
+                linear-gradient(180deg, #0f172a 0%, #111827 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 12px 0 34px rgba(15, 23, 42, 0.10);
+            z-index: 1000;
+            transition: width .25s ease, transform .25s ease;
+        }
+
+        .sidebar-top {
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .brand-box {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-logo {
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--cm-blue), var(--cm-indigo));
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            box-shadow: 0 8px 18px rgba(59, 130, 246, .24);
+        }
+
+        .brand-box h2 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 20px;
+            line-height: 1.05;
+            font-weight: 800;
+            letter-spacing: -.45px;
+            white-space: nowrap;
+        }
+
+        .brand-box p {
+            margin: 4px 0 0;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 14px 10px 18px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.15) transparent;
+        }
+
+        .nav-label {
+            margin: 4px 10px 8px;
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1.15px;
+            text-transform: uppercase;
+        }
+
+        .nav-link {
+            min-height: 40px;
+            margin: 3px 0;
+            padding: 9px 10px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 650;
+            transition: .18s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, .07);
+            color: #ffffff;
+            transform: translateX(2px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(59,130,246,.24), rgba(99,102,241,.18));
+            border-color: rgba(96,165,250,.24);
+            color: #ffffff;
+            box-shadow: inset 3px 0 0 #60a5fa;
+        }
+
+        .nav-icon {
+            width: 18px;
+            min-width: 18px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .admin-profile {
+            margin: 16px 0 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            border-radius: 11px;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .07);
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            flex: 0 0 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--cm-teal), var(--cm-cyan));
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .admin-profile strong {
+            display: block;
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .admin-profile small {
+            display: block;
+            margin-top: 2px;
+            color: #94a3b8;
+            font-size: 9px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .logout-btn {
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 10px;
+            background: rgba(239, 68, 68, .10);
+            border: 1px solid rgba(248,113,113,.22);
+            color: #fecaca;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 700;
+            transition: .18s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239,68,68,.18);
+            color: #ffffff;
+        }
+
+        .sidebar-footer {
+            padding: 0 10px 14px;
+        }
+
+        .support-card {
+            padding: 11px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, rgba(59,130,246,.14), rgba(20,184,166,.10));
+            border: 1px solid rgba(255,255,255,.07);
+        }
+
+        .support-card h4 {
+            margin: 0 0 4px;
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 750;
+        }
+
+        .support-card p {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 9px;
+            line-height: 1.45;
         }
 
         .sidebar-toggle-desktop {
             position: absolute;
-            top: 20px;
-            right: -16px;
-            width: 38px;
-            height: 38px;
-            border: none;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            color: #14213d;
-            font-size: 18px;
-            font-weight: 900;
+            top: 18px;
+            right: -14px;
+            width: 28px;
+            height: 28px;
+            border: 1px solid #e2e8f0;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #334155;
+            display: grid;
+            place-items: center;
+            padding: 0;
+            font-size: 11px;
+            font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-            z-index: 99999;
+            box-shadow: var(--cm-shadow-sm);
+            z-index: 1001;
+        }
+
+        .sidebar-close {
+            display: none;
+            width: 30px;
+            height: 30px;
+            border: 0;
+            border-radius: 8px;
+            background: rgba(255,255,255,.07);
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        /* =========================
+           MAIN CONTENT / TOPBAR
+        ========================== */
+
+        .main-content {
+            min-height: 100vh;
+            margin-left: var(--sidebar-width);
+            transition: margin-left .25s ease;
+            background: var(--cm-bg);
+        }
+
+        .topbar {
+            min-height: 68px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 12px 24px;
+            background: rgba(255,255,255,.94);
+            border-bottom: 1px solid var(--cm-border);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 900;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-left h1 {
+            margin: 0;
+            color: var(--cm-text);
+            font-size: 22px;
+            line-height: 1.15;
+            font-weight: 800;
+            letter-spacing: -.4px;
+        }
+
+        .topbar-left p {
+            margin: 4px 0 0;
+            color: var(--cm-muted);
+            font-size: 11px;
+            font-weight: 550;
+        }
+
+        .menu-btn {
+            display: none;
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--cm-border);
+            border-radius: 10px;
+            background: #fff;
+            color: #334155;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .page-content {
+            padding: 18px 22px 26px;
+            background:
+                radial-gradient(circle at 10% 0%, rgba(59,130,246,.05), transparent 26%),
+                radial-gradient(circle at 90% 15%, rgba(139,92,246,.04), transparent 24%),
+                var(--cm-bg);
+        }
+
+        .sidebar-overlay {
+            display: none;
+        }
+
+        /* =========================
+           COLLAPSED DESKTOP SIDEBAR
+        ========================== */
+
+        body.sidebar-collapsed .sidebar {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        body.sidebar-collapsed .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        body.sidebar-collapsed .brand-box > div:last-child,
+        body.sidebar-collapsed .nav-link > span:last-child,
+        body.sidebar-collapsed .nav-label,
+        body.sidebar-collapsed .admin-profile > div:last-child,
+        body.sidebar-collapsed .support-card,
+        body.sidebar-collapsed .logout-btn {
+            display: none;
+        }
+
+        body.sidebar-collapsed .sidebar-top {
             justify-content: center;
-            transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-            pointer-events: auto;
+            padding-inline: 10px;
         }
 
-        .sidebar {
-            background:
-                radial-gradient(circle at top left, rgba(37,99,235,0.12), transparent 30%),
-                linear-gradient(180deg, #fffaf4 0%, #f8fbff 48%, #eef6ff 100%) !important;
-            border-right: 1px solid #dbeafe !important;
-            box-shadow: 12px 0 40px rgba(15,23,42,.05);
+        body.sidebar-collapsed .brand-box {
+            justify-content: center;
         }
 
-        .brand-logo {
-            background: linear-gradient(135deg, #b42335, #f97316) !important;
-            color: #ffffff !important;
-            box-shadow:0 12px 24px rgba(180,35,53,.20);
+        body.sidebar-collapsed .sidebar-nav {
+            padding-inline: 10px;
         }
 
-        .brand-box h2{
-            color:#14213d !important;
-            letter-spacing:-.5px;
+        body.sidebar-collapsed .nav-link {
+            justify-content: center;
+            padding-inline: 0;
         }
 
-        .brand-box p,
-        .nav-label{
-            color:#7c8aa0 !important;
+        body.sidebar-collapsed .nav-icon {
+            width: auto;
+            min-width: 0;
         }
 
-        .nav-link {
-            color: #334155 !important;
-            border:1px solid transparent;
+        body.sidebar-collapsed .admin-profile {
+            justify-content: center;
+            padding: 7px;
         }
 
-        .nav-link:hover {
-            background: rgba(255,255,255,.75) !important;
-            color: #14213d !important;
-            border-color:#e0ecff;
-            box-shadow:0 10px 20px rgba(15,23,42,.04);
+        body.sidebar-collapsed .sidebar-footer {
+            display: none;
         }
 
-        .nav-link.active {
-            background: linear-gradient(135deg, #14213d, #2563eb) !important;
-            color: #ffffff !important;
-            box-shadow:0 14px 28px rgba(37,99,235,.22);
-        }
-
-        .nav-link.active .nav-icon,
-        .nav-link.active span{
-            color:#ffffff !important;
-        }
-
-        .support-card{
-            background:
-                radial-gradient(circle at top right, rgba(255,255,255,.20), transparent 35%),
-                linear-gradient(135deg,#14213d,#2563eb) !important;
-            color:#ffffff !important;
-            border:0 !important;
-        }
-
-        .support-card h4,
-        .support-card p{
-            color:#ffffff !important;
-        }
-
-        .main-content{
-            background:linear-gradient(135deg,#f8fafc,#eef6ff) !important;
-        }
-
-        .topbar{
-            min-height:86px !important;
-            padding:20px 28px !important;
-            background:linear-gradient(135deg,#f8fbff,#eef6ff) !important;
-            border-bottom:1px solid #dbeafe !important;
-        }
-
-        .topbar-left h1{
-            color:#14213d !important;
-            font-size:34px !important;
-            letter-spacing:-1px;
-        }
-
-        .topbar-left p{
-            color:#64748b !important;
-            font-weight:700;
-        }
-
-        .menu-btn{
-            background:#ffffff !important;
-            color:#14213d !important;
-            box-shadow:0 10px 20px rgba(15,23,42,.08);
-        }
-
-        .page-content{
-            padding-top:22px !important;
-            background:
-                radial-gradient(circle at top left, rgba(37,99,235,.05), transparent 34%),
-                linear-gradient(135deg,#f8fafc,#eef6ff) !important;
-        }
+        /* =========================
+           RESPONSIVE
+        ========================== */
 
         @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: min(260px, 86vw);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content,
+            body.sidebar-collapsed .main-content {
+                margin-left: 0;
+            }
+
             .sidebar-toggle-desktop {
                 display: none;
             }
+
+            .sidebar-close,
+            .menu-btn {
+                display: grid;
+                place-items: center;
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(15,23,42,.46);
+                z-index: 950;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .topbar {
+                padding-inline: 16px;
+            }
+
+            .page-content {
+                padding: 16px;
+            }
         }
 
-        .logout-item{
-            color:#dc3545 !important;
-            margin-top:20px;
-        }
+        @media (max-width: 640px) {
+            .topbar-left h1 {
+                font-size: 18px;
+            }
 
-        .logout-item:hover{
-            background:#ffe5e5;
-            color:#b30000 !important;
-        }
+            .topbar-left p {
+                font-size: 10px;
+            }
 
-        .logout-btn{
-            display:block;
-            width:100%;
-            text-align:center;
-            background:#dc3545;
-            color:white;
-            padding:12px;
-            border-radius:14px;
-            font-weight:700;
-        }
-
-        .admin-profile{
-            margin:15px 20px;
-            padding:12px;
-            background:#f8fafc;
-            border-radius:12px;
-        }
-
-        .admin-profile strong{
-            display:block;
-            color:#1e293b !important;
-            font-size:15px;
-            font-weight:700;
-        }
-
-        .admin-profile small{
-            color:#64748b !important;
-            font-size:12px;
+            .page-content {
+                padding: 12px;
+            }
         }
     </style>
 
@@ -203,9 +524,7 @@
 <body>
     <div class="admin-layout">
         <aside class="sidebar" id="sidebar">
-            <button class="sidebar-toggle-desktop" id="sidebarToggleDesktop" type="button" aria-label="Collapse sidebar">
-                ❮
-            </button>
+            <button class="sidebar-toggle-desktop" id="sidebarToggleDesktop" type="button" aria-label="Collapse sidebar">❮</button>
 
             <div class="sidebar-top">
                 <div class="brand-box">
@@ -216,76 +535,75 @@
                     </div>
                 </div>
 
-                <button class="sidebar-close" id="sidebarClose" type="button">
-                    ✕
-                </button>
+                <button class="sidebar-close" id="sidebarClose" type="button" aria-label="Close menu">✕</button>
             </div>
 
             <nav class="sidebar-nav">
                 <p class="nav-label">Main Menu</p>
 
                 <a href="{% url 'admin_web:dashboard' %}" class="nav-link {% block nav_dashboard %}{% endblock %}">
-                    <span class="nav-icon">🏠</span>
+                    <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
 
                 <a href="{% url 'admin_web:employees' %}" class="nav-link {% block nav_employees %}{% endblock %}">
-                    <span class="nav-icon">👨‍💼</span>
+                    <span class="nav-icon">👤</span>
                     <span>Employees</span>
                 </a>
 
                 <a href="{% url 'admin_web:drivers' %}" class="nav-link {% block nav_drivers %}{% endblock %}">
-                    <span class="nav-icon">🚖</span>
+                    <span class="nav-icon">🚕</span>
                     <span>Drivers</span>
                 </a>
 
                 <a href="{% url 'admin_web:routes' %}" class="nav-link {% block nav_routes %}{% endblock %}">
-                    <span class="nav-icon">🛣️</span>
+                    <span class="nav-icon">↗</span>
                     <span>Routes</span>
                 </a>
 
                 <a href="{% url 'admin_web:tracking' %}" class="nav-link {% block nav_tracking %}{% endblock %}">
-                    <span class="nav-icon">📍</span>
+                    <span class="nav-icon">⌖</span>
                     <span>Live Tracking</span>
                 </a>
 
                 <a href="{% url 'admin_web:trips' %}" class="nav-link {% block nav_trips %}{% endblock %}">
-                    <span class="nav-icon">📋</span>
+                    <span class="nav-icon">▤</span>
                     <span>Trips</span>
                 </a>
 
                 <a href="{% url 'admin_web:alerts' %}" class="nav-link {% block nav_alerts %}{% endblock %}">
-                    <span class="nav-icon">🚨</span>
+                    <span class="nav-icon">⚠</span>
                     <span>Emergency Alerts</span>
                 </a>
 
                 <a href="{% url 'admin_web:notifications' %}" class="nav-link {% block nav_notifications %}{% endblock %}">
-                    <span class="nav-icon">🔔</span>
+                    <span class="nav-icon">●</span>
                     <span>Notifications</span>
                 </a>
 
                 <a href="{% url 'admin_web:reports' %}" class="nav-link {% block nav_reports %}{% endblock %}">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon">▥</span>
                     <span>Reports</span>
                 </a>
-                <div class="admin-profile">
-                <div class="avatar">R</div>
-                <div>
-                    <strong>{{ request.user.username }}</strong>
-                    <small>Administrator</small>
-                </div>
-            </div>
 
-            <a href="{% url 'admin_web:admin_logout' %}" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-            </a>
+                <div class="admin-profile">
+                    <div class="avatar">{{ request.user.username|first|upper }}</div>
+                    <div>
+                        <strong>{{ request.user.username }}</strong>
+                        <small>Administrator</small>
+                    </div>
+                </div>
+
+                <a href="{% url 'admin_web:admin_logout' %}" class="logout-btn">
+                    <span>↪</span>
+                    <span>Logout</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer">
                 <div class="support-card">
                     <h4>CabMate Ops</h4>
-                    <p>Monitor transport, routes, and emergency activity from one place.</p>
+                    <p>Transport, route and safety control from one workspace.</p>
                 </div>
             </div>
         </aside>
@@ -295,9 +613,7 @@
         <main class="main-content">
             <header class="topbar">
                 <div class="topbar-left">
-                    <button class="menu-btn" id="menuBtn" type="button">
-                        ☰
-                    </button>
+                    <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu">☰</button>
 
                     <div>
                         <h1>{% block page_heading %}Admin Dashboard{% endblock %}</h1>
@@ -309,8 +625,7 @@
             </header>
 
             <section class="page-content">
-                {% block content %}
-                {% endblock %}
+                {% block content %}{% endblock %}
             </section>
         </main>
     </div>
@@ -336,11 +651,12 @@
 
             function updateSidebarToggleIcon() {
                 if (!sidebarToggleDesktop) return;
+
                 if (body.classList.contains("sidebar-collapsed")) {
-                    sidebarToggleDesktop.innerHTML = "❯";
+                    sidebarToggleDesktop.textContent = "❯";
                     sidebarToggleDesktop.setAttribute("aria-label", "Expand sidebar");
                 } else {
-                    sidebarToggleDesktop.innerHTML = "❮";
+                    sidebarToggleDesktop.textContent = "❮";
                     sidebarToggleDesktop.setAttribute("aria-label", "Collapse sidebar");
                 }
             }
@@ -354,11 +670,13 @@
 
             function loadSidebarState() {
                 const saved = localStorage.getItem("cabmate_sidebar_collapsed");
-                if (saved === "1") {
+
+                if (saved === "1" && window.innerWidth > 991) {
                     body.classList.add("sidebar-collapsed");
                 } else {
                     body.classList.remove("sidebar-collapsed");
                 }
+
                 updateSidebarToggleIcon();
             }
 
@@ -367,14 +685,21 @@
             if (sidebarOverlay) sidebarOverlay.addEventListener("click", closeSidebar);
 
             if (sidebarToggleDesktop) {
-                sidebarToggleDesktop.addEventListener("click", function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                sidebarToggleDesktop.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    if (window.innerWidth <= 991) return;
+
                     body.classList.toggle("sidebar-collapsed");
                     updateSidebarToggleIcon();
                     saveSidebarState();
                 });
             }
+
+            window.addEventListener("resize", function () {
+                if (window.innerWidth > 991) closeSidebar();
+            });
 
             loadSidebarState();
         });
