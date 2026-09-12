@@ -1173,6 +1173,7 @@ def driver_profile_page(request, driver_id):
         User,
         id=driver_id,
         role=User.Role.DRIVER,
+        is_active=True,
     )
 
     today = timezone.localdate()
@@ -1369,6 +1370,7 @@ def delete_driver_account(request, driver_id):
         User,
         id=driver_id,
         role=User.Role.DRIVER,
+        is_active=True,
     )
 
     driver_name = driver.username
@@ -1391,6 +1393,7 @@ def delete_driver_account(request, driver_id):
         driver=driver,
         is_active=True,
     )
+    archived_route_count = active_routes.count()
 
     affected_employee_count = (
         RouteStop.objects
@@ -1424,7 +1427,7 @@ def delete_driver_account(request, driver_id):
         request,
         (
             f"Driver {driver_name} was deactivated. "
-            f"{active_routes.count()} saved route(s) were archived, "
+            f"{archived_route_count} saved route(s) were archived, "
             f"{affected_employee_count} employee assignment(s) are no longer active, "
             f"and {cancelled_trip_count} assigned trip(s) were cancelled. "
             "Historical data was preserved."
@@ -2285,7 +2288,19 @@ def employee_profile_page(request, employee_id):
 @require_GET
 def drivers_page(request):
     query = request.GET.get("q", "").strip()
-    drivers = User.objects.filter(role="DRIVER").select_related("vehicle").order_by("-id")
+
+    # Operational Drivers page shows only active drivers.
+    # Deactivated drivers remain in the database so historical
+    # Trip / RouteRun / report records continue to resolve correctly.
+    drivers = (
+        User.objects
+        .filter(
+            role="DRIVER",
+            is_active=True,
+        )
+        .select_related("vehicle")
+        .order_by("-id")
+    )
 
     if query:
         drivers = drivers.filter(
