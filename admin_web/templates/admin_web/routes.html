@@ -1307,6 +1307,36 @@
     .route-compact-heading p { font-size:12px; }
 }
 
+
+.route-back-dashboard-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:38px;
+    padding:0 14px;
+    border-radius:12px;
+    background:#f3eee6;
+    border:1px solid #ded6cc;
+    color:#5f4636;
+    text-decoration:none;
+    font-size:12px;
+    font-weight:900;
+    white-space:nowrap;
+    transition:all .2s ease;
+}
+.route-back-dashboard-btn:hover {
+    background:#eee4db;
+    transform:translateY(-1px);
+    box-shadow:0 8px 16px rgba(95,70,54,.10);
+}
+@media (max-width:650px) {
+    .route-compact-heading {
+        align-items:flex-start;
+        gap:10px;
+        flex-wrap:wrap;
+    }
+}
+
 </style>
 
 <script id="routeFormData" type="application/json">
@@ -1361,6 +1391,9 @@
             <h1>Manage Routes</h1>
             <p>Create, control, and monitor daily route assignments</p>
         </div>
+        <a href="{% url 'admin_web:dashboard' %}" class="route-back-dashboard-btn">
+            ← Back to Dashboard
+        </a>
     </div>
 
     <div class="route-main-ai-row">
