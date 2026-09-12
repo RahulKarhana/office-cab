@@ -623,6 +623,22 @@
     }
 
 
+
+    .late-minutes-pill {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:66px;
+        padding:6px 10px;
+        border-radius:999px;
+        background:#f8ece9;
+        border:1px solid #e9c7c1;
+        color:#7f3f39;
+        font-size:12px;
+        font-weight:950;
+        white-space:nowrap;
+    }
+
 </style>
 
 
@@ -715,7 +731,7 @@
             <button type="button" class="today-analytics-card late" onclick="showAnalyticsList('lateList')">
                 <span>⏱️ Late Cab</span>
                 <h2>{{ late_cabs_count }}</h2>
-                <p>Pending started route runs</p>
+                <p>Routes outside completion SLA</p>
             </button>
 
             <button type="button" class="today-analytics-card cancelled" onclick="showAnalyticsList('cancelledList')">
@@ -778,7 +794,8 @@
                         <th>Driver</th>
                         <th>Vehicle</th>
                         <th>Trip Type</th>
-                        <th>Completed</th>
+                        <th>Trip Started</th>
+                        <th>Trip Completed</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -788,10 +805,11 @@
                         <td>{{ run.driver.username|default:"--" }}</td>
                         <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
                         <td>{{ run.trip_type }}</td>
-                        <td>{{ run.completed_at|time:"h:i A" }}</td>
+                        <td>{{ run.started_at|time:"h:i A"|default:"--" }}</td>
+                        <td>{{ run.completed_at|time:"h:i A"|default:"--" }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5">No completed cab found today.</td></tr>
+                    <tr><td colspan="6">No completed cab found today.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -810,6 +828,11 @@
                         <th>Driver</th>
                         <th>Vehicle</th>
                         <th>Trip Type</th>
+                        <th>Started</th>
+                        <th>Expected Complete</th>
+                        <th>Actual / Current</th>
+                        <th>Late By</th>
+                        <th>Reason</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -819,11 +842,36 @@
                         <td>{{ run.route_template.name|default:"Manual Route" }}</td>
                         <td>{{ run.driver.username|default:"--" }}</td>
                         <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
-                        <td>{{ run.trip_type }}</td>
+                        <td>{{ run.dashboard_trip_type }}</td>
+                        <td>
+                            {% if run.started_at %}
+                                {{ run.started_at|time:"h:i A" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if run.expected_complete_at %}
+                                {{ run.expected_complete_at|time:"h:i A" }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if run.completed_at %}
+                                {{ run.completed_at|time:"h:i A" }}
+                            {% else %}
+                                Still running
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="late-minutes-pill">{{ run.late_minutes }} min</span>
+                        </td>
+                        <td>{{ run.late_reason|default:"Late" }}</td>
                         <td><a href="{% url 'admin_web:tracking' %}" class="track-btn">Track Cab</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5">No late cab found today.</td></tr>
+                    <tr><td colspan="10">No late cab found today.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

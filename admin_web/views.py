@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from rest_framework.test import APIRequestFactory, force_authenticate
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -304,15 +304,105 @@ def dashboard(request):
         completed_at__isnull=False,
     ).order_by("-completed_at")
 
-    late_cabs = RouteRun.objects.select_related(
-        "route_template",
-        "driver",
-        "vehicle",
-    ).filter(
-        run_date=today,
-        started_at__isnull=True,
-        trips__status=Trip.STATUS_ASSIGNED,
-    ).distinct().order_by("run_date")
+    # =========================
+    # LATE CAB SLA
+    # =========================
+    # PICKUP:
+    #   Mon-Thu -> route should be completed / reach office by 5:30 PM
+    #   Friday  -> route should be completed / reach office by 7:00 PM
+    #
+    # DROP:
+    #   route should be completed within 2 hours from started_at
+    #
+    # We build a list instead of only checking "not started", because admin
+    # wants to see actual completion delay in minutes.
+    now_local = timezone.localtime()
+    tz = timezone.get_current_timezone()
+
+    if today.weekday() == 4:  # Friday
+        pickup_deadline_time = time(19, 0)
+    else:  # Monday-Thursday (and fallback for any manually-created weekday data)
+        pickup_deadline_time = time(17, 30)
+
+    pickup_deadline = timezone.make_aware(
+        datetime.combine(today, pickup_deadline_time),
+        tz,
+    )
+
+    today_route_runs = (
+        RouteRun.objects
+        .select_related("route_template", "driver", "vehicle")
+        .prefetch_related("trips")
+        .filter(run_date=today)
+        .order_by("id")
+    )
+
+    late_cabs = []
+
+    for run in today_route_runs:
+        trip_type = (
+            run.trips.values_list("trip_type", flat=True).first()
+            or getattr(run, "trip_type", "")
+            or ""
+        )
+        trip_type = str(trip_type).upper()
+        run.dashboard_trip_type = trip_type or "--"
+        run.late_minutes = 0
+        run.late_reason = ""
+        run.expected_complete_at = None
+        run.late_reference_at = None
+
+        # PICKUP = office arrival/completion deadline
+        if trip_type == Trip.TRIP_TYPE_PICKUP:
+            run.expected_complete_at = pickup_deadline
+
+            if run.completed_at:
+                completed_local = timezone.localtime(run.completed_at)
+                if completed_local > pickup_deadline:
+                    run.late_reference_at = completed_local
+                    run.late_minutes = max(
+                        1,
+                        int((completed_local - pickup_deadline).total_seconds() // 60),
+                    )
+                    run.late_reason = "Reached office late"
+                    late_cabs.append(run)
+
+            elif now_local > pickup_deadline:
+                run.late_reference_at = now_local
+                run.late_minutes = max(
+                    1,
+                    int((now_local - pickup_deadline).total_seconds() // 60),
+                )
+                run.late_reason = "Office arrival pending"
+                late_cabs.append(run)
+
+        # DROP = must finish within 2 hours after trip start
+        elif trip_type == Trip.TRIP_TYPE_DROP and run.started_at:
+            started_local = timezone.localtime(run.started_at)
+            expected_drop_complete = started_local + timedelta(hours=2)
+            run.expected_complete_at = expected_drop_complete
+
+            if run.completed_at:
+                completed_local = timezone.localtime(run.completed_at)
+                if completed_local > expected_drop_complete:
+                    run.late_reference_at = completed_local
+                    run.late_minutes = max(
+                        1,
+                        int((completed_local - expected_drop_complete).total_seconds() // 60),
+                    )
+                    run.late_reason = "Drop completed late"
+                    late_cabs.append(run)
+
+            elif now_local > expected_drop_complete:
+                run.late_reference_at = now_local
+                run.late_minutes = max(
+                    1,
+                    int((now_local - expected_drop_complete).total_seconds() // 60),
+                )
+                run.late_reason = "Drop still running"
+                late_cabs.append(run)
+
+    late_cabs.sort(key=lambda run: run.late_minutes, reverse=True)
 
     cancelled_trips = today_trips_qs.filter(
         status=Trip.STATUS_CANCELLED
@@ -370,7 +460,7 @@ def dashboard(request):
 
         "started_cabs_count": started_cabs.count(),
         "completed_cabs_count": completed_cabs.count(),
-        "late_cabs_count": late_cabs.count(),
+        "late_cabs_count": len(late_cabs),
         "cancelled_trips_count": cancelled_trips.count(),
         "no_show_count": no_show_stops.count(),
 
