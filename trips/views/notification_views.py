@@ -13,7 +13,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs=Notification.objects.filter(user=self.request.user).order_by("-created_at")
-        print("DEBUG: User:", self.request.user.username, "Notifications count:", qs.count())
+        print("DEBUG: User:", self.request.user.display_name, "Notifications count:", qs.count())
         return qs
 
     @action(detail=True, methods=["post"])

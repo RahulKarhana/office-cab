@@ -16,7 +16,7 @@ class Vehicle(models.Model):
     seat_count = models.PositiveIntegerField(default=4)
 
     def __str__(self):
-        return f"{self.vehicle_number} - {self.driver.username}"
+        return f"{self.vehicle_number} - {self.driver.display_name}"
 
 
 class Trip(models.Model):
@@ -144,7 +144,7 @@ class Review(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Review for Trip {self.trip_id} by {self.employee.username}"
+        return f"Review for Trip {self.trip_id} by {self.employee.display_name}"
 
 
 
@@ -234,7 +234,7 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title} - {self.user.username}"
+        return f"{self.title} - {self.user.display_name}"
 
 class DriverLocation(models.Model):
     driver = models.OneToOneField(
@@ -248,7 +248,7 @@ class DriverLocation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.driver.username} @ {self.latitude}, {self.longitude}"
+        return f"{self.driver.display_name} @ {self.latitude}, {self.longitude}"
 
 
 class TripCancellation(models.Model):
@@ -280,7 +280,7 @@ class TripCancellation(models.Model):
     cancelled_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Trip {self.trip_id} cancelled by {self.cancelled_by.username}"
+        return f"Trip {self.trip_id} cancelled by {self.cancelled_by.display_name}"
     
 class EmployeeLeave(models.Model):
     employee = models.ForeignKey(
@@ -299,7 +299,7 @@ class EmployeeLeave(models.Model):
         ordering = ["-leave_date"]
 
     def __str__(self):
-        return f"{self.employee.username} leave on {self.leave_date}"
+        return f"{self.employee.display_name} leave on {self.leave_date}"
     
 class RouteTemplate(models.Model):
     name = models.CharField(max_length=200)
@@ -375,7 +375,7 @@ class RouteStop(models.Model):
         ordering = ["stop_order"]
 
     def __str__(self):
-        return f"{self.route.name} - Stop {self.stop_order} ({self.employee.username})"
+        return f"{self.route.name} - Stop {self.stop_order} ({self.employee.display_name})"
 
 
 class RouteRun(models.Model):
@@ -503,7 +503,7 @@ class RouteRunStop(models.Model):
 
     def __str__(self):
         return (
-            f"{self.employee.username} - "
+            f"{self.employee.display_name} - "
             f"Stop {self.stop_order}"
         )
 
@@ -607,7 +607,7 @@ class DeviceToken(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username} - {self.device_type}"
+        return f"{self.user.display_name} - {self.device_type}"
     
 class EmergencyAlert(models.Model):
     STATUS_ACTIVE = "ACTIVE"
@@ -700,7 +700,7 @@ class EmergencyAlert(models.Model):
     def __str__(self):
         return (
             f"EmergencyAlert #{self.id} - "
-            f"{self.employee.username} - "
+            f"{self.employee.display_name} - "
             f"{self.status}"
         )
 

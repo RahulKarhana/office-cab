@@ -487,19 +487,19 @@
     .tab-blue { background: linear-gradient(135deg, #eee4db, #eff6ff); }
     .tab-blue.active { background: linear-gradient(135deg, #9b7457, #7e5c43); }
 
-    .tab-red { background: linear-gradient(135deg, #f8ece9, #fffdf91f2); }
+    .tab-red { background: linear-gradient(135deg, #f8ece9, #f8ece9); }
     .tab-red.active { background: linear-gradient(135deg, #a6584f, #7f3f39); }
 
-    .tab-orange { background: linear-gradient(135deg, #fbf3e7, #fffdf97ed); }
+    .tab-orange { background: linear-gradient(135deg, #fbf3e7, #fbf3e7); }
     .tab-orange.active { background: linear-gradient(135deg, #b8734a, #8b612e); }
 
-    .tab-yellow { background: linear-gradient(135deg, #fbf3e7, #fffdf9beb); }
+    .tab-yellow { background: linear-gradient(135deg, #fbf3e7, #fbf3e7); }
     .tab-yellow.active { background: linear-gradient(135deg, #8b612e, #8b612e); }
 
     .tab-purple { background: linear-gradient(135deg, #f2e9e1, #f8f5ed); }
     .tab-purple.active { background: linear-gradient(135deg, #9b7457, #7e5c43); }
 
-    .tab-pink { background: linear-gradient(135deg, #f5e9e6, #fffdf91f2); }
+    .tab-pink { background: linear-gradient(135deg, #f5e9e6, #f8ece9); }
     .tab-pink.active { background: linear-gradient(135deg, #a66d69, #7f514d); }
 
     .tab-teal { background: linear-gradient(135deg, #eee4db, #f8f5ed); }
@@ -593,7 +593,7 @@
     .started { background: #fbf3e7; color: #8b612e; }
     .completed { background: #edf3ed; color: #4f6d58; }
     .cancelled { background: #f8ece9; color: #7f3f39; }
-    .pending { background: #fffdf97ed; color: #8b612e; }
+    .pending { background: #fbf3e7; color: #8b612e; }
     .read, .resolved { background: #edf3ed; color: #4f6d58; }
 
     .empty {
@@ -726,13 +726,13 @@
     }
 
     .driver-performance-average {
-        background: linear-gradient(135deg, #fbf3e7, #fffdf9beb);
+        background: linear-gradient(135deg, #fbf3e7, #fbf3e7);
         color: #8b612e;
         border: 1px solid #fcd34d;
     }
 
     .driver-performance-risk {
-        background: linear-gradient(135deg, #f8ece9, #fffdf91f2);
+        background: linear-gradient(135deg, #f8ece9, #f8ece9);
         color: #7f3f39;
         border: 1px solid #d9aaa3;
     }
@@ -768,7 +768,7 @@
     }
 
     .timeline-summary-box {
-        background: linear-gradient(135deg, #fffdf9df9, #fbf8f2);
+        background: linear-gradient(135deg, #fffdf9, #fbf8f2);
         border: 1px solid #ded6cc;
         border-radius: 20px;
         padding: 15px;
@@ -797,7 +797,7 @@
     }
 
     .route-timeline-card {
-        background: #fffdf9df9;
+        background: #fffdf9;
         border: 1px solid #ded6cc;
         border-radius: 26px;
         overflow: hidden;
@@ -944,7 +944,7 @@
         border: 1px solid #ded6cc;
         border-radius: 20px;
         padding: 15px;
-        background: linear-gradient(135deg, #fffdf9df9, #fbf8f2);
+        background: linear-gradient(135deg, #fffdf9, #fbf8f2);
     }
 
     .timeline-detail-top {
@@ -1012,7 +1012,7 @@
 
     .no-show-reason-box {
         margin-top: 10px;
-        background: #fffdf97ed;
+        background: #fbf3e7;
         border: 1px solid #e5d0bb;
         color: #8b612e;
         border-radius: 15px;
@@ -1350,7 +1350,7 @@
                     <td>{{ forloop.counter }}</td>
 
                     <td>
-                        {{ speed.driver.username }}
+                        {{ speed.driver.display_name }}
                     </td>
 
                     <td>
@@ -1535,7 +1535,7 @@
                         <div class="inactive-avatar">👤</div>
 
                         <div class="inactive-name">
-                            <strong>{{ employee.username }}</strong>
+                            <strong>{{ employee.display_name }}</strong>
                             <small>
                                 {% if employee.employee_id %}Employee ID: {{ employee.employee_id }}{% else %}User ID: {{ employee.id }}{% endif %}
                             </small>
@@ -1551,7 +1551,7 @@
                             <small>Pickup location</small>
                         </div>
 
-                        <form method="post" action="{% url 'admin_web:activate_employee_account' employee.id %}" onsubmit="return confirm('Activate {{ employee.username|escapejs }}?');">
+                        <form method="post" action="{% url 'admin_web:activate_employee_account' employee.id %}" onsubmit="return confirm('Activate {{ employee.display_name|escapejs }}?');">
                             {% csrf_token %}
                             <button type="submit" class="activate-btn">✓ Activate</button>
                         </form>
@@ -1579,7 +1579,7 @@
                         <div class="inactive-avatar">🧑‍✈️</div>
 
                         <div class="inactive-name">
-                            <strong>{{ driver.username }}</strong>
+                            <strong>{{ driver.display_name }}</strong>
                             <small>Driver ID: #{{ driver.id }}</small>
                         </div>
 
@@ -1599,7 +1599,7 @@
                             <small>Vehicle</small>
                         </div>
 
-                        <form method="post" action="{% url 'admin_web:activate_driver_account' driver.id %}" onsubmit="return confirm('Activate {{ driver.username|escapejs }}?');">
+                        <form method="post" action="{% url 'admin_web:activate_driver_account' driver.id %}" onsubmit="return confirm('Activate {{ driver.display_name|escapejs }}?');">
                             {% csrf_token %}
                             <button type="submit" class="activate-btn">✓ Activate</button>
                         </form>

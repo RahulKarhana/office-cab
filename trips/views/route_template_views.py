@@ -118,7 +118,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             drivers_data.append(
                 {
                     "id": driver.id,
-                    "username": driver.username,
+                    "username": driver.display_name,
                     "phone_number": getattr(driver, "phone_number", None),
                     "is_selectable": driver.id not in used_driver_ids,
                 }
@@ -129,7 +129,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             employees_data.append(
                 {
                     "id": employee.id,
-                    "username": employee.username,
+                    "username": employee.display_name,
                     "phone_number": getattr(employee, "phone_number", None),
                     "pickup_location": getattr(employee, "pickup_location", None),
                     "pickup_latitude": getattr(employee, "pickup_latitude", None),
@@ -194,7 +194,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             ).exists()
 
             if exists:
-                duplicate_users.append(stop.employee.username)
+                duplicate_users.append(stop.employee.display_name)
 
         return duplicate_users
 
@@ -429,7 +429,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             return Response({"error": "Minimum 2 employees required."}, status=400)
 
         missing_location = [
-            emp.username
+            emp.display_name
             for emp in employees
             if emp.pickup_latitude is None or emp.pickup_longitude is None
         ]
@@ -480,7 +480,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
         return Response([
             {
                 "id": emp.id,
-                "username": emp.username,
+                "username": emp.display_name,
                 "pickup_location": emp.pickup_location,
                 "pickup_latitude": emp.pickup_latitude,
                 "pickup_longitude": emp.pickup_longitude,

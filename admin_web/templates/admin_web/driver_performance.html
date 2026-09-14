@@ -273,7 +273,7 @@
                             {% endif %}
                         </td>
 
-                        <td>{{ driver.username }}</td>
+                        <td>{{ driver.display_name }}</td>
 
                         <td>
                             <span class="badge {{ driver.badge }}">
@@ -312,7 +312,7 @@
                 <tbody>
                     {% for driver in risky_drivers_panel %}
                     <tr>
-                        <td>{{ driver.username }}</td>
+                        <td>{{ driver.display_name }}</td>
 
                         <td>
                             <span class="speed-chip danger">
@@ -373,7 +373,7 @@
                 {% for driver in drivers %}
                 <tr>
                     <td>
-                        <span class="driver-name">{{ driver.username }}</span>
+                        <span class="driver-name">{{ driver.display_name }}</span>
                         <span class="muted">{{ driver.phone_number }}</span>
                     </td>
 

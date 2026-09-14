@@ -15,6 +15,12 @@ class SignupSerializer(serializers.ModelSerializer):
         min_length=6,
     )
 
+    full_name = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=150,
+    )
+
     address = serializers.CharField(
         required=False,
         allow_blank=True,
@@ -64,6 +70,7 @@ class SignupSerializer(serializers.ModelSerializer):
             "id",
             "username",
             "password",
+            "full_name",
             "role",
             "phone_number",
             "address",
@@ -80,6 +87,57 @@ class SignupSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "account_status",
         ]
+
+    # ============================================================
+    # FULL NAME VALIDATION
+    # ============================================================
+
+    def validate_full_name(self, value):
+        value = " ".join((value or "").strip().split())
+
+        if len(value) < 2:
+            raise serializers.ValidationError(
+                "Full name is required."
+            )
+
+        return value
+
+    # ============================================================
+    # PHONE NUMBER VALIDATION
+    # ============================================================
+
+    def validate_phone_number(self, value):
+        if value is None:
+            return value
+
+        value = str(value).strip()
+        value = value.replace(" ", "").replace("-", "")
+
+        if not value:
+            return value
+
+        number_part = value[1:] if value.startswith("+") else value
+
+        if not number_part.isdigit():
+            raise serializers.ValidationError(
+                "Phone number must contain numbers only, with an optional leading +."
+            )
+
+        if len(number_part) < 10:
+            raise serializers.ValidationError(
+                "Phone number must contain at least 10 digits."
+            )
+
+        existing = User.objects.filter(phone_number=value)
+        if self.instance:
+            existing = existing.exclude(pk=self.instance.pk)
+
+        if existing.exists():
+            raise serializers.ValidationError(
+                "This phone number is already registered."
+            )
+
+        return value
 
     # ============================================================
     # ROLE VALIDATION
@@ -277,6 +335,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
     
 class MeSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
     vehicle_number = serializers.SerializerMethodField()
     vehicle_model = serializers.SerializerMethodField()
     seat_count = serializers.SerializerMethodField()
@@ -287,6 +346,8 @@ class MeSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "username",
+            "full_name",
+            "display_name",
             "role",
 
             "employee_id",
@@ -303,6 +364,9 @@ class MeSerializer(serializers.ModelSerializer):
             "vehicle_model",
             "seat_count",
         ]
+
+    def get_display_name(self, obj):
+        return getattr(obj, "display_name", None) or obj.username
 
     def get_vehicle_number(self, obj):
         if hasattr(obj, "vehicle"):
@@ -422,6 +486,9 @@ class CustomTokenObtainPairSerializer(
 
         data["user_id"] = user.id
         data["username"] = user.username
+        data["full_name"] = getattr(user, "full_name", "") or ""
+        data["display_name"] = getattr(user, "display_name", None) or user.username
+        data["phone_number"] = user.phone_number
         data["role"] = user.role
         data["account_status"] = (
             user.account_status
@@ -440,7 +507,7 @@ class CustomTokenObtainPairSerializer(
     
 class PickupLocationChangeRequestSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(
-        source="employee.username",
+        source="employee.display_name",
         read_only=True,
     )
 

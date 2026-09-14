@@ -82,7 +82,7 @@
                 >
                     <td><span class="id-pill">#{{ alert.id }}</span></td>
                     <td>
-                        <strong>{{ alert.employee.username|default:"--" }}</strong>
+                        <strong>{{ alert.employee.display_name|default:"--" }}</strong>
                     </td>
                     <td>{{ alert.title|default:"Emergency SOS" }}</td>
 

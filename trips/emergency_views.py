@@ -75,7 +75,7 @@ class EmergencyAlertViewSet(viewsets.ModelViewSet):
                 route_name = active_trip.route_run.route_template.name
 
         message = (
-            f"EMERGENCY ALERT from {user.username}. "
+            f"EMERGENCY ALERT from {user.display_name}. "
             f"Trip Type: {trip_type}. "
             f"Route: {route_name}. "
             f"Vehicle: {vehicle_number}. "
@@ -106,7 +106,7 @@ class EmergencyAlertViewSet(viewsets.ModelViewSet):
                     user=admin,
                     title="🚨 Emergency SOS Alert",
                     body=(
-                        f"{user.username} needs urgent help. "
+                        f"{user.display_name} needs urgent help. "
                         "Open emergency alerts now."
                     ),
                     data={

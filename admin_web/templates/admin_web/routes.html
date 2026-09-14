@@ -1345,7 +1345,7 @@
     {% for employee in employees %}
     {
       "id": {{ employee.id }},
-      "username": "{{ employee.username|escapejs }}",
+      "username": "{{ employee.display_name|escapejs }}",
       "pickup_location": "{{ employee.pickup_location|default:''|escapejs }}",
       "pickup_latitude": {% if employee.pickup_latitude is not None %}{{ employee.pickup_latitude }}{% else %}null{% endif %},
       "pickup_longitude": {% if employee.pickup_longitude is not None %}{{ employee.pickup_longitude }}{% else %}null{% endif %},
@@ -1357,7 +1357,7 @@
     {% for driver in drivers %}
     {
       "id": {{ driver.id }},
-      "username": "{{ driver.username|escapejs }}",
+      "username": "{{ driver.display_name|escapejs }}",
       "is_selectable": {% if driver.is_selectable == False %}false{% else %}true{% endif %}
     }{% if not forloop.last %},{% endif %}
     {% endfor %}
@@ -2041,7 +2041,7 @@ function fillDriverOptions(selectEl, selectedId) {
         '<option value="">Select Driver</option>' +
         drivers.map(driver => {
             const selected = Number(selectedId) === Number(driver.id) ? "selected" : "";
-            return `<option value="${driver.id}" ${selected}>${driver.username}</option>`;
+            return `<option value="${driver.id}" ${selected}>${driver.display_name}</option>`;
         }).join("");
 }
 

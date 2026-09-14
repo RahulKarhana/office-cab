@@ -493,12 +493,12 @@ Review new driver registrations before allowing login
                     <div class="driver-main">
 
                         <div class="driver-avatar">
-                            {{ driver.username|slice:":1"|upper }}
+                            {{ driver.display_name|slice:":1"|upper }}
                         </div>
 
                         <div>
                             <h4>
-                                {{ driver.username }}
+                                {{ driver.display_name }}
                             </h4>
 
                             <p>
@@ -518,9 +518,9 @@ Review new driver registrations before allowing login
                 <div class="details-grid">
 
                     <div class="detail-box">
-                        <span>Driver Username</span>
+                        <span>Login ID</span>
                         <strong>
-                            {{ driver.username }}
+                            {{ driver.display_name }}
                         </strong>
                     </div>
 
@@ -616,7 +616,7 @@ Review new driver registrations before allowing login
                         <button
                             type="submit"
                             class="approve-btn"
-                            onclick="return confirm('Approve {{ driver.username }} driver account?');"
+                            onclick="return confirm('Approve {{ driver.display_name|escapejs }} driver account?');"
                         >
                             ✅ Approve Account
                         </button>
@@ -643,7 +643,7 @@ Review new driver registrations before allowing login
                         <button
                             type="submit"
                             class="reject-btn"
-                            onclick="return confirm('Reject {{ driver.username }} driver account?');"
+                            onclick="return confirm('Reject {{ driver.display_name|escapejs }} driver account?');"
                         >
                             ❌ Reject
                         </button>

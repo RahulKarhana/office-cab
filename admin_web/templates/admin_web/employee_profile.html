@@ -1,6 +1,6 @@
 {% extends 'admin_web/base.html' %}
 
-{% block title %}{{ employee.username }} - Employee Profile{% endblock %}
+{% block title %}{{ employee.display_name }} - Employee Profile{% endblock %}
 {% block nav_employees %}active{% endblock %}
 {% block page_heading %}Employee Profile{% endblock %}
 {% block page_subheading %}Complete employee, route, trip, leave and review details{% endblock %}
@@ -410,7 +410,7 @@
             </div>
 
             <div>
-                <h2>{{ employee.username }}</h2>
+                <h2>{{ employee.display_name }}</h2>
 
                 <p>
                     Employee ID:
@@ -455,7 +455,7 @@
                 class="profile-btn btn-delete"
                 onclick="openDeleteEmployeeModal(
                     '{{ employee.id }}',
-                    '{{ employee.username|escapejs }}'
+                    '{{ employee.display_name|escapejs }}'
                 )"
             >
                 Delete Account
@@ -471,6 +471,11 @@
     ======================================================== -->
 
     <section class="profile-grid">
+
+        <div class="info-card">
+            <span>Login ID</span>
+            <strong>{{ employee.display_name }}</strong>
+        </div>
 
         <div class="info-card">
             <span>Phone</span>
@@ -569,7 +574,7 @@
                     <span>Driver</span>
                     <strong>
                         {% if route_stop.route.driver %}
-                            {{ route_stop.route.driver.username }}
+                            {{ route_stop.route.driver.display_name }}
                         {% else %}
                             --
                         {% endif %}
@@ -663,7 +668,7 @@
 
                             <td>
                                 {% if trip.driver %}
-                                    {{ trip.driver.username }}
+                                    {{ trip.driver.display_name }}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -792,7 +797,7 @@
 
                             <td>
                                 {% if trip.driver %}
-                                    {{ trip.driver.username }}
+                                    {{ trip.driver.display_name }}
                                 {% else %}
                                     --
                                 {% endif %}
@@ -946,7 +951,7 @@
 
                             <td>
                                 {% if review.trip.driver %}
-                                    {{ review.trip.driver.username }}
+                                    {{ review.trip.driver.display_name }}
                                 {% else %}
                                     --
                                 {% endif %}

@@ -1,7 +1,7 @@
 {% extends 'admin_web/base.html' %}
 
 {% block title %}
-{{ driver.username }} - Driver Profile
+{{ driver.display_name }} - Driver Profile
 {% endblock %}
 
 {% block nav_drivers %}
@@ -959,7 +959,7 @@ Complete driver, vehicle, route, employee, trip and review details
 
                 <h2>
 
-                    {{ driver.username }}
+                    {{ driver.display_name }}
 
                 </h2>
 
@@ -1041,11 +1041,11 @@ Complete driver, vehicle, route, employee, trip and review details
         <div class="info-card">
 
             <span>
-                Username
+                Login ID
             </span>
 
             <strong>
-                {{ driver.username }}
+                {{ driver.display_name }}
             </strong>
 
         </div>
@@ -1539,7 +1539,7 @@ Complete driver, vehicle, route, employee, trip and review details
 
                                 <strong>
 
-                                    {{ stop.employee.username }}
+                                    {{ stop.employee.display_name }}
 
                                 </strong>
 
@@ -1736,7 +1736,7 @@ Complete driver, vehicle, route, employee, trip and review details
 
                             {% if trip.employee %}
 
-                                {{ trip.employee.username }}
+                                {{ trip.employee.display_name }}
 
                             {% else %}
 
@@ -1949,7 +1949,7 @@ Complete driver, vehicle, route, employee, trip and review details
 
                             {% if trip.employee %}
 
-                                {{ trip.employee.username }}
+                                {{ trip.employee.display_name }}
 
                             {% else %}
 
@@ -2125,7 +2125,7 @@ Complete driver, vehicle, route, employee, trip and review details
 
                             {% if review.trip.employee %}
 
-                                {{ review.trip.employee.username }}
+                                {{ review.trip.employee.display_name }}
 
                             {% else %}
 
@@ -2243,7 +2243,7 @@ Complete driver, vehicle, route, employee, trip and review details
                     <option value="">Select available driver</option>
                     {% for replacement_driver in available_replacement_drivers %}
                     <option value="{{ replacement_driver.id }}">
-                        {{ replacement_driver.username }}
+                        {{ replacement_driver.display_name }}
                         {% if replacement_driver.vehicle %}
                             — {{ replacement_driver.vehicle.vehicle_number }}
                         {% endif %}
@@ -2331,7 +2331,7 @@ Complete driver, vehicle, route, employee, trip and review details
 
         <p class="delete-description">
             You are preparing to deactivate
-            <strong>{{ driver.username }}</strong>.
+            <strong>{{ driver.display_name }}</strong>.
         </p>
 
         <div class="delete-warning">

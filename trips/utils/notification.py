@@ -41,7 +41,7 @@ def initialize_firebase():
 
 
 def send_push_notification(user, title, body, data=None):
-    print("🔥 PUSH FUNCTION CALLED FOR:", user.username)
+    print("🔥 PUSH FUNCTION CALLED FOR:", user.display_name)
 
     if not initialize_firebase():
         print("❌ Push cancelled because Firebase is unavailable")
@@ -57,7 +57,7 @@ def send_push_notification(user, title, body, data=None):
     print("📱 TOKENS FOUND:", len(tokens))
 
     if not tokens:
-        print("❌ No active FCM tokens for:", user.username)
+        print("❌ No active FCM tokens for:", user.display_name)
         return
 
     try:

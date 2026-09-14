@@ -68,7 +68,7 @@ class RouteService:
     @staticmethod
     def _driver_name(route_run):
         if route_run.driver:
-            return route_run.driver.username
+            return route_run.driver.display_name
         return "Driver"
 
     @staticmethod
@@ -636,7 +636,7 @@ class RouteService:
 
         NotificationService.notify_admins(
             (
-                f"{current_stop.employee.username} was "
+                f"{current_stop.employee.display_name} was "
                 f"marked as No Show for route "
                 f"#{route_run.id}."
             ),

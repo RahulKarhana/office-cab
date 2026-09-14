@@ -208,7 +208,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
         total_stops = len(ordered_stops)
 
         driver_name = (
-            route_run.driver.username
+            route_run.driver.display_name
             if route_run.driver
             else "Driver"
         )
@@ -426,7 +426,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response(
             {
-                "message": f"{stop.employee.username} marked as boarded.",
+                "message": f"{stop.employee.display_name} marked as boarded.",
                 "stop_id": stop.id,
                 "is_boarded": True,
                 "is_no_show": False,
@@ -515,7 +515,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response(
             {
-                "message": f"{stop.employee.username} marked as No Show.",
+                "message": f"{stop.employee.display_name} marked as No Show.",
                 "stop_id": stop.id,
                 "is_boarded": False,
                 "is_no_show": True,
@@ -809,7 +809,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
                     )
                 ),
                 "completed_stop_id": current_stop.id,
-                "completed_employee": current_stop.employee.username,
+                "completed_employee": current_stop.employee.display_name,
                 "late_seconds": current_stop.late_seconds,
 
                 "next_stop_id": (
@@ -825,7 +825,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
                 ),
 
                 "next_employee": (
-                    next_stop.employee.username
+                    next_stop.employee.display_name
                     if next_stop
                     else None
                 ),

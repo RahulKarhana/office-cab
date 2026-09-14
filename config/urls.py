@@ -2,8 +2,9 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from trips.views.trip_views import test_fcm
 
+from accounts.views import CustomTokenObtainPairView
+
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
 )
 
@@ -15,7 +16,7 @@ from drf_yasg import openapi
 schema_view = get_schema_view(
     openapi.Info(
         title="Office Cab API",
-        default_version='v1',
+        default_version="v1",
         description="API documentation for Office Cab System",
     ),
     public=True,
@@ -24,17 +25,56 @@ schema_view = get_schema_view(
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path("test-fcm/", test_fcm, name="test-fcm"),
-    # JWT AUTH
-    path('api/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path("admin-web/", include("admin_web.urls")),
-    # APP APIs
-    path("api/accounts/", include("accounts.urls")),
-    path("api/trips/", include("trips.urls")),
+    path("admin/", admin.site.urls),
 
-    # API Documentation
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path("test-fcm/", test_fcm, name="test-fcm"),
+
+    # JWT AUTH
+    # Use the same custom login serializer as accounts/login so
+    # Employee/Driver account-status checks and full_name/display_name
+    # are returned consistently.
+    path(
+        "api/login/",
+        CustomTokenObtainPairView.as_view(),
+        name="token_obtain_pair",
+    ),
+    path(
+        "api/token/refresh/",
+        TokenRefreshView.as_view(),
+        name="token_refresh",
+    ),
+
+    # ADMIN WEB
+    path(
+        "admin-web/",
+        include("admin_web.urls"),
+    ),
+
+    # APP APIs
+    path(
+        "api/accounts/",
+        include("accounts.urls"),
+    ),
+    path(
+        "api/trips/",
+        include("trips.urls"),
+    ),
+
+    # API DOCUMENTATION
+    re_path(
+        r"^swagger/$",
+        schema_view.with_ui(
+            "swagger",
+            cache_timeout=0,
+        ),
+        name="schema-swagger-ui",
+    ),
+    re_path(
+        r"^redoc/$",
+        schema_view.with_ui(
+            "redoc",
+            cache_timeout=0,
+        ),
+        name="schema-redoc",
+    ),
 ]

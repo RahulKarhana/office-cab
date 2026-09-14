@@ -51,7 +51,7 @@ class PickupChatViewSet(viewsets.ViewSet):
 
         data = ChatService.build_chat_payload(chat)
         data["current_user_id"] = request.user.id
-        data["current_username"] = request.user.username
+        data["current_username"] = request.user.display_name
 
         return Response(
             data,
@@ -104,7 +104,7 @@ class PickupChatViewSet(viewsets.ViewSet):
         if receiver:
             send_push_notification(
                 user=receiver,
-                title=f"Message from {request.user.username}",
+                title=f"Message from {request.user.display_name}",
                 body=message.message,
                 data={
                     "type": "PICKUP_CHAT_MESSAGE",
@@ -112,7 +112,7 @@ class PickupChatViewSet(viewsets.ViewSet):
                     "route_run_id": str(chat.route_run_id),
                     "stop_id": str(chat.stop_id),
                     "sender_id": str(request.user.id),
-                    "sender_name": request.user.username,
+                    "sender_name": request.user.display_name,
                     "screen": "pickup_chat",
                 },
             )
@@ -124,7 +124,7 @@ class PickupChatViewSet(viewsets.ViewSet):
                     "id": message.id,
                     "sender_id": message.sender_id,
                     "sender_name": (
-                        message.sender.username
+                        message.sender.display_name
                         if message.sender
                         else ""
                     ),

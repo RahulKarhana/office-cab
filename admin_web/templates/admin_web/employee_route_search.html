@@ -443,7 +443,7 @@
     </div>
 
     <div class="employee-card">
-        <h3>{{ employee.username }}</h3>
+        <h3>{{ employee.display_name }}</h3>
 
         <div class="employee-meta">
             <div class="meta-box">
@@ -486,7 +486,7 @@
                         </div>
 
                         <div class="route-sub">
-                            Driver: {{ item.driver.username|default:"--" }}
+                            Driver: {{ item.driver.display_name|default:"--" }}
                         </div>
                     </div>
 
@@ -565,7 +565,7 @@
                             method="post"
                             action="{% url 'admin_web:assign_employee_to_route' employee.id item.route.id %}"
                             style="flex:1;"
-                            onsubmit="return confirm('Assign {{ employee.username }} to {{ item.route.name }}?');"
+                            onsubmit="return confirm('Assign {{ employee.display_name }} to {{ item.route.name }}?');"
                         >
                             {% csrf_token %}
                             <button class="route-btn assign-btn" type="submit">
@@ -594,7 +594,7 @@
                         <div class="stop-row">
                             <span>{{ stop.stop_order }}</span>
                             <div>
-                                <strong>{{ stop.employee.username }}</strong>
+                                <strong>{{ stop.employee.display_name }}</strong>
                                 <small>{{ stop.pickup_location }}</small>
                             </div>
                         </div>
@@ -620,7 +620,7 @@
 const employeePoint = {
     lat: {{ employee.pickup_latitude|default:"null" }},
     lng: {{ employee.pickup_longitude|default:"null" }},
-    name: "{{ employee.username|escapejs }}"
+    name: "{{ employee.display_name|escapejs }}"
 };
 
 const routeData = {
@@ -633,7 +633,7 @@ const routeData = {
                 {
                     lat: {{ stop.pickup_latitude }},
                     lng: {{ stop.pickup_longitude }},
-                    name: "{{ stop.employee.username|escapejs }}",
+                    name: "{{ stop.employee.display_name|escapejs }}",
                     location: "{{ stop.pickup_location|escapejs }}",
                     order: "{{ stop.stop_order }}"
                 },

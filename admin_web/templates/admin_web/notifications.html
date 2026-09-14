@@ -181,13 +181,13 @@
 
                 {% if notification.driver %}
                     <span class="notify-pill">
-                        🚗 {{ notification.driver.username }}
+                        🚗 {{ notification.driver.display_name }}
                     </span>
                 {% endif %}
 
                 {% if notification.employee %}
                     <span class="notify-pill">
-                        👤 {{ notification.employee.username }}
+                        👤 {{ notification.employee.display_name }}
                     </span>
                 {% endif %}
 

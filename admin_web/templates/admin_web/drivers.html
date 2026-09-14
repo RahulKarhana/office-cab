@@ -60,6 +60,41 @@
 
 
 /* ============================================================
+   IMPORT EXCEL
+============================================================ */
+
+.driver-directory-actions{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
+.driver-import-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:46px;
+    padding:0 18px;
+    border-radius:14px;
+    text-decoration:none;
+    font-weight:900;
+    color:#fffdf9;
+    background:linear-gradient(135deg,#7e5c43,#9b7457);
+    box-shadow:0 10px 22px rgba(95,70,54,.14);
+    transition:.2s ease;
+    white-space:nowrap;
+}
+
+.driver-import-btn:hover{
+    color:#fffdf9;
+    transform:translateY(-1px);
+    box-shadow:0 12px 26px rgba(95,70,54,.20);
+}
+
+
+/* ============================================================
    DRIVER PROFILE
 ============================================================ */
 
@@ -141,7 +176,7 @@
 
 .driver-status-card{
     grid-column:1/-1;
-    background:linear-gradient(135deg,#fffdf9fff,#fbf8f2);
+    background:linear-gradient(135deg,#fffdf9,#fbf8f2);
     border:1px solid #ded6cc;
     border-radius:26px;
     padding:24px;
@@ -164,7 +199,7 @@
 }
 
 .driver-status-card.warning .driver-status-icon{
-    background:#fffdf97ed;
+    background:#fbf3e7;
     color:#8b612e;
 }
 
@@ -285,6 +320,11 @@
     }
 
     .driver-search-btn{
+        width:100%;
+    }
+
+    .driver-directory-actions,
+    .driver-import-btn{
         width:100%;
     }
 
@@ -448,6 +488,15 @@
 
             </div>
 
+            <div class="driver-directory-actions">
+                <a
+                    href="{% url 'admin_web:driver_excel_import' %}"
+                    class="driver-import-btn"
+                >
+                    Import Excel
+                </a>
+            </div>
+
         </div>
 
 
@@ -471,7 +520,7 @@
                     type="text"
                     name="q"
                     value="{{ query }}"
-                    placeholder="Search driver, phone number, vehicle number or model..."
+                    placeholder="Search full name, username, phone, address, vehicle number or model..."
                 >
 
 
@@ -512,6 +561,10 @@
 
                         <th>
                             Phone
+                        </th>
+
+                        <th>
+                            Address
                         </th>
 
                         <th>
@@ -571,13 +624,13 @@
 
                                     <div class="driver-name">
 
-                                        {{ driver.username }}
+                                        {{ driver.display_name }}
 
                                     </div>
 
                                     <div class="driver-sub">
 
-                                        Driver ID #{{ driver.id }}
+                                        Driver ID #{{ driver.id }} · Login ID: {{ driver.username }}
 
                                     </div>
 
@@ -594,6 +647,13 @@
 
                             {{ driver.phone_number|default:"--" }}
 
+                        </td>
+
+
+                        <!-- ADDRESS -->
+
+                        <td>
+                            {{ driver.address|default:"--" }}
                         </td>
 
 
@@ -708,7 +768,7 @@
                     <tr>
 
                         <td
-                            colspan="8"
+                            colspan="9"
                             class="empty-drivers"
                         >
 

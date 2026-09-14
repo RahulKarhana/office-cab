@@ -103,7 +103,7 @@ class TripViewSet(ModelViewSet):
         if trip.driver:
             NotificationService.send_notification(
                 trip.driver,
-                f"{trip.trip_type.capitalize()} trip for {trip.employee.username} has been cancelled by admin.",
+                f"{trip.trip_type.capitalize()} trip for {trip.employee.display_name} has been cancelled by admin.",
                 title="❌ Trip Cancelled",
                 push_data={
                     "type": "TRIP_CANCELLED",
@@ -256,7 +256,7 @@ class TripViewSet(ModelViewSet):
 
                 if route_run.driver:
                     driver_name = (
-                        route_run.driver.username
+                        route_run.driver.display_name
                     )
 
                 if route_run.vehicle:
@@ -840,7 +840,7 @@ class TripViewSet(ModelViewSet):
                     "route_name": trip.route_run.route_template.name if trip.route_run and trip.route_run.route_template else "Manual Trip",
                     "trip_type": trip.trip_type,
                     "driver_id": trip.driver.id if trip.driver else None,
-                    "driver_name": trip.driver.username if trip.driver else None,
+                    "driver_name": trip.driver.display_name if trip.driver else None,
                     "vehicle_id": trip.vehicle.id if trip.vehicle else None,
                     "vehicle_number": trip.vehicle.vehicle_number if trip.vehicle else None,
                     "pickup_time": trip.pickup_time,
@@ -852,7 +852,7 @@ class TripViewSet(ModelViewSet):
             grouped[group_key]["employees"].append({
                 "trip_id": trip.id,
                 "employee_id": trip.employee.id,
-                "employee_name": trip.employee.username,
+                "employee_name": trip.employee.display_name,
                 "pickup_location": trip.pickup_location,
                 "drop_location": trip.drop_location,
                 "status": trip.status,
@@ -986,10 +986,10 @@ class TripViewSet(ModelViewSet):
         for trip in trips:
             if trip.trip_type == Trip.TRIP_TYPE_PICKUP:
                 employee_message = f"Your pickup trip is scheduled on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} from {trip.pickup_location} to {trip.drop_location}."
-                driver_message = f"You have a pickup trip on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} for {trip.employee.username} from {trip.pickup_location} to {trip.drop_location}."
+                driver_message = f"You have a pickup trip on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} for {trip.employee.display_name} from {trip.pickup_location} to {trip.drop_location}."
             else:
                 employee_message = f"Your drop trip is scheduled on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} from {trip.pickup_location} to {trip.drop_location}."
-                driver_message = f"You have a drop trip on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} for {trip.employee.username} from {trip.pickup_location} to {trip.drop_location}."
+                driver_message = f"You have a drop trip on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} for {trip.employee.display_name} from {trip.pickup_location} to {trip.drop_location}."
 
             NotificationService.send_notification(trip.employee, employee_message)
             NotificationService.send_notification(trip.driver, driver_message)
@@ -1099,7 +1099,7 @@ class TripViewSet(ModelViewSet):
             started_trips_count = Trip.objects.filter(employee=request.user, trip_date=leave_date, status=Trip.STATUS_STARTED).count()
 
         NotificationService.notify_admins(
-            f"{request.user.username} marked leave for {leave_date}. {cancelled_count} assigned trip(s) auto-cancelled.",
+            f"{request.user.display_name} marked leave for {leave_date}. {cancelled_count} assigned trip(s) auto-cancelled.",
             title="Employee Leave Marked",
             push_data={"type": "EMPLOYEE_LEAVE", "employee_id": str(request.user.id), "leave_date": str(leave_date)},
         )
@@ -1280,7 +1280,7 @@ class TripViewSet(ModelViewSet):
                     trip.driver,
                     (
                         f"{trip.trip_type.capitalize()} trip "
-                        f"cancelled by {trip.employee.username}. "
+                        f"cancelled by {trip.employee.display_name}. "
                         f"Reason: {reason}"
                     ),
                     title="❌ Trip Cancelled",
@@ -1310,7 +1310,7 @@ class TripViewSet(ModelViewSet):
             NotificationService.notify_admins(
                 (
                     f"{trip.trip_type.capitalize()} trip "
-                    f"cancelled by {trip.employee.username}. "
+                    f"cancelled by {trip.employee.display_name}. "
                     f"Reason: {reason}."
                 ),
                 title="❌ Employee Trip Cancelled",
@@ -1473,7 +1473,7 @@ class TripViewSet(ModelViewSet):
             (
                 f"{trip.trip_type.capitalize()} trip "
                 f"{trip.id} has started by "
-                f"driver {trip.driver.username}."
+                f"driver {trip.driver.display_name}."
             ),
             title="🚖 Trip Started",
             trip=trip,
@@ -1586,7 +1586,7 @@ class TripViewSet(ModelViewSet):
                     ),
                     "current_stop_id": expected_stop.id,
                     "current_employee": (
-                        expected_stop.employee.username
+                        expected_stop.employee.display_name
                     ),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1635,7 +1635,7 @@ class TripViewSet(ModelViewSet):
                     next_stop.id if next_stop else None
                 ),
                 "next_employee": (
-                    next_stop.employee.username
+                    next_stop.employee.display_name
                     if next_stop
                     else None
                 ),
@@ -1722,7 +1722,7 @@ class TripViewSet(ModelViewSet):
                     else "Arrival marked."
                 ),
                 "stop_id": current_stop.id,
-                "employee": current_stop.employee.username,
+                "employee": current_stop.employee.display_name,
                 "waiting_started_at": (
                     current_stop.waiting_started_at
                 ),
@@ -1805,7 +1805,7 @@ class TripViewSet(ModelViewSet):
             {
                 "message": "Waiting continued.",
                 "stop_id": current_stop.id,
-                "employee": current_stop.employee.username,
+                "employee": current_stop.employee.display_name,
                 "waiting_started_at": (
                     current_stop.waiting_started_at
                 ),
@@ -1912,7 +1912,7 @@ class TripViewSet(ModelViewSet):
                     next_stop.id if next_stop else None
                 ),
                 "next_employee": (
-                    next_stop.employee.username
+                    next_stop.employee.display_name
                     if next_stop
                     else None
                 ),
@@ -2049,7 +2049,7 @@ class TripViewSet(ModelViewSet):
         NotificationService.notify_admins(
             (
                 f"Trip {trip.id} has been completed by "
-                f"driver {trip.driver.username}."
+                f"driver {trip.driver.display_name}."
             ),
             title="✅ Trip Completed",
             trip=trip,

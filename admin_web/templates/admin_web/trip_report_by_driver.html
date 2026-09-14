@@ -46,7 +46,7 @@
 <form method="get" class="filter-card"><div class="filter-grid">
 <div class="field"><label>Start Date</label><input type="date" name="start_date" value="{{ start_date }}"></div>
 <div class="field"><label>End Date</label><input type="date" name="end_date" value="{{ end_date }}"></div>
-<div class="field"><label>Driver</label><select name="driver"><option value="">All Drivers</option>{% for driver in drivers %}<option value="{{ driver.id }}" {% if selected_driver == driver.id|stringformat:"s" %}selected{% endif %}>{{ driver.username }}</option>{% endfor %}</select></div>
+<div class="field"><label>Driver</label><select name="driver"><option value="">All Drivers</option>{% for driver in drivers %}<option value="{{ driver.id }}" {% if selected_driver == driver.id|stringformat:"s" %}selected{% endif %}>{{ driver.display_name }}</option>{% endfor %}</select></div>
 <div class="field"><label>Trip Type</label><select name="trip_type"><option value="">All</option><option value="PICKUP" {% if selected_trip_type == "PICKUP" %}selected{% endif %}>Pickup</option><option value="DROP" {% if selected_trip_type == "DROP" %}selected{% endif %}>Drop</option></select></div>
 <div class="field"><label>Status</label><select name="status"><option value="">All</option><option value="ASSIGNED" {% if selected_status == "ASSIGNED" %}selected{% endif %}>Assigned</option><option value="STARTED" {% if selected_status == "STARTED" %}selected{% endif %}>Started</option><option value="COMPLETED" {% if selected_status == "COMPLETED" %}selected{% endif %}>Completed</option></select></div>
 <button class="apply-btn" type="submit">Apply Filter</button>

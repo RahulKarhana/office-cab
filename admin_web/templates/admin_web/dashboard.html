@@ -768,7 +768,7 @@
                     {% for run in started_cabs %}
                     <tr>
                         <td>{{ run.route_template.name|default:"Manual Route" }}</td>
-                        <td>{{ run.driver.username|default:"--" }}</td>
+                        <td>{{ run.driver.display_name|default:"--" }}</td>
                         <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
                         <td>{{ run.trip_type }}</td>
                         <td>{{ run.started_at|time:"h:i A" }}</td>
@@ -802,7 +802,7 @@
                     {% for run in completed_cabs %}
                     <tr>
                         <td>{{ run.route_template.name|default:"Manual Route" }}</td>
-                        <td>{{ run.driver.username|default:"--" }}</td>
+                        <td>{{ run.driver.display_name|default:"--" }}</td>
                         <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
                         <td>{{ run.trip_type }}</td>
                         <td>{{ run.started_at|time:"h:i A"|default:"--" }}</td>
@@ -840,7 +840,7 @@
                     {% for run in late_cabs %}
                     <tr>
                         <td>{{ run.route_template.name|default:"Manual Route" }}</td>
-                        <td>{{ run.driver.username|default:"--" }}</td>
+                        <td>{{ run.driver.display_name|default:"--" }}</td>
                         <td>{{ run.vehicle.vehicle_number|default:"--" }}</td>
                         <td>{{ run.dashboard_trip_type }}</td>
                         <td>
@@ -897,8 +897,8 @@
                 <tbody>
                     {% for trip in cancelled_trips %}
                     <tr>
-                        <td>{{ trip.employee.username|default:"--" }}</td>
-                        <td>{{ trip.driver.username|default:"--" }}</td>
+                        <td>{{ trip.employee.display_name|default:"--" }}</td>
+                        <td>{{ trip.driver.display_name|default:"--" }}</td>
                         <td>{{ trip.vehicle.vehicle_number|default:"--" }}</td>
                         <td>
                             {% if trip.route_run and trip.route_run.route_template %}
@@ -938,9 +938,9 @@
                 <tbody>
                     {% for stop in no_show_stops %}
                     <tr>
-                        <td>{{ stop.employee.username|default:"--" }}</td>
+                        <td>{{ stop.employee.display_name|default:"--" }}</td>
                         <td>{{ stop.route_run.route_template.name|default:"Manual Route" }}</td>
-                        <td>{{ stop.route_run.driver.username|default:"--" }}</td>
+                        <td>{{ stop.route_run.driver.display_name|default:"--" }}</td>
                         <td>{{ stop.route_run.vehicle.vehicle_number|default:"--" }}</td>
                         <td>{{ stop.stop_order }}</td>
                     </tr>
@@ -1059,8 +1059,8 @@
                 <tbody>
                     {% for trip in recent_live_trips %}
                     <tr>
-                        <td>{{ trip.employee.username|default:"--" }}</td>
-                        <td>{{ trip.driver.username|default:"--" }}</td>
+                        <td>{{ trip.employee.display_name|default:"--" }}</td>
+                        <td>{{ trip.driver.display_name|default:"--" }}</td>
                         <td>{{ trip.vehicle.vehicle_number|default:"--" }}</td>
                         <td>
                             {% if trip.route_run and trip.route_run.route_template %}

@@ -30,9 +30,63 @@ urlpatterns = [
     ),
     path("employees/", views.employees_page, name="employees"),
     path("drivers/", views.drivers_page, name="drivers"),
+
+    # ============================================================
+    # EXCEL BULK IMPORT - EMPLOYEES
+    # ============================================================
+    path(
+        "employees/import-excel/",
+        views.employee_excel_import_page,
+        name="employee_excel_import",
+    ),
+    path(
+        "employees/import-excel/create-all/",
+        views.create_employee_excel_accounts,
+        name="create_employee_excel_accounts",
+    ),
+    path(
+        "employees/import-excel/provide-access/",
+        views.provide_employee_excel_access,
+        name="provide_employee_excel_access",
+    ),
+
+    # ============================================================
+    # EXCEL BULK IMPORT - DRIVERS
+    # ============================================================
+    path(
+        "drivers/import-excel/",
+        views.driver_excel_import_page,
+        name="driver_excel_import",
+    ),
+    path(
+        "drivers/import-excel/create-all/",
+        views.create_driver_excel_accounts,
+        name="create_driver_excel_accounts",
+    ),
+    path(
+        "drivers/import-excel/provide-access/",
+        views.provide_driver_excel_access,
+        name="provide_driver_excel_access",
+    ),
+
     path("login/", views.admin_login_page, name="admin_login"),
     path("logout/", views.admin_logout_page, name="admin_logout"),
     path("routes/", views.routes_page, name="routes"),
+
+    # ============================================================
+    # ADVANCED AI ROUTE SEARCH
+    # ============================================================
+    path(
+        "routes/ai-search/",
+        views.ai_route_search,
+        name="ai_route_search",
+    ),
+    path(
+        "routes/ai-search/save/",
+        views.save_ai_route,
+        name="save_ai_route",
+    ),
+
     path("routes/create/", views.create_route, name="create_route"),
     path("routes/<int:route_id>/edit/", views.edit_route, name="edit_route"),
     path("routes/<int:route_id>/delete/", views.delete_route, name="delete_route"),
@@ -97,8 +151,7 @@ urlpatterns = [
         views.assign_employee_to_route,
         name="assign_employee_to_route",
     ),
-  
-    
+
     path("tracking/", views.live_tracking, name="tracking"),
     path(
         "live-cab-cards/",
@@ -116,10 +169,10 @@ urlpatterns = [
         name="no_show_report",
     ),
     path(
-            "leave-report/",
-            views.leave_report_page,
-            name="leave_report",
-        ),
+        "leave-report/",
+        views.leave_report_page,
+        name="leave_report",
+    ),
     path(
         "alerts/<int:alert_id>/driver-location/",
         views.alert_driver_location_api,
@@ -184,7 +237,7 @@ urlpatterns = [
         "drivers/<int:driver_id>/delete/",
         views.delete_driver_account,
         name="delete_driver_account",
-    ),   
+    ),
     path(
         "drivers/<int:driver_id>/routes/<int:route_id>/replace-driver/",
         views.replace_driver_route,
@@ -209,8 +262,7 @@ urlpatterns = [
         name="activate_driver_account",
     ),
 
-
     path("assigned-trips/cancel-date/<str:date>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-date/<str:date_value>/", views.cancel_date_trips, name="cancel_date_trips"),
     path("assigned-trips/cancel-route-run/<int:route_run_id>/", views.cancel_route_run_trips, name="cancel_route_run_trips"),
-]   
+]

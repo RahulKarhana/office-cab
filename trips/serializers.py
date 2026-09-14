@@ -66,7 +66,7 @@ def format_distance_text(distance_km):
 
 class RouteRunStopSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(
-        source="employee.username",
+        source="employee.display_name",
         read_only=True,
     )
 
@@ -97,7 +97,7 @@ class RouteRunStopSerializer(serializers.ModelSerializer):
 
 class RouteRunSerializer(serializers.ModelSerializer):
     route_name = serializers.CharField(source="route_template.name", read_only=True)
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
     vehicle_number = serializers.CharField(source="vehicle.vehicle_number", read_only=True)
     stops = RouteRunStopSerializer(many=True, read_only=True)
 
@@ -122,8 +122,8 @@ class RouteRunSerializer(serializers.ModelSerializer):
 
 
 class TripSerializer(serializers.ModelSerializer):
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
-    employee_name = serializers.CharField(source="employee.username", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
+    employee_name = serializers.CharField(source="employee.display_name", read_only=True)
     vehicle_number = serializers.CharField(source="vehicle.vehicle_number", read_only=True)
     vehicle_model = serializers.CharField(source="vehicle.vehicle_model", read_only=True)
 
@@ -193,7 +193,7 @@ class TripSerializer(serializers.ModelSerializer):
 
             if qs.exists():
                 raise serializers.ValidationError(
-                    f"{employee.username} already has a {trip_type.lower()} trip on {trip_date}."
+                    f"{employee.display_name} already has a {trip_type.lower()} trip on {trip_date}."
                 )
 
         return attrs
@@ -241,8 +241,8 @@ class NotificationSerializer(serializers.ModelSerializer):
     )
     trip_id = serializers.IntegerField(source="trip.id", read_only=True)
     route_run_id = serializers.IntegerField(source="route_run.id", read_only=True)
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
-    employee_name = serializers.CharField(source="employee.username", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
+    employee_name = serializers.CharField(source="employee.display_name", read_only=True)
 
     class Meta:
         model = Notification
@@ -263,8 +263,8 @@ class NotificationSerializer(serializers.ModelSerializer):
         ]
 
 class AssignedCabSerializer(serializers.ModelSerializer):
-    employee_name = serializers.CharField(source="employee.username", read_only=True)
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
+    employee_name = serializers.CharField(source="employee.display_name", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
     vehicle_number = serializers.CharField(source="vehicle.vehicle_number", read_only=True)
     route_name = serializers.CharField(source="route_run.route_template.name", read_only=True)
     route_run_id = serializers.IntegerField(source="route_run.id", read_only=True)
@@ -293,7 +293,7 @@ class AssignedCabSerializer(serializers.ModelSerializer):
 
 
 class DriverLocationSerializer(serializers.ModelSerializer):
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
     active_trip = serializers.SerializerMethodField()
     distance_km = serializers.SerializerMethodField()
     distance_text = serializers.SerializerMethodField()
@@ -378,7 +378,7 @@ class DriverLocationSerializer(serializers.ModelSerializer):
 
         return {
             "id": trip.id,
-            "employee_name": trip.employee.username,
+            "employee_name": trip.employee.display_name,
             "pickup_location": trip.pickup_location,
             "drop_location": trip.drop_location,
             "trip_type": trip.trip_type,
@@ -420,7 +420,7 @@ class DriverLocationSerializer(serializers.ModelSerializer):
         current_stop = self._get_current_stop(obj)
         if not current_stop:
             return None
-        return current_stop.employee.username
+        return current_stop.employee.display_name
 
     def get_current_stop_latitude(self, obj):
         current_stop = self._get_current_stop(obj)
@@ -451,7 +451,7 @@ class DriverLocationSerializer(serializers.ModelSerializer):
 class TripCancellationSerializer(serializers.ModelSerializer):
     trip_id = serializers.IntegerField(source="trip.id", read_only=True)
     employee_name = serializers.CharField(
-        source="cancelled_by.username",
+        source="cancelled_by.display_name",
         read_only=True,
     )
 
@@ -478,7 +478,7 @@ class UserOptionSerializer(serializers.Serializer):
 
 
 class VehicleOptionSerializer(serializers.ModelSerializer):
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
 
     class Meta:
         model = Vehicle
@@ -494,7 +494,7 @@ class VehicleOptionSerializer(serializers.ModelSerializer):
 
 class RouteStopSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(
-        source="employee.username",
+        source="employee.display_name",
         read_only=True,
     )
 
@@ -535,7 +535,7 @@ class AssignedCabGroupSerializer(serializers.Serializer):
 
 class EmergencyAlertSerializer(serializers.ModelSerializer):
     employee_name = serializers.CharField(
-        source="employee.username",
+        source="employee.display_name",
         read_only=True,
     )
     trip_type = serializers.CharField(
@@ -574,7 +574,7 @@ class EmergencyAlertSerializer(serializers.ModelSerializer):
         ]
         
 class RouteTemplateSerializer(serializers.ModelSerializer):
-    driver_name = serializers.CharField(source="driver.username", read_only=True)
+    driver_name = serializers.CharField(source="driver.display_name", read_only=True)
     vehicle_number = serializers.CharField(source="vehicle.vehicle_number", read_only=True)
     stops = RouteStopSerializer(many=True, required=False)
 
@@ -675,7 +675,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
 
         if already_assigned_ids:
             already_assigned_users = [
-                str(stop["employee"].username)
+                str(stop["employee"].display_name)
                 for stop in stops_data
                 if stop["employee"].id in already_assigned_ids
             ]
@@ -763,7 +763,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
 
             if already_assigned_ids:
                 already_assigned_users = [
-                    str(stop["employee"].username)
+                    str(stop["employee"].display_name)
                     for stop in stops_data
                     if stop["employee"].id in already_assigned_ids
                 ]

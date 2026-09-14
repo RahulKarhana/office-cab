@@ -1,13 +1,19 @@
-import json
+
 from datetime import datetime, timedelta, time
+from django.conf import settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Q
 from django.db import transaction
 import math
+import json
+from urllib.parse import urlencode
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from django.db import transaction
@@ -68,6 +74,10 @@ admin_required = user_passes_test(_is_admin_user, login_url="/admin/login/")
 # =========================
 # HELPERS
 # =========================
+# User identity convention:
+# - username: authentication/login identifier (kept for compatibility)
+# - full_name/display_name: human-readable name shown in Admin UI and reports
+# - searches: full_name + username + phone_number
 def _redirect_back(request, fallback_name="/admin-web/routes/"):
     referer = request.META.get("HTTP_REFERER")
     if referer:
@@ -503,11 +513,23 @@ def late_report_page(request):
     if query:
         stops = stops.filter(
             Q(
+                employee__full_name__icontains=query
+            )
+            | Q(
                 employee__username__icontains=query
+            )
+            | Q(
+                employee__phone_number__icontains=query
             )
             |
             Q(
+                route_run__driver__full_name__icontains=query
+            )
+            | Q(
                 route_run__driver__username__icontains=query
+            )
+            | Q(
+                route_run__driver__phone_number__icontains=query
             )
             |
             Q(
@@ -600,7 +622,7 @@ def late_report_page(request):
                 ),
 
                 "employee":
-                    stop.employee.username,
+                    stop.employee.display_name,
 
                 "route_name": (
                     route_run.route_template.name
@@ -610,7 +632,7 @@ def late_report_page(request):
                 ),
 
                 "driver": (
-                    route_run.driver.username
+                    route_run.driver.display_name
                     if route_run
                     and route_run.driver
                     else "--"
@@ -737,11 +759,23 @@ def no_show_report_page(request):
     if query:
         stops = stops.filter(
             Q(
+                employee__full_name__icontains=query
+            )
+            | Q(
                 employee__username__icontains=query
+            )
+            | Q(
+                employee__phone_number__icontains=query
             )
             |
             Q(
+                route_run__driver__full_name__icontains=query
+            )
+            | Q(
                 route_run__driver__username__icontains=query
+            )
+            | Q(
+                route_run__driver__phone_number__icontains=query
             )
             |
             Q(
@@ -958,7 +992,7 @@ def no_show_report_page(request):
                 ),
 
                 "employee": (
-                    stop.employee.username
+                    stop.employee.display_name
                     if stop.employee
                     else "--"
                 ),
@@ -973,7 +1007,7 @@ def no_show_report_page(request):
                 ),
 
                 "driver": (
-                    route_run.driver.username
+                    route_run.driver.display_name
                     if (
                         route_run
                         and route_run.driver
@@ -1106,7 +1140,7 @@ def delete_employee_account(request, employee_id):
         role=User.Role.EMPLOYEE,
     )
 
-    employee_name = employee.username
+    employee_name = employee.display_name
     now = timezone.now()
 
     # Cancel only operational trips. Historical completed/cancelled rows remain.
@@ -1343,7 +1377,7 @@ def driver_profile_page(request, driver_id):
         .exclude(id=driver.id)
         .exclude(id__in=used_driver_ids)
         .select_related("vehicle")
-        .order_by("username")
+        .order_by("full_name", "username")
     )
 
     # ==========================================================
@@ -1435,7 +1469,7 @@ def replace_driver_route(request, driver_id, route_id):
     ).exclude(id=route.id).exists():
         messages.error(
             request,
-            f"{new_driver.username} is already assigned to another active saved route.",
+            f"{new_driver.display_name} is already assigned to another active saved route.",
         )
         return redirect("admin_web:driver_profile", driver_id=old_driver.id)
 
@@ -1444,11 +1478,11 @@ def replace_driver_route(request, driver_id, route_id):
     except Exception:
         messages.error(
             request,
-            f"{new_driver.username} does not have a vehicle assigned.",
+            f"{new_driver.display_name} does not have a vehicle assigned.",
         )
         return redirect("admin_web:driver_profile", driver_id=old_driver.id)
 
-    old_driver_name = old_driver.username
+    old_driver_name = old_driver.display_name
     route_name = route.name
 
     # Update saved route for future assignments.
@@ -1484,7 +1518,7 @@ def replace_driver_route(request, driver_id, route_id):
         request,
         (
             f'Route "{route_name}" moved from {old_driver_name} to '
-            f'{new_driver.username}. {transferred_trip_count} active/assigned '
+            f'{new_driver.display_name}. {transferred_trip_count} active/assigned '
             "trip(s) were automatically reassigned to the new driver and cab."
         ),
     )
@@ -1540,7 +1574,7 @@ def archive_driver_route(request, driver_id, route_id):
                 "cancelled_by": request.user,
                 "reason": (
                     f'Route "{route_name}" archived while deactivating '
-                    f"driver {driver.username}."
+                    f"driver {driver.display_name}."
                 ),
                 "declaration_accepted": False,
                 "declaration_text": "",
@@ -1584,7 +1618,7 @@ def delete_driver_account(request, driver_id):
         is_active=True,
     )
 
-    driver_name = driver.username
+    driver_name = driver.display_name
 
     unresolved_routes = RouteTemplate.objects.filter(
         driver=driver,
@@ -1824,7 +1858,7 @@ def approve_employee_account(request, employee_id):
 
     messages.success(
         request,
-        f"{employee.username}'s account has been approved.",
+        f"{employee.display_name}'s account has been approved.",
     )
 
     return redirect(
@@ -1893,7 +1927,7 @@ def reject_employee_account(request, employee_id):
 
     messages.success(
         request,
-        f"{employee.username}'s account has been rejected.",
+        f"{employee.display_name}'s account has been rejected.",
     )
 
     return redirect(
@@ -1974,7 +2008,7 @@ def approve_driver_account(request, driver_id):
 
     messages.success(
         request,
-        f"{driver.username}'s driver account has been approved.",
+        f"{driver.display_name}'s driver account has been approved.",
     )
 
     return redirect(
@@ -2041,7 +2075,7 @@ def reject_driver_account(request, driver_id):
 
     messages.success(
         request,
-        f"{driver.username}'s driver account has been rejected.",
+        f"{driver.display_name}'s driver account has been rejected.",
     )
 
     return redirect(
@@ -2196,7 +2230,7 @@ def approve_location_request(request, request_id):
     messages.success(
         request,
         (
-            f"{employee.username}'s pickup location "
+            f"{employee.display_name}'s pickup location "
             "change request has been approved."
         ),
     )
@@ -2286,7 +2320,7 @@ def reject_location_request(request, request_id):
     messages.success(
         request,
         (
-            f"{employee.username}'s pickup location "
+            f"{employee.display_name}'s pickup location "
             "change request has been rejected."
         ),
     )
@@ -2294,6 +2328,736 @@ def reject_location_request(request, request_id):
     return redirect(
         "admin_web:location_requests"
     )
+
+# ============================================================
+# EXCEL BULK IMPORT - EMPLOYEES / DRIVERS
+# ============================================================
+#
+# Flow:
+#   1. Admin uploads .xlsx
+#   2. Server validates every row and shows a preview
+#   3. Admin confirms "Create All Accounts"
+#   4. Accounts are created APPROVED but inactive
+#   5. Admin can "Provide Access to All" for that import batch
+#
+# IMPORTANT:
+# - Existing users are never overwritten.
+# - Existing inactive/deactivated users are never reactivated by bulk access.
+# - The IDs of the current import batch are kept in the Admin session.
+# - Plain-text passwords are NOT stored in the session.
+# - Employee Address is residential/profile address only.
+# - Employee pickup location/latitude/longitude are NOT imported from Excel.
+# - Driver Address is stored in User.address and can later be used as the
+#   driver's base/start address by AI Route Search.
+# ============================================================
+
+def _excel_text(value):
+    """Convert an Excel cell to a clean string without turning 987... into 987....0."""
+    if value is None:
+        return ""
+
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value)).strip()
+
+    return str(value).strip()
+
+
+def _excel_header_key(value):
+    value = _excel_text(value).lower()
+    return "".join(ch for ch in value if ch.isalnum())
+
+
+def _normalize_excel_gender(value):
+    """
+    Accept friendly Excel values such as:
+    Male / FEMALE / Other / Prefer not to say
+    and convert them to the model choice values.
+    """
+    value = _excel_text(value).strip().upper()
+    if not value:
+        return ""
+
+    normalized = (
+        value
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+
+    while "__" in normalized:
+        normalized = normalized.replace("__", "_")
+
+    return normalized
+
+
+def _excel_import_config(role):
+    role = str(role or "").upper()
+
+    if role == User.Role.EMPLOYEE:
+        return {
+            "role": User.Role.EMPLOYEE,
+            "title": "Employee",
+            "session_prefix": "employee_excel_import",
+            "required": {
+                "fullname": "Full Name",
+                "employeeid": "Employee ID",
+                "phonenumber": "Phone Number",
+                "username": "Username",
+                "password": "Password",
+            },
+        }
+
+    if role == User.Role.DRIVER:
+        return {
+            "role": User.Role.DRIVER,
+            "title": "Driver",
+            "session_prefix": "driver_excel_import",
+            "required": {
+                "fullname": "Full Name",
+                "phonenumber": "Phone Number",
+                "username": "Username",
+                "password": "Password",
+            },
+        }
+
+    raise ValueError("Unsupported import role.")
+
+
+def _read_user_import_workbook(uploaded_file, role):
+    config = _excel_import_config(role)
+
+    try:
+        workbook = openpyxl.load_workbook(
+            uploaded_file,
+            read_only=True,
+            data_only=True,
+        )
+    except Exception as exc:
+        return [], [f"Unable to read Excel file: {exc}"]
+
+    sheet = workbook.active
+    rows_iter = sheet.iter_rows(values_only=True)
+
+    try:
+        raw_headers = next(rows_iter)
+    except StopIteration:
+        workbook.close()
+        return [], ["The Excel file is empty."]
+
+    headers = {
+        _excel_header_key(value): index
+        for index, value in enumerate(raw_headers)
+        if _excel_header_key(value)
+    }
+
+    missing = [
+        label
+        for key, label in config["required"].items()
+        if key not in headers
+    ]
+
+    if missing:
+        workbook.close()
+        return [], [
+            "Missing required column(s): " + ", ".join(missing)
+        ]
+
+    def cell(row, *keys):
+        for key in keys:
+            if key in headers:
+                index = headers[key]
+                if index < len(row):
+                    return row[index]
+        return None
+
+    preview_rows = []
+    errors = []
+
+    workbook_usernames = set()
+    workbook_phones = set()
+    workbook_employee_ids = set()
+
+    for excel_row_number, row in enumerate(rows_iter, start=2):
+        if not any(_excel_text(value) for value in row):
+            continue
+
+        full_name = _excel_text(cell(row, "fullname", "name"))
+        employee_id = _excel_text(
+            cell(row, "employeeid", "empid")
+        ).upper()
+        phone_number = _excel_text(
+            cell(row, "phonenumber", "phone", "mobile")
+        )
+        username = _excel_text(
+            cell(row, "username", "loginid")
+        )
+        raw_password = _excel_text(
+            cell(row, "password")
+        )
+        email = _excel_text(
+            cell(row, "email")
+        )
+        gender = _normalize_excel_gender(
+            cell(row, "gender")
+        )
+        address = _excel_text(
+            cell(row, "address")
+        )
+
+        row_errors = []
+
+        if not full_name:
+            row_errors.append("Full Name is required.")
+
+        if not phone_number:
+            row_errors.append("Phone Number is required.")
+        elif len(phone_number) > 15:
+            row_errors.append(
+                "Phone Number cannot exceed 15 characters."
+            )
+
+        if not username:
+            row_errors.append("Username is required.")
+
+        if not raw_password:
+            row_errors.append("Password is required.")
+
+        if email and "@" not in email:
+            row_errors.append("Email format looks invalid.")
+
+        allowed_genders = {
+            choice[0]
+            for choice in User.GENDER_CHOICES
+        }
+
+        if gender and gender not in allowed_genders:
+            row_errors.append(
+                "Gender must be MALE, FEMALE, OTHER or PREFER_NOT_TO_SAY."
+            )
+
+        if config["role"] == User.Role.EMPLOYEE:
+            if not employee_id:
+                row_errors.append("Employee ID is required.")
+            elif not (
+                len(employee_id) == 5
+                and employee_id.startswith("E")
+                and employee_id[1:].isdigit()
+            ):
+                row_errors.append(
+                    "Employee ID must use format E0001."
+                )
+
+        # Duplicate checks inside the workbook.
+        username_key = username.lower()
+        phone_key = phone_number.lower()
+        employee_id_key = employee_id.lower()
+
+        if username_key:
+            if username_key in workbook_usernames:
+                row_errors.append(
+                    "Duplicate Username inside this Excel file."
+                )
+            workbook_usernames.add(username_key)
+
+        if phone_key:
+            if phone_key in workbook_phones:
+                row_errors.append(
+                    "Duplicate Phone Number inside this Excel file."
+                )
+            workbook_phones.add(phone_key)
+
+        if (
+            config["role"] == User.Role.EMPLOYEE
+            and employee_id_key
+        ):
+            if employee_id_key in workbook_employee_ids:
+                row_errors.append(
+                    "Duplicate Employee ID inside this Excel file."
+                )
+            workbook_employee_ids.add(employee_id_key)
+
+        # Duplicate checks against the database.
+        if (
+            username
+            and User.objects.filter(
+                username__iexact=username
+            ).exists()
+        ):
+            row_errors.append("Username already exists.")
+
+        if (
+            phone_number
+            and User.objects.filter(
+                phone_number=phone_number
+            ).exists()
+        ):
+            row_errors.append("Phone Number already exists.")
+
+        if (
+            config["role"] == User.Role.EMPLOYEE
+            and employee_id
+            and User.objects.filter(
+                employee_id__iexact=employee_id
+            ).exists()
+        ):
+            row_errors.append("Employee ID already exists.")
+
+        # Hash immediately so the plain-text dummy password is never
+        # persisted in the Django session between Preview and Create.
+        password_hash = (
+            make_password(raw_password)
+            if raw_password
+            else ""
+        )
+
+        preview_row = {
+            "excel_row": excel_row_number,
+            "full_name": full_name,
+            "employee_id": (
+                employee_id
+                if config["role"] == User.Role.EMPLOYEE
+                else ""
+            ),
+            "phone_number": phone_number,
+            "username": username,
+            "password_hash": password_hash,
+            "password_present": bool(raw_password),
+            "email": email,
+            "gender": gender,
+            "address": address,
+            "errors": row_errors,
+            "is_valid": not row_errors,
+        }
+
+        preview_rows.append(preview_row)
+
+        for error in row_errors:
+            errors.append(
+                f"Row {excel_row_number}: {error}"
+            )
+
+    workbook.close()
+
+    if not preview_rows:
+        errors.append(
+            "No data rows were found in the Excel file."
+        )
+
+    return preview_rows, errors
+
+
+def _excel_import_page(request, role):
+    config = _excel_import_config(role)
+    prefix = config["session_prefix"]
+
+    preview_rows = request.session.get(
+        f"{prefix}_preview",
+        [],
+    )
+    validation_errors = request.session.get(
+        f"{prefix}_errors",
+        [],
+    )
+
+    if request.method == "POST":
+        uploaded_file = request.FILES.get("excel_file")
+
+        if not uploaded_file:
+            messages.error(
+                request,
+                "Please select an Excel .xlsx file.",
+            )
+            return redirect(request.path)
+
+        if not uploaded_file.name.lower().endswith(".xlsx"):
+            messages.error(
+                request,
+                "Only .xlsx Excel files are supported.",
+            )
+            return redirect(request.path)
+
+        preview_rows, validation_errors = (
+            _read_user_import_workbook(
+                uploaded_file,
+                config["role"],
+            )
+        )
+
+        # Keep only validated import data in the session.
+        # Passwords are already hashed before this point.
+        request.session[f"{prefix}_preview"] = (
+            preview_rows
+        )
+        request.session[f"{prefix}_errors"] = (
+            validation_errors
+        )
+
+        # A newly uploaded/validated workbook starts a new batch.
+        request.session.pop(
+            f"{prefix}_created_ids",
+            None,
+        )
+
+        request.session.modified = True
+
+        if validation_errors:
+            messages.warning(
+                request,
+                (
+                    f"Excel checked: {len(preview_rows)} row(s) found, "
+                    f"{len(validation_errors)} validation issue(s). "
+                    "Fix the highlighted rows before creating accounts."
+                ),
+            )
+        else:
+            messages.success(
+                request,
+                (
+                    f"Excel validated successfully. {len(preview_rows)} "
+                    f"{config['title'].lower()} account(s) are ready to create."
+                ),
+            )
+
+        return redirect(request.path)
+
+    safe_preview_rows = []
+
+    for row in preview_rows:
+        safe_row = dict(row)
+
+        # Never send the password hash or plain password to HTML.
+        safe_row.pop("password_hash", None)
+        safe_row["password"] = (
+            "••••••••"
+            if row.get("password_present")
+            else ""
+        )
+
+        safe_preview_rows.append(safe_row)
+
+    context = {
+        "import_role": config["role"],
+        "import_title": config["title"],
+        "preview_rows": safe_preview_rows,
+        "validation_errors": validation_errors,
+        "valid_count": sum(
+            1
+            for row in preview_rows
+            if row.get("is_valid")
+        ),
+        "invalid_count": sum(
+            1
+            for row in preview_rows
+            if not row.get("is_valid")
+        ),
+        "has_preview": bool(preview_rows),
+        "can_create": (
+            bool(preview_rows)
+            and not validation_errors
+            and all(
+                row.get("is_valid")
+                for row in preview_rows
+            )
+        ),
+        "imported_user_ids": request.session.get(
+            f"{prefix}_created_ids",
+            [],
+        ),
+    }
+
+    return render(
+        request,
+        "admin_web/import_users.html",
+        context,
+    )
+
+
+@login_required
+@admin_required
+def employee_excel_import_page(request):
+    return _excel_import_page(
+        request,
+        User.Role.EMPLOYEE,
+    )
+
+
+@login_required
+@admin_required
+def driver_excel_import_page(request):
+    return _excel_import_page(
+        request,
+        User.Role.DRIVER,
+    )
+
+
+def _create_excel_import_accounts(request, role):
+    config = _excel_import_config(role)
+    prefix = config["session_prefix"]
+
+    preview_rows = request.session.get(
+        f"{prefix}_preview",
+        [],
+    )
+    validation_errors = request.session.get(
+        f"{prefix}_errors",
+        [],
+    )
+
+    import_page_name = (
+        "admin_web:employee_excel_import"
+        if config["role"] == User.Role.EMPLOYEE
+        else "admin_web:driver_excel_import"
+    )
+
+    if not preview_rows:
+        messages.error(
+            request,
+            "Please upload and validate an Excel file first.",
+        )
+        return redirect(import_page_name)
+
+    if (
+        validation_errors
+        or any(
+            not row.get("is_valid")
+            for row in preview_rows
+        )
+    ):
+        messages.error(
+            request,
+            (
+                "Accounts were not created because the "
+                "Excel preview contains errors."
+            ),
+        )
+        return redirect(import_page_name)
+
+    created_ids = []
+
+    try:
+        with transaction.atomic():
+            # Recheck unique values immediately before writing.
+            for row in preview_rows:
+                username = row["username"]
+                phone_number = row["phone_number"]
+
+                employee_id = (
+                    row.get("employee_id") or None
+                    if config["role"] == User.Role.EMPLOYEE
+                    else None
+                )
+
+                if User.objects.filter(
+                    username__iexact=username
+                ).exists():
+                    raise ValueError(
+                        f'Username "{username}" already exists.'
+                    )
+
+                if User.objects.filter(
+                    phone_number=phone_number
+                ).exists():
+                    raise ValueError(
+                        f'Phone Number "{phone_number}" already exists.'
+                    )
+
+                if (
+                    config["role"] == User.Role.EMPLOYEE
+                    and employee_id
+                    and User.objects.filter(
+                        employee_id__iexact=employee_id
+                    ).exists()
+                ):
+                    raise ValueError(
+                        f'Employee ID "{employee_id}" already exists.'
+                    )
+
+                password_hash = row.get(
+                    "password_hash",
+                    "",
+                )
+
+                if not password_hash:
+                    raise ValueError(
+                        (
+                            f'Password data is missing for '
+                            f'username "{username}". '
+                            "Please upload and validate the Excel file again."
+                        )
+                    )
+
+                user = User(
+                    username=username,
+                    full_name=row["full_name"],
+                    phone_number=phone_number or None,
+                    email=row.get("email", ""),
+                    gender=row.get("gender", ""),
+                    address=row.get("address") or None,
+                    role=config["role"],
+                    employee_id=employee_id,
+
+                    # Employee pickup data intentionally stays empty here.
+                    # It is managed only through the existing pickup system.
+                    pickup_location=None,
+                    pickup_latitude=None,
+                    pickup_longitude=None,
+
+                    account_status=(
+                        User.ACCOUNT_STATUS_APPROVED
+                    ),
+                    account_reviewed_at=timezone.now(),
+                    account_reviewed_by=request.user,
+                    account_rejection_reason="",
+                    is_active=False,
+                )
+
+                # The password was already encoded during validation.
+                user.password = password_hash
+
+                user.full_clean(
+                    exclude=["password"]
+                )
+                user.save()
+
+                created_ids.append(user.id)
+
+    except Exception as exc:
+        messages.error(
+            request,
+            (
+                "No accounts were created. "
+                f"Import stopped safely: {exc}"
+            ),
+        )
+        return redirect(import_page_name)
+
+    # Only this exact batch can be activated by
+    # "Provide Access to All".
+    request.session[
+        f"{prefix}_created_ids"
+    ] = created_ids
+
+    request.session.pop(
+        f"{prefix}_preview",
+        None,
+    )
+    request.session.pop(
+        f"{prefix}_errors",
+        None,
+    )
+
+    request.session.modified = True
+
+    messages.success(
+        request,
+        (
+            f"{len(created_ids)} {config['title'].lower()} "
+            "account(s) created successfully. "
+            "Login access is OFF until you click "
+            "\"Provide Access to All\"."
+        ),
+    )
+
+    return redirect(import_page_name)
+
+
+@login_required
+@admin_required
+@require_POST
+def create_employee_excel_accounts(request):
+    return _create_excel_import_accounts(
+        request,
+        User.Role.EMPLOYEE,
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+def create_driver_excel_accounts(request):
+    return _create_excel_import_accounts(
+        request,
+        User.Role.DRIVER,
+    )
+
+
+def _provide_excel_import_access(request, role):
+    config = _excel_import_config(role)
+    prefix = config["session_prefix"]
+
+    created_ids = request.session.get(
+        f"{prefix}_created_ids",
+        [],
+    )
+
+    import_page_name = (
+        "admin_web:employee_excel_import"
+        if config["role"] == User.Role.EMPLOYEE
+        else "admin_web:driver_excel_import"
+    )
+
+    if not created_ids:
+        messages.warning(
+            request,
+            (
+                "There is no newly imported batch "
+                "waiting for access."
+            ),
+        )
+        return redirect(import_page_name)
+
+    # Critical history-safety rule:
+    # Activate ONLY IDs created by this exact import batch.
+    # Never reactivate all inactive/deactivated users.
+    updated = User.objects.filter(
+        id__in=created_ids,
+        role=config["role"],
+        is_active=False,
+        account_status=User.ACCOUNT_STATUS_APPROVED,
+    ).update(
+        is_active=True,
+    )
+
+    request.session.pop(
+        f"{prefix}_created_ids",
+        None,
+    )
+    request.session.modified = True
+
+    messages.success(
+        request,
+        (
+            f"Access provided to {updated} newly imported "
+            f"{config['title'].lower()} account(s)."
+        ),
+    )
+
+    return redirect(
+        "admin_web:employees"
+        if config["role"] == User.Role.EMPLOYEE
+        else "admin_web:drivers"
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+def provide_employee_excel_access(request):
+    return _provide_excel_import_access(
+        request,
+        User.Role.EMPLOYEE,
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+def provide_driver_excel_access(request):
+    return _provide_excel_import_access(
+        request,
+        User.Role.DRIVER,
+    )
+
+
 # =========================
 # EMPLOYEES
 # =========================
@@ -2311,7 +3075,7 @@ def employees_page(request):
     employees = User.objects.filter(
         role="EMPLOYEE",
         is_active=True,
-    ).order_by("username")
+    ).order_by("full_name", "username")
 
     today = timezone.localdate()
 
@@ -2338,7 +3102,7 @@ def employees_page(request):
 
     if query:
         employees = employees.filter(
-            Q(username__icontains=query)
+            Q(full_name__icontains=query) | Q(username__icontains=query) | Q(phone_number__icontains=query)
             | Q(phone_number__icontains=query)
             | Q(address__icontains=query)
             | Q(pickup_location__icontains=query)
@@ -2390,7 +3154,7 @@ def employees_page(request):
                 if main_trip and main_trip.route_run and main_trip.route_run.route_template
                 else "--"
             ),
-            "driver_name": main_trip.driver.username if main_trip and main_trip.driver else "--",
+            "driver_name": main_trip.driver.display_name if main_trip and main_trip.driver else "--",
             "vehicle_number": main_trip.vehicle.vehicle_number if main_trip and main_trip.vehicle else "--",
         })
 
@@ -2521,7 +3285,7 @@ def drivers_page(request):
 
     if query:
         drivers = drivers.filter(
-            Q(username__icontains=query) |
+            Q(full_name__icontains=query) | Q(username__icontains=query) | Q(phone_number__icontains=query) |
             Q(vehicle__vehicle_number__icontains=query)
         )
 
@@ -2613,7 +3377,7 @@ def routes_page(request):
     if query:
         routes = routes.filter(
             Q(name__icontains=query)
-            | Q(driver__username__icontains=query)
+            | Q(driver__full_name__icontains=query) | Q(driver__username__icontains=query) | Q(driver__phone_number__icontains=query)
             | Q(vehicle__vehicle_number__icontains=query)
             | Q(vehicle__vehicle_model__icontains=query)
         )
@@ -2672,7 +3436,7 @@ def routes_page(request):
 
         employee_rows = []
         for stop_index, stop in enumerate(stops, start=1):
-            employee_name = stop.employee.username if getattr(stop, "employee", None) else "--"
+            employee_name = stop.employee.display_name if getattr(stop, "employee", None) else "--"
 
             employee_rows.append({
                 "index": stop_index,
@@ -2688,7 +3452,7 @@ def routes_page(request):
             "id": route.id,
             "name": route.name or f"Route {route.id}",
             "driver_id": route.driver.id if getattr(route, "driver", None) else "",
-            "driver_name": route.driver.username if getattr(route, "driver", None) else "--",
+            "driver_name": route.driver.display_name if getattr(route, "driver", None) else "--",
             "vehicle_id": route.vehicle.id if getattr(route, "vehicle", None) else "",
             "vehicle_number": route.vehicle.vehicle_number if getattr(route, "vehicle", None) else "--",
             "vehicle_model": route.vehicle.vehicle_model if getattr(route, "vehicle", None) else "--",
@@ -2736,7 +3500,7 @@ def routes_page(request):
         User.objects.filter(
             role="EMPLOYEE",
             is_active=True,
-        ).order_by("username")
+        ).order_by("full_name", "username")
     )
     for employee in employees:
         employee.is_selectable = employee.id not in assigned_employee_ids
@@ -2745,7 +3509,7 @@ def routes_page(request):
         User.objects.filter(
             role="DRIVER",
             is_active=True,
-        ).order_by("username")
+        ).order_by("full_name", "username")
     )
     for driver in drivers:
         driver.is_selectable = driver.id not in assigned_driver_ids
@@ -3116,7 +3880,7 @@ def trips_page(request):
 
     if query:
         route_runs = route_runs.filter(
-            Q(driver__username__icontains=query) |
+            Q(driver__full_name__icontains=query) | Q(driver__username__icontains=query) | Q(driver__phone_number__icontains=query) |
             Q(vehicle__vehicle_number__icontains=query) |
             Q(route_template__name__icontains=query)
         )
@@ -3136,7 +3900,7 @@ def trips_page(request):
         for stop in run.stops.all().order_by("stop_order"):
 
             if stop.employee:
-                employees.append(stop.employee.username)
+                employees.append(stop.employee.display_name)
 
             if stop.is_picked:
                 completed_stops += 1
@@ -3154,7 +3918,7 @@ def trips_page(request):
         trip_rows.append({
             "id": run.id,
             "route_name": run.route_template.name if run.route_template else "Manual Route",
-            "driver_name": run.driver.username if run.driver else "--",
+            "driver_name": run.driver.display_name if run.driver else "--",
             "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
             "trip_type": run.trip_type,
             "run_date": run.run_date,
@@ -3235,7 +3999,7 @@ def alerts_page(request):
 
     if query:
         alerts = alerts.filter(
-            Q(employee__username__icontains=query) |
+            Q(employee__full_name__icontains=query) | Q(employee__username__icontains=query) | Q(employee__phone_number__icontains=query) |
             Q(title__icontains=query) |
             Q(message__icontains=query)
         )
@@ -3273,14 +4037,14 @@ def alerts_page(request):
             "message": alert.message or "",
             "status": alert.status or "ACTIVE",
             "created_at": alert.created_at.isoformat() if alert.created_at else "",
-            "employee_name": employee.username if employee else "--",
+            "employee_name": employee.display_name if employee else "--",
             "employee_phone": getattr(employee, "phone_number", "") if employee else "",
             "pickup_location": getattr(trip, "pickup_location", "") if trip else "",
             "drop_location": getattr(trip, "drop_location", "") if trip else "",
             "trip_type": getattr(trip, "trip_type", "") if trip else "",
             "trip_status": getattr(trip, "status", "") if trip else "",
             "trip_id": trip.id if trip else None,
-            "driver_name": driver.username if driver else "--",
+            "driver_name": driver.display_name if driver else "--",
             "driver_id": driver.id if driver else None,
             "vehicle_number": vehicle_number,
             "route_name": route_name,
@@ -3355,7 +4119,7 @@ def alert_driver_location_api(request, alert_id):
         {
             "success": True,
             "driver_id": driver.id,
-            "driver_name": driver.username,
+            "driver_name": driver.display_name,
             "latitude": _safe_float(location.latitude),
             "longitude": _safe_float(location.longitude),
             "updated_at": (
@@ -3405,7 +4169,7 @@ def alerts_data_api(request):
 
         data.append({
             "id": alert.id,
-            "employee_name": employee.username if employee else "--",
+            "employee_name": employee.display_name if employee else "--",
             "employee_phone": getattr(employee, "phone_number", "") if employee else "",
             "title": alert.title or "Emergency SOS",
             "message": alert.message or "",
@@ -3416,7 +4180,7 @@ def alerts_data_api(request):
             "trip_status": getattr(trip, "status", "") if trip else "",
             "pickup_location": getattr(trip, "pickup_location", "") if trip else "",
             "drop_location": getattr(trip, "drop_location", "") if trip else "",
-            "driver_name": driver.username if driver else "--",
+            "driver_name": driver.display_name if driver else "--",
             "driver_id": driver.id if driver else None,
             "vehicle_number": vehicle_number,
             "route_name": route_name,
@@ -3677,7 +4441,7 @@ def live_cab_cards_api(request):
         if next_stop:
 
             next_stop_name = (
-                next_stop.employee.username
+                next_stop.employee.display_name
                 if next_stop.employee
                 else "--"
             )
@@ -3775,7 +4539,7 @@ def live_cab_cards_api(request):
                     run.driver_id,
 
                 "driver_name": (
-                    run.driver.username
+                    run.driver.display_name
                     if run.driver
                     else "--"
                 ),
@@ -3929,7 +4693,7 @@ def export_trip_report_by_driver_excel(request):
             "stops__pickup_chats__messages__sender",
         )
         .filter(run_date__range=(start_date, end_date))
-        .order_by("-run_date", "driver__username", "started_at", "id")
+        .order_by("-run_date", "driver__full_name", "driver__username", "started_at", "id")
     )
 
     if driver_raw:
@@ -4038,7 +4802,7 @@ def export_trip_report_by_driver_excel(request):
                 run.run_date,
                 run.id,
                 run.route_template.name if run.route_template else "Manual Route",
-                run.driver.username if run.driver else "--",
+                run.driver.display_name if run.driver else "--",
                 run.vehicle.vehicle_number if run.vehicle else "--",
                 run.trip_type,
                 run_status,
@@ -4109,13 +4873,13 @@ def export_trip_report_by_driver_excel(request):
                 run.run_date,
                 run.id,
                 run.route_template.name if run.route_template else "Manual Route",
-                run.driver.username if run.driver else "--",
+                run.driver.display_name if run.driver else "--",
                 run.vehicle.vehicle_number if run.vehicle else "--",
                 run.trip_type,
                 run_status,
                 fmt_dt(run.started_at),
                 stop.stop_order,
-                stop.employee.username if stop.employee else "--",
+                stop.employee.display_name if stop.employee else "--",
                 stop.pickup_location or "--",
                 fmt_dt(arrival_time),
                 fmt_dt(boarded_at),
@@ -4203,7 +4967,7 @@ def trip_report_by_driver_page(request):
             "trips__employee",
         )
         .filter(run_date__range=(start_date, end_date))
-        .order_by("-run_date", "driver__username", "started_at", "id")
+        .order_by("-run_date", "driver__full_name", "driver__username", "started_at", "id")
     )
 
     if driver_raw:
@@ -4215,7 +4979,7 @@ def trip_report_by_driver_page(request):
     report_drivers = (
         User.objects
         .filter(role="DRIVER", is_active=True)
-        .order_by("username")
+        .order_by("full_name", "username")
     )
 
     timeline_rows = []
@@ -4279,7 +5043,7 @@ def trip_report_by_driver_page(request):
                 for msg in chat_messages:
                     message_count += 1
                     messages_data.append({
-                        "sender": msg.sender.username if msg.sender else "--",
+                        "sender": msg.sender.display_name if msg.sender else "--",
                         "sender_role": getattr(msg.sender, "role", "") if msg.sender else "",
                         "message": msg.message,
                         "sent_at": msg.sent_at,
@@ -4334,7 +5098,7 @@ def trip_report_by_driver_page(request):
 
             stops_data.append({
                 "stop_order": stop.stop_order,
-                "employee_name": stop.employee.username if stop.employee else "--",
+                "employee_name": stop.employee.display_name if stop.employee else "--",
                 "pickup_location": stop.pickup_location or "--",
                 "arrival_time": arrival_time,
                 "boarded_at": boarded_at,
@@ -4368,7 +5132,7 @@ def trip_report_by_driver_page(request):
             "run_id": run.id,
             "run_date": run.run_date,
             "route_name": run.route_template.name if run.route_template else "Manual Route",
-            "driver_name": run.driver.username if run.driver else "--",
+            "driver_name": run.driver.display_name if run.driver else "--",
             "driver_id": run.driver_id,
             "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
             "vehicle_model": getattr(run.vehicle, "vehicle_model", "") if run.vehicle else "",
@@ -4429,7 +5193,7 @@ def reports_page(request):
         "route_run__route_template",
     ).filter(
         trip_date=parsed_date
-    ).order_by("driver__username", "pickup_time")
+    ).order_by("driver__full_name", "driver__username", "pickup_time")
 
     total_trips = trips.count()
     completed_trips = trips.filter(status=Trip.STATUS_COMPLETED).count()
@@ -4454,7 +5218,7 @@ def reports_page(request):
         "employee"
     ).filter(
         leave_date=parsed_date
-    ).order_by("employee__username")
+    ).order_by("employee__full_name", "employee__username")
 
     sos_reports = EmergencyAlert.objects.select_related(
         "employee",
@@ -4515,7 +5279,7 @@ def reports_page(request):
         "stops__employee",
     ).filter(
         run_date=parsed_date
-    ).order_by("driver__username", "started_at", "created_at")
+    ).order_by("driver__full_name", "driver__username", "started_at", "created_at")
 
     route_trips = Trip.objects.select_related(
         "employee",
@@ -4569,7 +5333,7 @@ def reports_page(request):
 
             stops_data.append({
                 "stop_order": stop.stop_order,
-                "employee_name": stop.employee.username if stop.employee else "--",
+                "employee_name": stop.employee.display_name if stop.employee else "--",
                 "pickup_location": stop.pickup_location or "--",
                 "reached_time": stop.waiting_started_at,
                 "picked_time": stop.picked_at,
@@ -4594,7 +5358,7 @@ def reports_page(request):
         driver_timeline_reports.append({
             "route_run_id": run.id,
             "route_name": run.route_template.name if run.route_template else "Manual Route",
-            "driver_name": run.driver.username if run.driver else "--",
+            "driver_name": run.driver.display_name if run.driver else "--",
             "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
             "vehicle_model": run.vehicle.vehicle_model if run.vehicle else "--",
             "trip_type": run.trip_type,
@@ -4620,7 +5384,7 @@ def reports_page(request):
 
         driver_id = trip.driver_id or "unassigned"
         driver_name = (
-            trip.driver.username
+            trip.driver.display_name
             if trip.driver
             else "Unassigned Driver"
         )
@@ -4696,7 +5460,7 @@ def reports_page(request):
         is_active=True,
     ).exclude(
         id__in=assigned_employee_ids
-    ).order_by("username")
+    ).order_by("full_name", "username")
 
     # =========================
     # UNASSIGNED DRIVERS
@@ -4726,7 +5490,7 @@ def reports_page(request):
         is_active=True,
     ).exclude(
         id__in=assigned_driver_ids
-    ).order_by("username")
+    ).order_by("full_name", "username")
 
     # =========================
     # INACTIVE / DEACTIVATED ACCOUNTS
@@ -4738,7 +5502,7 @@ def reports_page(request):
             role=User.Role.EMPLOYEE,
             is_active=False,
         )
-        .order_by("username")
+        .order_by("full_name", "username")
     )
 
     deactivated_drivers = (
@@ -4748,7 +5512,7 @@ def reports_page(request):
             is_active=False,
         )
         .select_related("vehicle")
-        .order_by("username")
+        .order_by("full_name", "username")
     )
 
     # =========================
@@ -4805,7 +5569,7 @@ def activate_employee_account(request, employee_id):
 
     messages.success(
         request,
-        f"Employee {employee.username} activated successfully.",
+        f"Employee {employee.display_name} activated successfully.",
     )
 
     return redirect(
@@ -4830,7 +5594,7 @@ def activate_driver_account(request, driver_id):
     messages.success(
         request,
         (
-            f"Driver {driver.username} activated successfully. "
+            f"Driver {driver.display_name} activated successfully. "
             "Any archived route remains archived until admin assigns/creates an active route."
         ),
     )
@@ -4876,6 +5640,7 @@ def leave_report_page(request):
         )
         .order_by(
             "-leave_date",
+            "employee__full_name",
             "employee__username",
         )
     )
@@ -4883,7 +5648,13 @@ def leave_report_page(request):
     if query:
         leaves = leaves.filter(
             Q(
+                employee__full_name__icontains=query
+            )
+            | Q(
                 employee__username__icontains=query
+            )
+            | Q(
+                employee__phone_number__icontains=query
             )
             |
             Q(
@@ -4939,7 +5710,7 @@ def leave_report_page(request):
                 "id": leave.id,
 
                 "employee_name":
-                    employee.username,
+                    employee.display_name,
 
                 "leave_date":
                     leave.leave_date,
@@ -5054,7 +5825,7 @@ def route_analytics_page(request):
             "id": run.id,
             "route_name": run.route_template.name if run.route_template else "Manual Route",
             "trip_type": run.trip_type,
-            "driver_name": run.driver.username if run.driver else "--",
+            "driver_name": run.driver.display_name if run.driver else "--",
             "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
             "total_stops": total_stops,
             "completed_stops": completed_stops,
@@ -5430,6 +6201,7 @@ def export_reports_excel(request):
         )
         .order_by(
             "-trip_date",
+            "driver__full_name",
             "driver__username",
             "pickup_time",
         )
@@ -5481,13 +6253,13 @@ def export_reports_excel(request):
             trip.trip_date,
 
             (
-                trip.driver.username
+                trip.driver.display_name
                 if trip.driver
                 else "Unassigned"
             ),
 
             (
-                trip.employee.username
+                trip.employee.display_name
                 if trip.employee
                 else ""
             ),
@@ -5606,13 +6378,13 @@ def export_reports_excel(request):
             trip.trip_date,
 
             (
-                trip.employee.username
+                trip.employee.display_name
                 if trip.employee
                 else ""
             ),
 
             (
-                trip.driver.username
+                trip.driver.display_name
                 if trip.driver
                 else ""
             ),
@@ -5634,7 +6406,7 @@ def export_reports_excel(request):
             (
                 cancellation
                 .cancelled_by
-                .username
+                .display_name
                 if cancellation.cancelled_by
                 else ""
             ),
@@ -5779,7 +6551,7 @@ def export_reports_excel(request):
             ),
 
             (
-                stop.employee.username
+                stop.employee.display_name
                 if stop.employee
                 else ""
             ),
@@ -5794,7 +6566,7 @@ def export_reports_excel(request):
             ),
 
             (
-                run.driver.username
+                run.driver.display_name
                 if (
                     run
                     and run.driver
@@ -5882,6 +6654,7 @@ def export_reports_excel(request):
         )
         .order_by(
             "-leave_date",
+            "employee__full_name",
             "employee__username",
         )
     )
@@ -5924,7 +6697,7 @@ def export_reports_excel(request):
                 or employee.id
             ),
 
-            employee.username,
+            employee.display_name,
 
             getattr(
                 employee,
@@ -6042,7 +6815,7 @@ def export_reports_excel(request):
 
             user.id,
 
-            user.username,
+            user.display_name,
 
             user.role,
 
@@ -6071,7 +6844,7 @@ def export_reports_excel(request):
             ),
 
             (
-                reviewed_by.username
+                reviewed_by.display_name
                 if reviewed_by
                 else ""
             ),
@@ -6136,7 +6909,7 @@ def export_reports_excel(request):
             item.id,
 
             (
-                item.employee.username
+                item.employee.display_name
                 if item.employee
                 else ""
             ),
@@ -6173,7 +6946,7 @@ def export_reports_excel(request):
             ),
 
             (
-                reviewed_by.username
+                reviewed_by.display_name
                 if reviewed_by
                 else ""
             ),
@@ -6251,13 +7024,13 @@ def export_reports_excel(request):
             ),
 
             (
-                review.employee.username
+                review.employee.display_name
                 if review.employee
                 else ""
             ),
 
             (
-                trip.driver.username
+                trip.driver.display_name
                 if (
                     trip
                     and trip.driver
@@ -6374,7 +7147,7 @@ def export_reports_excel(request):
             ),
 
             (
-                stop.employee.username
+                stop.employee.display_name
                 if stop.employee
                 else ""
             ),
@@ -6389,7 +7162,7 @@ def export_reports_excel(request):
             ),
 
             (
-                run.driver.username
+                run.driver.display_name
                 if (
                     run
                     and run.driver
@@ -6513,6 +7286,7 @@ def export_reports_excel(request):
             role=User.Role.DRIVER
         )
         .order_by(
+            "full_name",
             "username"
         )
     )
@@ -6656,7 +7430,7 @@ def export_reports_excel(request):
         ws.append([
             driver.id,
 
-            driver.username,
+            driver.display_name,
 
             (
                 getattr(
@@ -6767,7 +7541,7 @@ def export_reports_excel(request):
             ),
 
             (
-                record.driver.username
+                record.driver.display_name
                 if record.driver
                 else ""
             ),
@@ -6880,6 +7654,7 @@ def export_reports_excel(request):
                 assigned_employee_ids
         )
         .order_by(
+            "full_name",
             "username"
         )
     )
@@ -6897,7 +7672,7 @@ def export_reports_excel(request):
                 or ""
             ),
 
-            employee.username,
+            employee.display_name,
 
             (
                 employee.phone_number
@@ -6971,6 +7746,7 @@ def export_reports_excel(request):
                 assigned_driver_ids
         )
         .order_by(
+            "full_name",
             "username"
         )
     )
@@ -6989,7 +7765,7 @@ def export_reports_excel(request):
         ws.append([
             driver.id,
 
-            driver.username,
+            driver.display_name,
 
             (
                 driver.phone_number
@@ -7250,7 +8026,7 @@ def export_reports_excel(request):
             run.trip_type,
 
             (
-                run.driver.username
+                run.driver.display_name
                 if run.driver
                 else ""
             ),
@@ -7479,7 +8255,7 @@ def driver_performance_page(request):
 
         driver_rows.append({
             "id": driver.id,
-            "username": driver.username,
+            "username": driver.display_name,
             "phone_number": getattr(driver, "phone_number", "") or "--",
             "total_trips": driver.total_trips,
             "completed_trips": driver.completed_trips,
@@ -7678,6 +8454,7 @@ def review_report_page(request):
         )
         .values(
             "trip__driver_id",
+            "trip__driver__full_name",
             "trip__driver__username",
         )
         .annotate(
@@ -7735,9 +8512,11 @@ def review_report_page(request):
                 driver_id,
 
             "driver_name":
-                driver[
-                    "trip__driver__username"
-                ],
+                (
+                    driver.get("trip__driver__full_name")
+                    or driver.get("trip__driver__username")
+                    or "--"
+                ),
 
             "today_reviews":
                 today_data.get(
@@ -7806,13 +8585,25 @@ def review_report_page(request):
         reviews = reviews.filter(
 
             Q(
+                employee__full_name__icontains=query
+            )
+            | Q(
                 employee__username__icontains=query
+            )
+            | Q(
+                employee__phone_number__icontains=query
             )
 
             |
 
             Q(
+                trip__driver__full_name__icontains=query
+            )
+            | Q(
                 trip__driver__username__icontains=query
+            )
+            | Q(
+                trip__driver__phone_number__icontains=query
             )
 
             |
@@ -7940,12 +8731,12 @@ def review_report_page(request):
                 ).time(),
 
             "employee":
-                review.employee.username
+                review.employee.display_name
                 if review.employee
                 else "--",
 
             "driver":
-                driver.username
+                driver.display_name
                 if driver
                 else "--",
 
@@ -7991,7 +8782,7 @@ def review_report_page(request):
             role="DRIVER",
             is_active=True,
         )
-        .order_by("username")
+        .order_by("full_name", "username")
     )
 
     employees = (
@@ -8000,7 +8791,7 @@ def review_report_page(request):
             role="EMPLOYEE",
             is_active=True,
         )
-        .order_by("username")
+        .order_by("full_name", "username")
     )
 
     # --------------------------------------------------------
@@ -8149,9 +8940,9 @@ def assigned_trips_page(request):
     if query:
         runs = runs.filter(
             Q(route_template__name__icontains=query)
-            | Q(driver__username__icontains=query)
+            | Q(driver__full_name__icontains=query) | Q(driver__username__icontains=query) | Q(driver__phone_number__icontains=query)
             | Q(vehicle__vehicle_number__icontains=query)
-            | Q(stops__employee__username__icontains=query)
+            | Q(stops__employee__full_name__icontains=query) | Q(stops__employee__username__icontains=query) | Q(stops__employee__phone_number__icontains=query)
             | Q(stops__pickup_location__icontains=query)
         ).distinct()
 
@@ -8263,7 +9054,7 @@ def assigned_trips_page(request):
 
         if current_stop and current_stop.employee:
             current_stop_name = (
-                current_stop.employee.username
+                current_stop.employee.display_name
             )
 
         elif completion_percent == 100:
@@ -8309,7 +9100,7 @@ def assigned_trips_page(request):
                 "trip_id": trip.id,
 
                 "employee_name": (
-                    stop.employee.username
+                    stop.employee.display_name
                     if stop.employee
                     else "--"
                 ),
@@ -8395,7 +9186,7 @@ def assigned_trips_page(request):
             ),
 
             "driver_name": (
-                run.driver.username
+                run.driver.display_name
                 if run.driver
                 else "--"
             ),
@@ -8610,9 +9401,9 @@ def trip_history_page(request):
     if query:
         runs = runs.filter(
             Q(route_template__name__icontains=query)
-            | Q(driver__username__icontains=query)
+            | Q(driver__full_name__icontains=query) | Q(driver__username__icontains=query) | Q(driver__phone_number__icontains=query)
             | Q(vehicle__vehicle_number__icontains=query)
-            | Q(stops__employee__username__icontains=query)
+            | Q(stops__employee__full_name__icontains=query) | Q(stops__employee__username__icontains=query) | Q(stops__employee__phone_number__icontains=query)
             | Q(stops__pickup_location__icontains=query)
         ).distinct()
 
@@ -8651,7 +9442,7 @@ def trip_history_page(request):
 
             employees.append({
                 "trip_id": trip.id,
-                "employee_name": stop.employee.username if stop.employee else "--",
+                "employee_name": stop.employee.display_name if stop.employee else "--",
                 "pickup_location": stop.pickup_location or "--",
                 "drop_location": trip.drop_location or "Office",
                 "status": trip.status,
@@ -8671,7 +9462,7 @@ def trip_history_page(request):
         card = {
             "id": run.id,
             "route_name": run.route_template.name if run.route_template else "Manual Route",
-            "driver_name": run.driver.username if run.driver else "--",
+            "driver_name": run.driver.display_name if run.driver else "--",
             "vehicle_number": run.vehicle.vehicle_number if run.vehicle else "--",
             "trip_type": run.trip_type,
             "run_date": run.run_date,
@@ -8761,11 +9552,23 @@ def cancelled_trips_page(request):
     if query:
         cancellations = cancellations.filter(
             Q(
+                trip__employee__full_name__icontains=query
+            )
+            | Q(
                 trip__employee__username__icontains=query
+            )
+            | Q(
+                trip__employee__phone_number__icontains=query
             )
             |
             Q(
+                trip__driver__full_name__icontains=query
+            )
+            | Q(
                 trip__driver__username__icontains=query
+            )
+            | Q(
+                trip__driver__phone_number__icontains=query
             )
             |
             Q(
@@ -8891,7 +9694,7 @@ def cancelled_trips_page(request):
                 "trip_id": trip.id,
 
                 "employee_name": (
-                    trip.employee.username
+                    trip.employee.display_name
                     if trip.employee
                     else "--"
                 ),
@@ -8903,7 +9706,7 @@ def cancelled_trips_page(request):
                 "route_name": route_name,
 
                 "driver_name": (
-                    trip.driver.username
+                    trip.driver.display_name
                     if trip.driver
                     else "--"
                 ),
@@ -8925,7 +9728,7 @@ def cancelled_trips_page(request):
                 ),
 
                 "cancelled_by": (
-                    cancellation.cancelled_by.username
+                    cancellation.cancelled_by.display_name
                     if cancellation.cancelled_by
                     else "--"
                 ),
@@ -9032,6 +9835,691 @@ def restore_trip(request, trip_id):
 
     messages.success(request, "Trip restored successfully.")
     return _redirect_back(request, "admin_web:trip_history")
+
+# ============================================================
+# ADVANCED AI ROUTE SEARCH
+# ============================================================
+# Modes:
+#   1. SHORTEST_SAFETY
+#      - Uses Google Directions waypoint optimisation
+#      - Avoids highways as the current safety-aware routing preference
+#   2. SHORTEST_LEAVE
+#      - Removes employees who have leave recorded for the selected date
+#      - Uses shortest-distance waypoint optimisation
+#
+# Important architecture rules:
+#   - Driver address is the route starting/base address.
+#   - Employee residential address is never used as pickup point.
+#   - Employee pickup_location + pickup_latitude/longitude are used.
+#   - Driver / vehicle route conflicts are HARD blocks.
+#   - Employee existing-route conflicts are SOFT warnings. Admin can confirm
+#     reassignment when saving.
+#   - Vehicle capacity is always enforced.
+#   - Admin may manually reorder pickup stops in the browser before save.
+#   - DROP order is always the exact reverse of the final PICKUP order.
+#   - Saved AI routes become normal active RouteTemplate records (Ready for Use).
+# ============================================================
+
+AI_ROUTE_MODE_SAFETY = "SHORTEST_SAFETY"
+AI_ROUTE_MODE_LEAVE = "SHORTEST_LEAVE"
+AI_ROUTE_SESSION_KEY = "admin_web_ai_route_preview"
+
+# Existing CabMate office point used by the employee pickup flow.
+CABMATE_OFFICE_LATITUDE = 28.49390268974162
+CABMATE_OFFICE_LONGITUDE = 77.09298663956277
+
+
+def _google_maps_json(endpoint, params):
+    api_key = str(getattr(settings, "GOOGLE_MAPS_API_KEY", "") or "").strip()
+    if not api_key:
+        raise ValueError(
+            "GOOGLE_MAPS_API_KEY is not configured. Add it to your environment before using AI Route Search."
+        )
+
+    query = dict(params or {})
+    query["key"] = api_key
+    url = f"https://maps.googleapis.com/maps/api/{endpoint}/json?{urlencode(query, doseq=True)}"
+
+    try:
+        with urlopen(url, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (URLError, HTTPError, TimeoutError) as exc:
+        raise ValueError(f"Google Maps request failed: {exc}") from exc
+    except Exception as exc:
+        raise ValueError(f"Unable to read Google Maps response: {exc}") from exc
+
+    status = str(payload.get("status") or "")
+    if status not in {"OK", "ZERO_RESULTS"}:
+        error_message = payload.get("error_message") or status or "Unknown Google Maps error"
+        raise ValueError(f"Google Maps error: {error_message}")
+
+    return payload
+
+
+def _geocode_driver_address(address):
+    address = str(address or "").strip()
+    if not address:
+        raise ValueError("Driver base/start address is missing.")
+
+    payload = _google_maps_json(
+        "geocode",
+        {
+            "address": address,
+            "region": "in",
+        },
+    )
+
+    results = payload.get("results") or []
+    if not results:
+        raise ValueError("Google Maps could not locate the driver's base/start address.")
+
+    first = results[0]
+    location = ((first.get("geometry") or {}).get("location") or {})
+    lat = _safe_float(location.get("lat"))
+    lng = _safe_float(location.get("lng"))
+
+    if lat is None or lng is None:
+        raise ValueError("Driver base/start address did not return valid coordinates.")
+
+    return {
+        "latitude": lat,
+        "longitude": lng,
+        "formatted_address": first.get("formatted_address") or address,
+    }
+
+
+def _nearest_neighbor_order(origin_lat, origin_lng, employee_rows):
+    """Fallback optimiser used only when Google waypoint optimisation cannot be used."""
+    remaining = list(employee_rows)
+    ordered = []
+    current_lat = origin_lat
+    current_lng = origin_lng
+
+    while remaining:
+        nearest_index = 0
+        nearest_distance = None
+
+        for index, row in enumerate(remaining):
+            distance = _distance_km(
+                current_lat,
+                current_lng,
+                row["latitude"],
+                row["longitude"],
+            )
+            if distance is None:
+                continue
+            if nearest_distance is None or distance < nearest_distance:
+                nearest_distance = distance
+                nearest_index = index
+
+        chosen = remaining.pop(nearest_index)
+        ordered.append(chosen)
+        current_lat = chosen["latitude"]
+        current_lng = chosen["longitude"]
+
+    return ordered
+
+
+def _google_optimise_employee_order(driver_start, employee_rows, mode):
+    """
+    Optimise pickup order from Driver base -> employee stops -> Office.
+
+    Google Directions supports waypoint optimisation for the normal cab-size
+    route. If an unusually large vehicle exceeds the waypoint limit, CabMate
+    falls back to nearest-neighbour ordering instead of failing the whole page.
+    """
+    if not employee_rows:
+        return [], {
+            "distance_km": 0,
+            "duration_minutes": 0,
+            "polyline": "",
+            "google_optimised": False,
+        }
+
+    if len(employee_rows) > 23:
+        ordered = _nearest_neighbor_order(
+            driver_start["latitude"],
+            driver_start["longitude"],
+            employee_rows,
+        )
+        return ordered, {
+            "distance_km": None,
+            "duration_minutes": None,
+            "polyline": "",
+            "google_optimised": False,
+            "warning": (
+                "More than 23 employee stops were selected, so CabMate used local "
+                "nearest-neighbour ordering instead of Google waypoint optimisation."
+            ),
+        }
+
+    waypoint_values = [
+        f'{row["latitude"]},{row["longitude"]}'
+        for row in employee_rows
+    ]
+
+    params = {
+        "origin": f'{driver_start["latitude"]},{driver_start["longitude"]}',
+        "destination": f"{CABMATE_OFFICE_LATITUDE},{CABMATE_OFFICE_LONGITUDE}",
+        "waypoints": "optimize:true|" + "|".join(waypoint_values),
+        "mode": "driving",
+        "alternatives": "false",
+        "region": "in",
+    }
+
+    # Current safety-aware routing preference: avoid highways.
+    # This is a road-choice heuristic, not a crime/safety guarantee.
+    if mode == AI_ROUTE_MODE_SAFETY:
+        params["avoid"] = "highways"
+
+    payload = _google_maps_json("directions", params)
+    routes = payload.get("routes") or []
+    if not routes:
+        raise ValueError("Google Maps could not generate a route for the selected employees.")
+
+    route_data = routes[0]
+    waypoint_order = route_data.get("waypoint_order") or list(range(len(employee_rows)))
+    ordered = [employee_rows[index] for index in waypoint_order]
+
+    legs = route_data.get("legs") or []
+    distance_meters = sum(
+        int(((leg.get("distance") or {}).get("value") or 0))
+        for leg in legs
+    )
+    duration_seconds = sum(
+        int(((leg.get("duration") or {}).get("value") or 0))
+        for leg in legs
+    )
+
+    overview_polyline = ((route_data.get("overview_polyline") or {}).get("points") or "")
+
+    return ordered, {
+        "distance_km": round(distance_meters / 1000, 2),
+        "duration_minutes": round(duration_seconds / 60),
+        "polyline": overview_polyline,
+        "google_optimised": True,
+    }
+
+
+def _ai_employee_row(employee):
+    lat = _safe_float(employee.pickup_latitude)
+    lng = _safe_float(employee.pickup_longitude)
+    return {
+        "id": employee.id,
+        "name": employee.display_name,
+        "employee_id": employee.employee_id or "--",
+        "username": employee.username,
+        "pickup_location": employee.pickup_location or "",
+        "latitude": lat,
+        "longitude": lng,
+    }
+
+
+def _ai_route_employee_conflicts(employee_ids):
+    conflicts = {}
+    stops = (
+        RouteStop.objects
+        .filter(
+            employee_id__in=employee_ids,
+            route__is_active=True,
+        )
+        .select_related("route", "employee")
+        .order_by("route__name", "stop_order")
+    )
+
+    for stop in stops:
+        conflicts.setdefault(stop.employee_id, []).append(stop.route.name)
+
+    return conflicts
+
+
+def _ai_route_page_context(request, preview=None):
+    today = timezone.localdate()
+
+    active_route_driver_ids = set(
+        RouteTemplate.objects.filter(
+            is_active=True,
+            driver__isnull=False,
+        ).values_list("driver_id", flat=True)
+    )
+
+    drivers = list(
+        User.objects.filter(
+            role=User.Role.DRIVER,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        )
+        .select_related("vehicle")
+        .order_by("full_name", "username")
+    )
+
+    driver_rows = []
+    for driver in drivers:
+        try:
+            vehicle = driver.vehicle
+        except Exception:
+            vehicle = None
+
+        driver_rows.append({
+            "id": driver.id,
+            "name": driver.display_name,
+            "username": driver.username,
+            "address": driver.address or "",
+            "vehicle_number": vehicle.vehicle_number if vehicle else "--",
+            "seat_count": vehicle.seat_count if vehicle else 0,
+            "has_vehicle": bool(vehicle),
+            "has_address": bool((driver.address or "").strip()),
+            "hard_conflict": driver.id in active_route_driver_ids,
+        })
+
+    employees = list(
+        User.objects.filter(
+            role=User.Role.EMPLOYEE,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        ).order_by("full_name", "username")
+    )
+
+    employee_conflict_map = _ai_route_employee_conflicts([employee.id for employee in employees])
+    employee_rows = []
+    for employee in employees:
+        row = _ai_employee_row(employee)
+        row["has_pickup"] = bool(
+            row["pickup_location"]
+            and row["latitude"] is not None
+            and row["longitude"] is not None
+        )
+        row["conflict_routes"] = employee_conflict_map.get(employee.id, [])
+        row["soft_conflict"] = bool(row["conflict_routes"])
+        employee_rows.append(row)
+
+    return {
+        "page_name": "AI Route Search",
+        "today": today,
+        "drivers": driver_rows,
+        "employees": employee_rows,
+        "preview": preview,
+        "mode_safety": AI_ROUTE_MODE_SAFETY,
+        "mode_leave": AI_ROUTE_MODE_LEAVE,
+        "office_latitude": CABMATE_OFFICE_LATITUDE,
+        "office_longitude": CABMATE_OFFICE_LONGITUDE,
+    }
+
+
+@login_required
+@admin_required
+def ai_route_search(request):
+    preview = None
+
+    if request.method == "POST":
+        driver_id = str(request.POST.get("driver_id") or "").strip()
+        route_date_text = str(request.POST.get("route_date") or "").strip()
+        mode = str(request.POST.get("mode") or AI_ROUTE_MODE_SAFETY).strip().upper()
+        selected_employee_ids = [
+            int(value)
+            for value in request.POST.getlist("employee_ids")
+            if str(value).isdigit()
+        ]
+
+        if mode not in {AI_ROUTE_MODE_SAFETY, AI_ROUTE_MODE_LEAVE}:
+            messages.error(request, "Please select a valid AI Route Search mode.")
+            return redirect("admin_web:ai_route_search")
+
+        if not driver_id.isdigit():
+            messages.error(request, "Please select a driver.")
+            return redirect("admin_web:ai_route_search")
+
+        route_date = parse_date(route_date_text) if route_date_text else timezone.localdate()
+        if route_date is None:
+            messages.error(request, "Please select a valid route date.")
+            return redirect("admin_web:ai_route_search")
+
+        driver = get_object_or_404(
+            User,
+            id=int(driver_id),
+            role=User.Role.DRIVER,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        )
+
+        # HARD CONFLICT: one active saved route per driver.
+        driver_route_conflict = RouteTemplate.objects.filter(
+            is_active=True,
+            driver=driver,
+        ).first()
+        if driver_route_conflict:
+            messages.error(
+                request,
+                f'{driver.display_name} is already assigned to active route "{driver_route_conflict.name}". '
+                "Driver conflicts are blocked by AI Route Search.",
+            )
+            return redirect("admin_web:ai_route_search")
+
+        try:
+            vehicle = driver.vehicle
+        except Exception:
+            messages.error(request, f"{driver.display_name} does not have a vehicle assigned.")
+            return redirect("admin_web:ai_route_search")
+
+        if not (driver.address or "").strip():
+            messages.error(
+                request,
+                f"{driver.display_name} does not have a Driver Address. Add the base/start address first.",
+            )
+            return redirect("admin_web:ai_route_search")
+
+        employees_qs = User.objects.filter(
+            role=User.Role.EMPLOYEE,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+            pickup_location__isnull=False,
+            pickup_latitude__isnull=False,
+            pickup_longitude__isnull=False,
+        ).exclude(pickup_location="")
+
+        if selected_employee_ids:
+            employees_qs = employees_qs.filter(id__in=selected_employee_ids)
+
+        leave_employee_ids = set()
+        if mode == AI_ROUTE_MODE_LEAVE:
+            leave_employee_ids = set(
+                EmployeeLeave.objects.filter(
+                    leave_date=route_date,
+                ).values_list("employee_id", flat=True)
+            )
+            employees_qs = employees_qs.exclude(id__in=leave_employee_ids)
+
+        employees = list(employees_qs.order_by("full_name", "username"))
+        if not employees:
+            messages.error(
+                request,
+                "No eligible employees with approved pickup coordinates were found for this search.",
+            )
+            return redirect("admin_web:ai_route_search")
+
+        try:
+            driver_start = _geocode_driver_address(driver.address)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("admin_web:ai_route_search")
+
+        # Capacity-aware candidate selection. When more employees are available
+        # than seats, prioritise the employees nearest to the driver's base.
+        employee_rows = [_ai_employee_row(employee) for employee in employees]
+        for row in employee_rows:
+            row["driver_distance_km"] = _distance_km(
+                driver_start["latitude"],
+                driver_start["longitude"],
+                row["latitude"],
+                row["longitude"],
+            )
+
+        employee_rows.sort(
+            key=lambda row: (
+                row["driver_distance_km"] is None,
+                row["driver_distance_km"] if row["driver_distance_km"] is not None else 999999,
+                row["name"].lower(),
+            )
+        )
+
+        seat_count = int(vehicle.seat_count or 0)
+        if seat_count <= 0:
+            messages.error(request, "Selected vehicle has no available seating capacity.")
+            return redirect("admin_web:ai_route_search")
+
+        capacity_excluded = []
+        if len(employee_rows) > seat_count:
+            capacity_excluded = employee_rows[seat_count:]
+            employee_rows = employee_rows[:seat_count]
+
+        try:
+            ordered_rows, metrics = _google_optimise_employee_order(
+                driver_start,
+                employee_rows,
+                mode,
+            )
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("admin_web:ai_route_search")
+
+        conflict_map = _ai_route_employee_conflicts([row["id"] for row in ordered_rows])
+        for index, row in enumerate(ordered_rows, start=1):
+            row["stop_order"] = index
+            row["conflict_routes"] = conflict_map.get(row["id"], [])
+            row["soft_conflict"] = bool(row["conflict_routes"])
+
+        first_stop_distance = None
+        if ordered_rows:
+            first_stop_distance = _distance_km(
+                driver_start["latitude"],
+                driver_start["longitude"],
+                ordered_rows[0]["latitude"],
+                ordered_rows[0]["longitude"],
+            )
+
+        excluded_leave_rows = []
+        if leave_employee_ids:
+            excluded_leave_rows = [
+                {
+                    "id": employee.id,
+                    "name": employee.display_name,
+                    "employee_id": employee.employee_id or "--",
+                }
+                for employee in User.objects.filter(id__in=leave_employee_ids).order_by("full_name", "username")
+            ]
+
+        preview = {
+            "driver_id": driver.id,
+            "driver_name": driver.display_name,
+            "driver_username": driver.username,
+            "driver_address": driver.address or "",
+            "driver_formatted_address": driver_start["formatted_address"],
+            "driver_latitude": driver_start["latitude"],
+            "driver_longitude": driver_start["longitude"],
+            "vehicle_id": vehicle.id,
+            "vehicle_number": vehicle.vehicle_number,
+            "vehicle_model": vehicle.vehicle_model,
+            "seat_count": seat_count,
+            "route_date": route_date.isoformat(),
+            "mode": mode,
+            "mode_label": (
+                "Shortest Distance + Safety-aware roads"
+                if mode == AI_ROUTE_MODE_SAFETY
+                else "Shortest Distance + Remove Leave Employees"
+            ),
+            "employees": ordered_rows,
+            "drop_employees": list(reversed(ordered_rows)),
+            "included_count": len(ordered_rows),
+            "remaining_seats": max(seat_count - len(ordered_rows), 0),
+            "first_stop_distance_km": first_stop_distance,
+            "distance_km": metrics.get("distance_km"),
+            "duration_minutes": metrics.get("duration_minutes"),
+            "polyline": metrics.get("polyline") or "",
+            "google_optimised": bool(metrics.get("google_optimised")),
+            "optimizer_warning": metrics.get("warning") or "",
+            "leave_excluded": excluded_leave_rows,
+            "capacity_excluded": capacity_excluded,
+            "soft_conflict_count": sum(1 for row in ordered_rows if row.get("soft_conflict")),
+        }
+
+        # Store only server-validated data. The browser may change ORDER only.
+        request.session[AI_ROUTE_SESSION_KEY] = {
+            "driver_id": driver.id,
+            "vehicle_id": vehicle.id,
+            "route_date": route_date.isoformat(),
+            "mode": mode,
+            "employee_ids": [row["id"] for row in ordered_rows],
+        }
+        request.session.modified = True
+
+    return render(
+        request,
+        "admin_web/ai_route_search.html",
+        _ai_route_page_context(request, preview=preview),
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
+def save_ai_route(request):
+    session_preview = request.session.get(AI_ROUTE_SESSION_KEY) or {}
+    if not session_preview:
+        messages.error(request, "AI Route preview expired. Generate the route again before saving.")
+        return redirect("admin_web:ai_route_search")
+
+    route_name = str(request.POST.get("route_name") or "").strip()
+    ordered_ids_text = str(request.POST.get("ordered_employee_ids") or "").strip()
+    confirm_reassignment = str(request.POST.get("confirm_reassignment") or "") == "1"
+
+    if not route_name:
+        messages.error(request, "Please enter a route name before saving.")
+        return redirect("admin_web:ai_route_search")
+
+    if RouteTemplate.objects.filter(is_active=True, name__iexact=route_name).exists():
+        messages.error(request, "An active route with this name already exists.")
+        return redirect("admin_web:ai_route_search")
+
+    try:
+        ordered_ids = [
+            int(value)
+            for value in ordered_ids_text.split(",")
+            if str(value).strip().isdigit()
+        ]
+    except Exception:
+        ordered_ids = []
+
+    allowed_ids = [int(value) for value in session_preview.get("employee_ids") or []]
+    if not ordered_ids or len(ordered_ids) != len(allowed_ids) or set(ordered_ids) != set(allowed_ids):
+        messages.error(
+            request,
+            "The route stop list changed unexpectedly. Generate the AI route again before saving.",
+        )
+        return redirect("admin_web:ai_route_search")
+
+    driver = get_object_or_404(
+        User,
+        id=session_preview.get("driver_id"),
+        role=User.Role.DRIVER,
+        is_active=True,
+        account_status=User.ACCOUNT_STATUS_APPROVED,
+    )
+    vehicle = get_object_or_404(Vehicle, id=session_preview.get("vehicle_id"), driver=driver)
+
+    # Re-run HARD conflicts immediately before save.
+    existing_driver_route = RouteTemplate.objects.filter(
+        is_active=True,
+        driver=driver,
+    ).first()
+    if existing_driver_route:
+        messages.error(
+            request,
+            f'{driver.display_name} is now assigned to active route "{existing_driver_route.name}". '
+            "The AI route was not saved.",
+        )
+        return redirect("admin_web:ai_route_search")
+
+    if len(ordered_ids) > int(vehicle.seat_count or 0):
+        messages.error(request, "Employee count is greater than the vehicle seat capacity.")
+        return redirect("admin_web:ai_route_search")
+
+    employees = {
+        employee.id: employee
+        for employee in User.objects.filter(
+            id__in=ordered_ids,
+            role=User.Role.EMPLOYEE,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        )
+    }
+
+    if set(employees.keys()) != set(ordered_ids):
+        messages.error(request, "One or more employees are no longer eligible for this route.")
+        return redirect("admin_web:ai_route_search")
+
+    for employee in employees.values():
+        if (
+            not employee.pickup_location
+            or employee.pickup_latitude is None
+            or employee.pickup_longitude is None
+        ):
+            messages.error(
+                request,
+                f"{employee.display_name} no longer has a complete approved pickup point.",
+            )
+            return redirect("admin_web:ai_route_search")
+
+    conflict_map = _ai_route_employee_conflicts(ordered_ids)
+    if conflict_map and not confirm_reassignment:
+        conflict_names = []
+        for employee_id, route_names in conflict_map.items():
+            employee = employees.get(employee_id)
+            if employee:
+                conflict_names.append(
+                    f'{employee.display_name} ({", ".join(route_names)})'
+                )
+        messages.warning(
+            request,
+            "Employee route conflict found. Tick 'Confirm employee reassignment' and save again. "
+            + "; ".join(conflict_names),
+        )
+        return redirect("admin_web:ai_route_search")
+
+    # Soft conflicts become deliberate reassignments only after Admin confirms.
+    if conflict_map:
+        affected_old_route_ids = set(
+            RouteStop.objects.filter(
+                employee_id__in=ordered_ids,
+                route__is_active=True,
+            ).values_list("route_id", flat=True)
+        )
+        RouteStop.objects.filter(
+            employee_id__in=ordered_ids,
+            route__is_active=True,
+        ).delete()
+
+        # Keep stop ordering clean on routes employees were removed from.
+        for old_route_id in affected_old_route_ids:
+            remaining_stops = RouteStop.objects.filter(
+                route_id=old_route_id,
+            ).order_by("stop_order", "id")
+            for new_order, stop in enumerate(remaining_stops, start=1):
+                if stop.stop_order != new_order:
+                    stop.stop_order = new_order
+                    stop.save(update_fields=["stop_order"])
+
+    route = RouteTemplate.objects.create(
+        name=route_name,
+        driver=driver,
+        vehicle=vehicle,
+        is_active=True,
+    )
+
+    for stop_order, employee_id in enumerate(ordered_ids, start=1):
+        employee = employees[employee_id]
+        RouteStop.objects.create(
+            route=route,
+            employee=employee,
+            pickup_location=employee.pickup_location,
+            pickup_latitude=employee.pickup_latitude,
+            pickup_longitude=employee.pickup_longitude,
+            stop_order=stop_order,
+        )
+
+    request.session.pop(AI_ROUTE_SESSION_KEY, None)
+    request.session.modified = True
+
+    messages.success(
+        request,
+        (
+            f'AI Route "{route.name}" saved as Ready for Use with {len(ordered_ids)} employee(s). '
+            "Pickup order is saved; DROP will use the exact reverse order when trips are generated."
+        ),
+    )
+    return redirect("admin_web:routes")
+
+
 
 @login_required
 @admin_required
@@ -9166,7 +10654,7 @@ def assign_employee_to_route(request, employee_id, route_id):
 
     messages.success(
         request,
-        f"{employee.username} assigned to {route.name} successfully.",
+        f"{employee.display_name} assigned to {route.name} successfully.",
     )
 
-    return redirect(f"{reverse('admin_web:routes')}?edit_route_id={route.id}")
+    return redirect("admin_web:employee_route_search", employee_id=employee.id)

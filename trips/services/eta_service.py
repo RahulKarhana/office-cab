@@ -193,7 +193,7 @@ class ETAService:
                 "id": stop.id,
                 "stop_order": stop.stop_order,
                 "display_order": index + 1,
-                "employee_name": stop.employee.username if stop.employee else "",
+                "employee_name": stop.employee.display_name if stop.employee else "",
                 "pickup_location": stop.pickup_location,
                 "pickup_latitude": stop.pickup_latitude,
                 "pickup_longitude": stop.pickup_longitude,
@@ -291,16 +291,16 @@ class ETAService:
         elif current_stop and my_stop and current_stop.id == my_stop.id:
             status_text = f"Cab is currently coming for your {route_word}."
         elif next_stop and my_stop and next_stop.id == my_stop.id:
-            status_text = f"Current {route_word} is {current_stop.employee.username}. You are next."
+            status_text = f"Current {route_word} is {current_stop.employee.display_name}. You are next."
         elif my_stop:
-            status_text = f"Current {route_word} is {current_stop.employee.username}. Your {route_word} will come later in route."
+            status_text = f"Current {route_word} is {current_stop.employee.display_name}. Your {route_word} will come later in route."
         else:
             status_text = f"Live {route_word} route is active."
 
         return {
             "route_run_id": route_run.id,
             "route_name": route_run.route_template.name if route_run.route_template else f"{route_word.capitalize()} Route",
-            "driver_name": route_run.driver.username if route_run.driver else None,
+            "driver_name": route_run.driver.display_name if route_run.driver else None,
             "vehicle_number": route_run.vehicle.vehicle_number if route_run.vehicle else None,
             "trip_type": route_run.trip_type,
             "current_stop_order": current_stop.stop_order if current_stop else None,

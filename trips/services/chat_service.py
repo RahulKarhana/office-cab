@@ -164,7 +164,7 @@ class ChatService:
                         msg.sender_id
                     ),
                     "sender_name": (
-                        msg.sender.username
+                        msg.sender.display_name
                         if msg.sender
                         else ""
                     ),

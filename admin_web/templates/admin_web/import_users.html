@@ -1,0 +1,653 @@
+{% extends 'admin_web/base.html' %}
+
+{% block title %}Import {{ import_title }} Excel - CabMate Admin{% endblock %}
+
+{% block page_heading %}Import {{ import_title }} Excel{% endblock %}
+{% block page_subheading %}
+Bulk validate, create and activate {{ import_title|lower }} accounts
+{% endblock %}
+
+{% block content %}
+
+<style>
+    .import-page {
+        display: grid;
+        gap: 22px;
+    }
+
+    .import-hero {
+        background: linear-gradient(135deg, #5f4636, #7e5c43, #9b7457);
+        color: #fffdf9;
+        border-radius: 28px;
+        padding: 26px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        box-shadow: 0 18px 40px rgba(95, 70, 54, .18);
+    }
+
+    .import-hero h2 {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 950;
+    }
+
+    .import-hero p {
+        margin: 8px 0 0;
+        color: #f0e8e1;
+        font-weight: 650;
+        max-width: 760px;
+        line-height: 1.55;
+    }
+
+    .back-link {
+        text-decoration: none;
+        color: #fffdf9;
+        border: 1px solid rgba(255,255,255,.28);
+        background: rgba(255,255,255,.12);
+        padding: 11px 16px;
+        border-radius: 14px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .import-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+        gap: 22px;
+    }
+
+    .import-card {
+        background: #fffdf9;
+        border: 1px solid #ded6cc;
+        border-radius: 26px;
+        padding: 22px;
+        box-shadow: 0 14px 30px rgba(95,70,54,.06);
+    }
+
+    .import-card h3 {
+        margin: 0;
+        color: #5f4636;
+        font-size: 22px;
+        font-weight: 950;
+    }
+
+    .import-card p {
+        color: #746b64;
+        font-weight: 650;
+        line-height: 1.55;
+    }
+
+    .upload-zone {
+        margin-top: 16px;
+        border: 2px dashed #cdbfb4;
+        background: #fbf8f2;
+        border-radius: 22px;
+        padding: 22px;
+    }
+
+    .upload-zone input[type="file"] {
+        width: 100%;
+        min-height: 48px;
+        padding: 10px 12px;
+        border: 1px solid #ded6cc;
+        border-radius: 14px;
+        background: #fffdf9;
+        font-weight: 750;
+    }
+
+    .primary-btn,
+    .secondary-btn,
+    .access-btn {
+        min-height: 48px;
+        border: none;
+        border-radius: 14px;
+        padding: 0 18px;
+        font-weight: 950;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+
+    .primary-btn {
+        background: linear-gradient(135deg, #7e5c43, #9b7457);
+        color: #fffdf9;
+    }
+
+    .secondary-btn {
+        background: #f2e9e1;
+        color: #7e5c43;
+    }
+
+    .access-btn {
+        background: #4f6d58;
+        color: #fffdf9;
+    }
+
+    .primary-btn:disabled,
+    .access-btn:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+
+    .button-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+    }
+
+    .column-list {
+        margin: 16px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 9px;
+    }
+
+    .column-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: #fbf8f2;
+        color: #514943;
+        font-weight: 750;
+    }
+
+    .column-list li::before {
+        content: "✓";
+        color: #4f6d58;
+        font-weight: 950;
+    }
+
+    .note {
+        margin-top: 16px;
+        background: #f8f5ed;
+        border: 1px solid #ded6cc;
+        color: #5f4636;
+        border-radius: 16px;
+        padding: 14px;
+        line-height: 1.5;
+        font-weight: 700;
+    }
+
+    .note strong {
+        color: #5f4636;
+    }
+
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .summary-box {
+        border-radius: 18px;
+        padding: 16px;
+        background: #fbf8f2;
+        border: 1px solid #eee6de;
+    }
+
+    .summary-box span {
+        color: #746b64;
+        font-size: 12px;
+        font-weight: 850;
+        text-transform: uppercase;
+    }
+
+    .summary-box strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 28px;
+        color: #5f4636;
+        font-weight: 950;
+    }
+
+    .summary-box.good strong {
+        color: #4f6d58;
+    }
+
+    .summary-box.bad strong {
+        color: #9a4d43;
+    }
+
+    .error-panel {
+        background: #fff8f7;
+        border: 1px solid #ead2ce;
+        border-radius: 18px;
+        padding: 16px;
+        margin-top: 16px;
+    }
+
+    .error-panel h4 {
+        margin: 0 0 10px;
+        color: #8c433b;
+    }
+
+    .error-panel ul {
+        margin: 0;
+        padding-left: 20px;
+        color: #7f3f39;
+        font-weight: 700;
+        line-height: 1.55;
+    }
+
+    .preview-card {
+        background: #fffdf9;
+        border: 1px solid #ded6cc;
+        border-radius: 26px;
+        padding: 22px;
+        box-shadow: 0 14px 30px rgba(95,70,54,.06);
+    }
+
+    .preview-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .preview-head h3 {
+        margin: 0;
+        color: #5f4636;
+        font-size: 22px;
+        font-weight: 950;
+    }
+
+    .preview-wrap {
+        overflow-x: auto;
+        border: 1px solid #eee6de;
+        border-radius: 18px;
+    }
+
+    .preview-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 1180px;
+    }
+
+    .preview-table th {
+        background: #fbf8f2;
+        color: #746b64;
+        padding: 12px 13px;
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .preview-table td {
+        padding: 13px;
+        border-top: 1px solid #eee6de;
+        color: #514943;
+        font-weight: 700;
+        vertical-align: top;
+        background: #fffdf9;
+    }
+
+    .preview-table tr.invalid-row td {
+        background: #fff8f7;
+    }
+
+    .row-ok,
+    .row-error {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .row-ok {
+        background: #edf3ed;
+        color: #4f6d58;
+    }
+
+    .row-error {
+        background: #f8ece9;
+        color: #7f3f39;
+    }
+
+    .row-error-list {
+        margin: 8px 0 0;
+        padding-left: 17px;
+        color: #7f3f39;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .batch-ready {
+        background: #edf3ed;
+        border: 1px solid #cdddcf;
+        color: #3f5c48;
+        border-radius: 18px;
+        padding: 16px;
+        margin-top: 16px;
+        font-weight: 800;
+        line-height: 1.5;
+    }
+
+    .empty-preview {
+        padding: 30px;
+        text-align: center;
+        color: #746b64;
+        font-weight: 800;
+    }
+
+    @media (max-width: 950px) {
+        .import-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .import-hero {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 650px) {
+        .summary-row {
+            grid-template-columns: 1fr;
+        }
+
+        .button-row,
+        .primary-btn,
+        .secondary-btn,
+        .access-btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="import-page">
+
+    <section class="import-hero">
+        <div>
+            <h2>Import {{ import_title }} Data from Excel</h2>
+            <p>
+                Upload one Excel file, validate every row, review the preview,
+                create all accounts in one click, then provide login access when you are ready.
+            </p>
+        </div>
+
+        {% if import_role == "EMPLOYEE" %}
+            <a href="{% url 'admin_web:employees' %}" class="back-link">
+                Back to Employees
+            </a>
+        {% else %}
+            <a href="{% url 'admin_web:drivers' %}" class="back-link">
+                Back to Drivers
+            </a>
+        {% endif %}
+    </section>
+
+
+    <section class="import-grid">
+
+        <div class="import-card">
+            <h3>1. Upload Excel File</h3>
+            <p>
+                Select an <strong>.xlsx</strong> file. CabMate will validate the
+                complete sheet before any account is created.
+            </p>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="upload-zone">
+                    <input
+                        type="file"
+                        name="excel_file"
+                        accept=".xlsx"
+                        required
+                    >
+                </div>
+
+                <div class="button-row">
+                    <button type="submit" class="primary-btn">
+                        Validate & Preview
+                    </button>
+                </div>
+            </form>
+
+            {% if import_role == "EMPLOYEE" %}
+                <div class="note">
+                    <strong>Employee Address:</strong>
+                    Address from this Excel file is only the employee's residential/profile address.
+                    It is <strong>not</strong> the pickup point. Pickup Location continues through
+                    your existing employee pickup-location feature after account creation.
+                </div>
+            {% else %}
+                <div class="note">
+                    <strong>Driver Address:</strong>
+                    Address from this Excel file is saved as the driver's normal/base address.
+                    Later, AI Route Search can use this address as the driver's starting point
+                    when selecting the best route.
+                </div>
+            {% endif %}
+        </div>
+
+
+        <div class="import-card">
+            <h3>Required Excel Columns</h3>
+            <p>
+                Keep these column headings in the first row of your Excel file.
+            </p>
+
+            <ul class="column-list">
+                <li>Full Name</li>
+
+                {% if import_role == "EMPLOYEE" %}
+                    <li>Employee ID</li>
+                {% endif %}
+
+                <li>Phone Number</li>
+                <li>Username</li>
+                <li>Password</li>
+                <li>Email</li>
+                <li>Gender</li>
+                <li>Address</li>
+            </ul>
+
+            <div class="note">
+                <strong>Dummy Password:</strong>
+                Admin can provide the initial password in Excel. The password is
+                securely hashed when the account is created and is never shown in
+                the preview table.
+            </div>
+        </div>
+
+    </section>
+
+
+    {% if has_preview %}
+    <section class="preview-card">
+
+        <div class="preview-head">
+            <div>
+                <h3>2. Validation Preview</h3>
+                <p style="margin:5px 0 0;color:#746b64;font-weight:650;">
+                    Review the complete batch before creating accounts.
+                </p>
+            </div>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-box">
+                <span>Total Rows</span>
+                <strong>{{ preview_rows|length }}</strong>
+            </div>
+
+            <div class="summary-box good">
+                <span>Valid Rows</span>
+                <strong>{{ valid_count }}</strong>
+            </div>
+
+            <div class="summary-box bad">
+                <span>Invalid Rows</span>
+                <strong>{{ invalid_count }}</strong>
+            </div>
+        </div>
+
+
+        {% if validation_errors %}
+        <div class="error-panel">
+            <h4>Please correct these issues</h4>
+            <ul>
+                {% for error in validation_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+
+        <div class="preview-wrap" style="margin-top:18px;">
+            <table class="preview-table">
+                <thead>
+                    <tr>
+                        <th>Excel Row</th>
+                        <th>Full Name</th>
+
+                        {% if import_role == "EMPLOYEE" %}
+                            <th>Employee ID</th>
+                        {% endif %}
+
+                        <th>Phone</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Email</th>
+                        <th>Gender</th>
+                        <th>Address</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in preview_rows %}
+                    <tr class="{% if not row.is_valid %}invalid-row{% endif %}">
+                        <td>{{ row.excel_row }}</td>
+                        <td>{{ row.full_name|default:"--" }}</td>
+
+                        {% if import_role == "EMPLOYEE" %}
+                            <td>{{ row.employee_id|default:"--" }}</td>
+                        {% endif %}
+
+                        <td>{{ row.phone_number|default:"--" }}</td>
+                        <td>{{ row.username|default:"--" }}</td>
+                        <td>{{ row.password|default:"--" }}</td>
+                        <td>{{ row.email|default:"--" }}</td>
+                        <td>{{ row.gender|default:"--" }}</td>
+                        <td>{{ row.address|default:"--" }}</td>
+
+                        <td>
+                            {% if row.is_valid %}
+                                <span class="row-ok">Ready</span>
+                            {% else %}
+                                <span class="row-error">Error</span>
+
+                                {% if row.errors %}
+                                    <ul class="row-error-list">
+                                        {% for error in row.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+
+        <div class="button-row">
+            {% if import_role == "EMPLOYEE" %}
+                <form method="post" action="{% url 'admin_web:create_employee_excel_accounts' %}">
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                        {% if not can_create %}disabled{% endif %}
+                    >
+                        Create All Employee Accounts
+                    </button>
+                </form>
+            {% else %}
+                <form method="post" action="{% url 'admin_web:create_driver_excel_accounts' %}">
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                        {% if not can_create %}disabled{% endif %}
+                    >
+                        Create All Driver Accounts
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+    </section>
+    {% endif %}
+
+
+    {% if imported_user_ids %}
+    <section class="import-card">
+        <h3>3. Accounts Created — Access Still Off</h3>
+
+        <div class="batch-ready">
+            {{ imported_user_ids|length }} newly imported {{ import_title|lower }}
+            account{{ imported_user_ids|length|pluralize }} have been created.
+            Login access is currently disabled.
+        </div>
+
+        <div class="button-row">
+            {% if import_role == "EMPLOYEE" %}
+                <form method="post" action="{% url 'admin_web:provide_employee_excel_access' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="access-btn">
+                        Provide Access to All Employees
+                    </button>
+                </form>
+            {% else %}
+                <form method="post" action="{% url 'admin_web:provide_driver_excel_access' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="access-btn">
+                        Provide Access to All Drivers
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+
+        <p style="margin-bottom:0;">
+            This action only activates the accounts created in this import batch.
+            Existing deactivated users are not affected.
+        </p>
+    </section>
+    {% endif %}
+
+
+    {% if not has_preview and not imported_user_ids %}
+    <section class="preview-card">
+        <div class="empty-preview">
+            Upload an Excel file above to start validation and preview.
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -269,10 +269,10 @@
                     <span>Reports</span>
                 </a>
                 <div class="admin-profile">
-                <div class="avatar">R</div>
+                <div class="avatar">{{ request.user.display_name|default:request.user.username|slice:":1"|upper }}</div>
                 <div>
-                    <strong>{{ request.user.username }}</strong>
-                    <small>Administrator</small>
+                    <strong>{{ request.user.display_name }}</strong>
+                    <small>Administrator · Login ID: {{ request.user.username }}</small>
                 </div>
             </div>
 

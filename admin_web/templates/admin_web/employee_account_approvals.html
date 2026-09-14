@@ -501,7 +501,7 @@ Review new employee registrations before allowing login
 
                         <div>
                             <h4>
-                                {{ employee.username }}
+                                {{ employee.display_name }}
                             </h4>
 
                             <p>
@@ -524,6 +524,13 @@ Review new employee registrations before allowing login
                         <span>Employee ID</span>
                         <strong>
                             {{ employee.employee_id|default:"--" }}
+                        </strong>
+                    </div>
+
+                    <div class="detail-box">
+                        <span>Login ID</span>
+                        <strong>
+                            {{ employee.display_name }}
                         </strong>
                     </div>
 
@@ -593,7 +600,7 @@ Review new employee registrations before allowing login
                         <button
                             type="submit"
                             class="approve-btn"
-                            onclick="return confirm('Approve {{ employee.username }} account?');"
+                            onclick="return confirm('Approve {{ employee.display_name|escapejs }} account?');"
                         >
                             ✅ Approve Account
                         </button>
@@ -616,7 +623,7 @@ Review new employee registrations before allowing login
                         <button
                             type="submit"
                             class="reject-btn"
-                            onclick="return confirm('Reject {{ employee.username }} account?');"
+                            onclick="return confirm('Reject {{ employee.display_name|escapejs }} account?');"
                         >
                             ❌ Reject
                         </button>

@@ -461,7 +461,7 @@ class DriverLocationViewSet(viewsets.ModelViewSet):
                 if not recent_alert_exists:
                     self._notify_admins(
                         (
-                            f"Driver {user.username} is "
+                            f"Driver {user.display_name} is "
                             f"overspeeding at "
                             f"{round(speed_kmph, 1)} km/h."
                         ),

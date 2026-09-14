@@ -1,0 +1,606 @@
+{% extends "admin_web/base.html" %}
+
+{% block content %}
+<style>
+    .ai-route-page {
+        padding: 24px;
+        background: #F8F5ED;
+        min-height: calc(100vh - 80px);
+        color: #24211F;
+    }
+
+    .ai-route-hero {
+        background: linear-gradient(135deg, #5F4636, #7E5C43 55%, #9B7457);
+        color: #FFFDF9;
+        border-radius: 22px;
+        padding: 26px 28px;
+        box-shadow: 0 16px 40px rgba(95, 70, 54, 0.18);
+        margin-bottom: 22px;
+    }
+
+    .ai-route-hero h1 {
+        margin: 0 0 7px;
+        font-size: 30px;
+        font-weight: 800;
+    }
+
+    .ai-route-hero p {
+        margin: 0;
+        opacity: .92;
+        max-width: 900px;
+        line-height: 1.6;
+    }
+
+    .ai-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(310px, 0.42fr);
+        gap: 20px;
+        align-items: start;
+    }
+
+    .lux-card {
+        background: #FFFDF9;
+        border: 1px solid #DED6CC;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(95, 70, 54, .08);
+        overflow: hidden;
+    }
+
+    .lux-card-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #E8E0D7;
+        background: #F3EEE6;
+    }
+
+    .lux-card-header h2 {
+        margin: 0;
+        font-size: 19px;
+        color: #5F4636;
+    }
+
+    .lux-card-body { padding: 20px; }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 15px;
+    }
+
+    .field label {
+        display: block;
+        font-weight: 700;
+        font-size: 13px;
+        color: #5F4636;
+        margin-bottom: 7px;
+    }
+
+    .field select,
+    .field input[type="date"],
+    .field input[type="text"] {
+        width: 100%;
+        border: 1px solid #D9CEC2;
+        border-radius: 12px;
+        padding: 11px 12px;
+        background: #fff;
+        color: #24211F;
+        outline: none;
+    }
+
+    .field select:focus,
+    .field input:focus {
+        border-color: #9B7457;
+        box-shadow: 0 0 0 3px rgba(155, 116, 87, .12);
+    }
+
+    .mode-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin: 12px 0 18px;
+    }
+
+    .mode-option {
+        border: 1px solid #DED6CC;
+        border-radius: 14px;
+        padding: 14px;
+        background: #FFFDF9;
+    }
+
+    .mode-option strong { color: #5F4636; }
+    .mode-option small { color: #746B64; display: block; margin-top: 5px; line-height: 1.45; }
+
+    .employee-panel {
+        border: 1px solid #E3DAD0;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-top: 16px;
+    }
+
+    .employee-toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        background: #F8F5ED;
+        border-bottom: 1px solid #E3DAD0;
+    }
+
+    .employee-list {
+        max-height: 330px;
+        overflow: auto;
+    }
+
+    .employee-row {
+        display: grid;
+        grid-template-columns: 34px minmax(160px, 1fr) minmax(170px, 1.4fr) 120px;
+        gap: 12px;
+        align-items: center;
+        padding: 11px 14px;
+        border-bottom: 1px solid #F0EAE3;
+        font-size: 13px;
+    }
+
+    .employee-row:last-child { border-bottom: 0; }
+    .employee-row.missing { opacity: .55; background: #FBF5F3; }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .badge.ok { background: #EAF6ED; color: #256D3C; }
+    .badge.warn { background: #FFF3D9; color: #9A6500; }
+    .badge.bad { background: #FDE9E7; color: #A9342B; }
+    .badge.info { background: #EEE8E2; color: #5F4636; }
+
+    .btn {
+        border: 0;
+        border-radius: 12px;
+        padding: 11px 16px;
+        font-weight: 800;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-primary { background: #5F4636; color: #fff; }
+    .btn-primary:hover { background: #7E5C43; }
+    .btn-light { background: #F3EEE6; color: #5F4636; border: 1px solid #DED6CC; }
+    .btn-success { background: #2F6B46; color: #fff; }
+    .btn-full { width: 100%; }
+
+    .mini-note {
+        background: #F8F5ED;
+        border: 1px solid #E3DAD0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        color: #746B64;
+        line-height: 1.5;
+        font-size: 13px;
+        margin-top: 13px;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .summary-box {
+        border: 1px solid #E3DAD0;
+        background: #F8F5ED;
+        border-radius: 13px;
+        padding: 13px;
+    }
+
+    .summary-box span { display: block; color: #746B64; font-size: 11px; text-transform: uppercase; font-weight: 800; }
+    .summary-box strong { display: block; margin-top: 6px; color: #5F4636; font-size: 18px; }
+
+    .result-section { margin-top: 20px; }
+
+    .route-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .route-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        min-height: 80px;
+    }
+
+    .route-stop {
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid #E3DAD0;
+        border-radius: 12px;
+        padding: 11px 12px;
+        margin-bottom: 9px;
+        background: #FFFDF9;
+    }
+
+    .route-stop[draggable="true"] { cursor: grab; }
+    .route-stop.dragging { opacity: .5; }
+    .stop-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #5F4636;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 12px;
+    }
+
+    .route-stop small { display: block; color: #746B64; margin-top: 3px; }
+    .drag-handle { color: #9B7457; font-size: 18px; }
+
+    .locked-note {
+        color: #746B64;
+        font-size: 12px;
+        margin: 0 0 12px;
+    }
+
+    .warning-box {
+        border: 1px solid #E9C879;
+        background: #FFF8E8;
+        color: #76520A;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 12px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .save-panel {
+        margin-top: 18px;
+        border-top: 1px solid #E6DED4;
+        padding-top: 18px;
+    }
+
+    .confirm-box {
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        margin: 13px 0;
+        font-size: 13px;
+        color: #5F4636;
+    }
+
+    @media (max-width: 980px) {
+        .ai-grid, .route-columns { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 650px) {
+        .ai-route-page { padding: 14px; }
+        .form-row, .mode-grid, .summary-grid { grid-template-columns: 1fr; }
+        .employee-row { grid-template-columns: 30px 1fr; }
+        .employee-row .pickup-cell, .employee-row .status-cell { grid-column: 2; }
+    }
+</style>
+
+<div class="ai-route-page">
+    <div class="ai-route-hero">
+        <h1>AI Route Search</h1>
+        <p>
+            Build a capacity-aware pickup route from the driver's base address to employee pickup points and then the office.
+            Driver/vehicle conflicts are hard-blocked. Employee route conflicts are shown as warnings and require Admin confirmation before reassignment.
+        </p>
+    </div>
+
+    <div class="ai-grid">
+        <div class="lux-card">
+            <div class="lux-card-header"><h2>Generate Route</h2></div>
+            <div class="lux-card-body">
+                <form method="post" action="{% url 'admin_web:ai_route_search' %}">
+                    {% csrf_token %}
+
+                    <div class="form-row">
+                        <div class="field">
+                            <label>Driver</label>
+                            <select name="driver_id" required>
+                                <option value="">Select driver</option>
+                                {% for driver in drivers %}
+                                    <option value="{{ driver.id }}" {% if driver.hard_conflict or not driver.has_vehicle or not driver.has_address %}disabled{% endif %}>
+                                        {{ driver.name }} · {{ driver.vehicle_number }} · {{ driver.seat_count }} seats
+                                        {% if driver.hard_conflict %} · Already on active route{% endif %}
+                                        {% if not driver.has_vehicle %} · No vehicle{% endif %}
+                                        {% if not driver.has_address %} · No address{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label>Route Date</label>
+                            <input type="date" name="route_date" value="{{ today|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mode-grid">
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="{{ mode_safety }}" checked>
+                            <strong>Shortest Distance + Safety</strong>
+                            <small>Google waypoint optimisation with a safety-aware road preference that avoids highways where Google supports it.</small>
+                        </label>
+
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="{{ mode_leave }}">
+                            <strong>Shortest Distance + Remove Leave Employees</strong>
+                            <small>Employees with a leave record for the selected date are removed before route optimisation.</small>
+                        </label>
+                    </div>
+
+                    <div class="employee-panel">
+                        <div class="employee-toolbar">
+                            <strong>Employees</strong>
+                            <div>
+                                <button type="button" class="btn btn-light" id="selectEligibleBtn">Select Eligible</button>
+                                <button type="button" class="btn btn-light" id="clearEmployeesBtn">Clear</button>
+                            </div>
+                        </div>
+
+                        <div class="employee-list">
+                            {% for employee in employees %}
+                                <div class="employee-row {% if not employee.has_pickup %}missing{% endif %}">
+                                    <div>
+                                        <input
+                                            type="checkbox"
+                                            name="employee_ids"
+                                            value="{{ employee.id }}"
+                                            class="employee-check"
+                                            {% if not employee.has_pickup %}disabled{% endif %}
+                                        >
+                                    </div>
+                                    <div>
+                                        <strong>{{ employee.name }}</strong><br>
+                                        <small>{{ employee.employee_id }} · {{ employee.username }}</small>
+                                    </div>
+                                    <div class="pickup-cell">
+                                        {% if employee.has_pickup %}
+                                            {{ employee.pickup_location }}
+                                        {% else %}
+                                            <span class="badge bad">Pickup missing</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="status-cell">
+                                        {% if employee.soft_conflict %}
+                                            <span class="badge warn">Route conflict</span>
+                                        {% elif employee.has_pickup %}
+                                            <span class="badge ok">Eligible</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div style="padding:16px;color:#746B64;">No active employees found.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mini-note">
+                        Leave all employee checkboxes empty if you want CabMate to automatically consider all eligible employees. If eligible employees exceed vehicle capacity, CabMate prioritises employees nearest to the driver's base before optimising the final stop order.
+                    </div>
+
+                    <div style="margin-top:16px;">
+                        <button class="btn btn-primary btn-full" type="submit">Generate AI Route</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="lux-card">
+            <div class="lux-card-header"><h2>Rules Used</h2></div>
+            <div class="lux-card-body">
+                <div class="summary-grid">
+                    <div class="summary-box"><span>Driver conflict</span><strong>Hard block</strong></div>
+                    <div class="summary-box"><span>Employee conflict</span><strong>Warning</strong></div>
+                    <div class="summary-box"><span>Vehicle capacity</span><strong>Enforced</strong></div>
+                    <div class="summary-box"><span>Drop sequence</span><strong>Reverse</strong></div>
+                </div>
+                <div class="mini-note">
+                    <strong>Start:</strong> Driver Address<br>
+                    <strong>Stops:</strong> Approved employee pickup points<br>
+                    <strong>Destination:</strong> CabMate office<br><br>
+                    Employee residential/profile address is never used as a pickup location.
+                </div>
+                <a class="btn btn-light btn-full" style="margin-top:14px;" href="{% url 'admin_web:routes' %}">Back to Routes</a>
+            </div>
+        </div>
+    </div>
+
+    {% if preview %}
+        <div class="result-section lux-card">
+            <div class="lux-card-header"><h2>AI Route Result · {{ preview.mode_label }}</h2></div>
+            <div class="lux-card-body">
+                <div class="summary-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+                    <div class="summary-box"><span>Driver</span><strong style="font-size:15px;">{{ preview.driver_name }}</strong></div>
+                    <div class="summary-box"><span>Vehicle</span><strong style="font-size:15px;">{{ preview.vehicle_number }}</strong></div>
+                    <div class="summary-box"><span>Employees</span><strong>{{ preview.included_count }}/{{ preview.seat_count }}</strong></div>
+                    <div class="summary-box"><span>Seats left</span><strong>{{ preview.remaining_seats }}</strong></div>
+                    <div class="summary-box"><span>Route distance</span><strong>{% if preview.distance_km %}{{ preview.distance_km }} km{% else %}--{% endif %}</strong></div>
+                    <div class="summary-box"><span>ETA</span><strong>{% if preview.duration_minutes %}{{ preview.duration_minutes }} min{% else %}--{% endif %}</strong></div>
+                    <div class="summary-box"><span>Driver → first stop</span><strong>{% if preview.first_stop_distance_km %}{{ preview.first_stop_distance_km }} km{% else %}--{% endif %}</strong></div>
+                    <div class="summary-box"><span>Employee conflicts</span><strong>{{ preview.soft_conflict_count }}</strong></div>
+                </div>
+
+                <div class="mini-note">
+                    <strong>Driver base:</strong> {{ preview.driver_formatted_address }}<br>
+                    <strong>Date:</strong> {{ preview.route_date }}<br>
+                    {% if preview.google_optimised %}<span class="badge ok" style="margin-top:8px;">Google optimised</span>{% else %}<span class="badge warn" style="margin-top:8px;">Local fallback optimisation</span>{% endif %}
+                </div>
+
+                {% if preview.optimizer_warning %}<div class="warning-box">{{ preview.optimizer_warning }}</div>{% endif %}
+
+                {% if preview.leave_excluded %}
+                    <div class="warning-box">
+                        <strong>Leave employees removed:</strong>
+                        {% for item in preview.leave_excluded %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if preview.capacity_excluded %}
+                    <div class="warning-box">
+                        <strong>Capacity limit:</strong> {{ preview.capacity_excluded|length }} additional eligible employee(s) were not included because the vehicle is full.
+                    </div>
+                {% endif %}
+
+                <div class="route-columns" style="margin-top:20px;">
+                    <div>
+                        <h3 style="color:#5F4636;margin-top:0;">Pickup Order · Drag to Reorder</h3>
+                        <p class="locked-note">Your final dragged pickup order will be saved. DROP updates automatically to the exact reverse.</p>
+                        <ul class="route-list" id="pickupList">
+                            {% for row in preview.employees %}
+                                <li class="route-stop" draggable="true" data-employee-id="{{ row.id }}">
+                                    <span class="stop-number">{{ forloop.counter }}</span>
+                                    <div>
+                                        <strong>{{ row.name }}</strong>
+                                        <small>{{ row.employee_id }} · {{ row.pickup_location }}</small>
+                                        {% if row.soft_conflict %}
+                                            <small style="color:#9A6500;">Already on: {{ row.conflict_routes|join:", " }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <span class="drag-handle">☰</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 style="color:#5F4636;margin-top:0;">Drop Order · Locked Reverse</h3>
+                        <p class="locked-note">Drop cannot be manually reordered. It always mirrors the final pickup sequence in reverse.</p>
+                        <ul class="route-list" id="dropList"></ul>
+                    </div>
+                </div>
+
+                <div class="save-panel">
+                    <form method="post" action="{% url 'admin_web:save_ai_route' %}" id="saveAiRouteForm">
+                        {% csrf_token %}
+                        <div class="field">
+                            <label>Route Name</label>
+                            <input type="text" name="route_name" placeholder="Example: Gurugram Route A" required maxlength="200">
+                        </div>
+
+                        <input type="hidden" name="ordered_employee_ids" id="orderedEmployeeIds">
+
+                        {% if preview.soft_conflict_count %}
+                            <label class="confirm-box">
+                                <input type="checkbox" name="confirm_reassignment" value="1">
+                                <span>
+                                    <strong>Confirm employee reassignment</strong><br>
+                                    I understand that employees showing route conflicts will be removed from their current active saved route and moved to this AI route. Historical trips/runs are not deleted.
+                                </span>
+                            </label>
+                        {% endif %}
+
+                        <button class="btn btn-success btn-full" type="submit">Save as Ready for Use</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    const selectEligibleBtn = document.getElementById('selectEligibleBtn');
+    const clearEmployeesBtn = document.getElementById('clearEmployeesBtn');
+
+    if (selectEligibleBtn) {
+        selectEligibleBtn.addEventListener('click', function () {
+            document.querySelectorAll('.employee-check:not(:disabled)').forEach(cb => cb.checked = true);
+        });
+    }
+
+    if (clearEmployeesBtn) {
+        clearEmployeesBtn.addEventListener('click', function () {
+            document.querySelectorAll('.employee-check').forEach(cb => cb.checked = false);
+        });
+    }
+
+    const pickupList = document.getElementById('pickupList');
+    const dropList = document.getElementById('dropList');
+    const orderedInput = document.getElementById('orderedEmployeeIds');
+
+    if (!pickupList || !dropList || !orderedInput) return;
+
+    function pickupItems() {
+        return Array.from(pickupList.querySelectorAll('.route-stop'));
+    }
+
+    function updateOrders() {
+        const items = pickupItems();
+        const ids = [];
+
+        items.forEach((item, index) => {
+            ids.push(item.dataset.employeeId);
+            const number = item.querySelector('.stop-number');
+            if (number) number.textContent = index + 1;
+        });
+
+        orderedInput.value = ids.join(',');
+        dropList.innerHTML = '';
+
+        [...items].reverse().forEach((item, index) => {
+            const clone = item.cloneNode(true);
+            clone.removeAttribute('draggable');
+            clone.classList.remove('dragging');
+            const number = clone.querySelector('.stop-number');
+            if (number) number.textContent = index + 1;
+            const handle = clone.querySelector('.drag-handle');
+            if (handle) handle.textContent = '🔒';
+            dropList.appendChild(clone);
+        });
+    }
+
+    let dragging = null;
+
+    pickupList.querySelectorAll('.route-stop').forEach(item => {
+        item.addEventListener('dragstart', function () {
+            dragging = item;
+            item.classList.add('dragging');
+        });
+
+        item.addEventListener('dragend', function () {
+            item.classList.remove('dragging');
+            dragging = null;
+            updateOrders();
+        });
+    });
+
+    pickupList.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        if (!dragging) return;
+
+        const candidates = [...pickupList.querySelectorAll('.route-stop:not(.dragging)')];
+        const afterElement = candidates.find(candidate => {
+            const box = candidate.getBoundingClientRect();
+            return event.clientY < box.top + box.height / 2;
+        });
+
+        if (afterElement) {
+            pickupList.insertBefore(dragging, afterElement);
+        } else {
+            pickupList.appendChild(dragging);
+        }
+    });
+
+    updateOrders();
+})();
+</script>
+{% endblock %}

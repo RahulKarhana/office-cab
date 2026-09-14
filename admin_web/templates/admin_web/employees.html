@@ -173,6 +173,29 @@
         cursor: pointer;
     }
 
+    .import-excel-btn {
+        height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 18px;
+        border-radius: 16px;
+        background: #9b7457;
+        color: #fffdf9;
+        text-decoration: none;
+        font-weight: 900;
+        white-space: nowrap;
+        box-shadow: 0 10px 22px rgba(95,70,54,.14);
+        transition: 0.2s ease;
+    }
+
+    .import-excel-btn:hover {
+        background: #7e5c43;
+        transform: translateY(-1px);
+        color: #fffdf9;
+    }
+
     .employee-table-wrap {
         overflow-x: auto;
         border-radius: 22px;
@@ -404,16 +427,22 @@
                 </p>
             </div>
 
-            <form method="get" class="employee-search">
+            <div class="employee-search">
+                <a href="{% url 'admin_web:employee_excel_import' %}" class="import-excel-btn">
+                    Import Excel
+                </a>
+
+                <form method="get" class="employee-search">
                 <input type="hidden" name="filter" value="{{ filter_type }}">
                 <input
                     type="text"
                     name="q"
                     value="{{ query }}"
-                    placeholder="Search username, phone, address or pickup"
+                    placeholder="Search full name, username, employee ID, phone, address or pickup"
                 >
                 <button type="submit" class="search-btn">Search</button>
-            </form>
+                </form>
+            </div>
         </div>
 
         <div class="employee-table-wrap">
@@ -422,6 +451,7 @@
                     <tr>
                         <th>Employee</th>
                         <th>Phone</th>
+                        <th>Address</th>
                         <th>Pickup Location</th>
                         <th>Today Route</th>
                         <th>Driver</th>
@@ -444,13 +474,22 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <strong>{{ row.employee.username }}</strong>
-                                    <small>ID: {{ row.employee.id }}</small>
+                                    <strong>{{ row.employee.display_name }}</strong>
+                                    <small>
+                                        {% if row.employee.employee_id %}
+                                            Employee ID: {{ row.employee.employee_id }}
+                                        {% else %}
+                                            User ID: {{ row.employee.id }}
+                                        {% endif %}
+                                        · Login ID: {{ row.employee.username }}
+                                    </small>
                                 </div>
                             </div>
                         </td>
 
                         <td>{{ row.employee.phone_number|default:"--" }}</td>
+
+                        <td>{{ row.employee.address|default:"--" }}</td>
 
                         <td>{{ row.employee.pickup_location|default:"No pickup saved" }}</td>
 
@@ -493,7 +532,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="empty-row">No employees found.</td>
+                        <td colspan="10" class="empty-row">No employees found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

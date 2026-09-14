@@ -68,7 +68,7 @@ def analytics_dashboard(request):
 
         punctual_drivers.append({
             "driver_id": driver.id,
-            "driver_name": driver.username,
+            "driver_name": driver.display_name,
             "total_runs": total_runs,
             "on_time_runs": on_time_runs,
             "punctuality_score": punctuality_score,
@@ -101,7 +101,7 @@ def analytics_dashboard(request):
 
         delayed_routes.append({
             "route_name": run.route_template.name if run.route_template else "Unknown",
-            "driver_name": run.driver.username if run.driver else "--",
+            "driver_name": run.driver.display_name if run.driver else "--",
             "trip_type": run.trip_type,
             "duration_minutes": round(duration_minutes, 2),
         })

@@ -24,6 +24,25 @@ class User(AbstractUser):
     # BASIC DETAILS
     # ============================================================
 
+    # Employee / Driver full name.
+    #
+    # Example:
+    # Rahul Kumar
+    # Ravi Sharma
+    #
+    # We keep Django's existing username field because the current
+    # app already depends on it.
+    #
+    # Later:
+    # username = phone number
+    # full_name = person's actual name
+    #
+    full_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
     phone_number = models.CharField(
         max_length=15,
         blank=True,
@@ -31,6 +50,16 @@ class User(AbstractUser):
         unique=True,
     )
 
+    # IMPORTANT:
+    #
+    # EMPLOYEE:
+    # This is only the employee's residential/profile address.
+    # It is NOT the employee pickup location.
+    #
+    # DRIVER:
+    # This address can later be used by AI Route Search as the
+    # driver's starting/base address.
+    #
     address = models.TextField(
         blank=True,
         null=True,
@@ -38,6 +67,14 @@ class User(AbstractUser):
 
     # ============================================================
     # EMPLOYEE PICKUP LOCATION
+    # ============================================================
+    #
+    # These fields are completely separate from address.
+    #
+    # Employee address != Pickup Location
+    #
+    # Pickup location will continue to be configured through the
+    # existing employee pickup-location system.
     # ============================================================
 
     pickup_location = models.CharField(
@@ -165,11 +202,38 @@ class User(AbstractUser):
     )
 
     # ============================================================
+    # DISPLAY NAME
+    # ============================================================
+    #
+    # This gives us a safe transition from username -> full name.
+    #
+    # New users:
+    #   Full Name: Rahul Kumar
+    #   Username: 9876543210
+    #
+    # Old users:
+    #   Full Name: blank
+    #   Username: emp4
+    #
+    # Old accounts therefore continue displaying emp4 until
+    # their full_name is updated.
+    # ============================================================
+
+    @property
+    def display_name(self):
+        name = (self.full_name or "").strip()
+
+        if name:
+            return name
+
+        return self.username
+
+    # ============================================================
     # DISPLAY
     # ============================================================
 
     def __str__(self):
-        return self.username
+        return self.display_name
 
 
 # ================================================================
@@ -280,6 +344,6 @@ class PickupLocationChangeRequest(models.Model):
 
     def __str__(self):
         return (
-            f"{self.employee.username} - "
+            f"{self.employee.display_name} - "
             f"{self.status}"
         )

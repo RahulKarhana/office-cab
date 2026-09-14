@@ -8,20 +8,63 @@ User = get_user_model()
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     # Show these columns in user list
-    list_display = ("username", "email", "role", "is_staff", "is_active", "is_female")
-    list_filter = ("role", "is_staff", "is_active")
+    list_display = (
+        "username",
+        "full_name",
+        "email",
+        "phone_number",
+        "role",
+        "is_staff",
+        "is_active",
+        "is_female",
+    )
 
-    # Add "role" and "phone_number" in user edit page
+    list_filter = (
+        "role",
+        "is_staff",
+        "is_active",
+    )
+
+    # Keep Django username for Admin/login compatibility.
+    # Full Name is the human-facing Employee/Driver name.
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Extra Info", {"fields": ("role", "phone_number", "is_female")}),
+        (
+            "Extra Info",
+            {
+                "fields": (
+                    "full_name",
+                    "role",
+                    "phone_number",
+                    "is_female",
+                )
+            },
+        ),
     )
 
-    # Add "role" and "phone_number" in add-user page
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ("Extra Info", {"fields": ("role", "phone_number")}),
+        (
+            "Extra Info",
+            {
+                "fields": (
+                    "full_name",
+                    "role",
+                    "phone_number",
+                )
+            },
+        ),
     )
 
-    search_fields = ("username", "email", "phone_number")
-    ordering = ("username",)
+    search_fields = (
+        "username",
+        "full_name",
+        "email",
+        "phone_number",
+    )
+
+    ordering = (
+        "full_name",
+        "username",
+    )
+
 
 # Register your models here.

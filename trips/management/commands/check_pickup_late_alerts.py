@@ -48,7 +48,7 @@ class Command(BaseCommand):
             )
 
             driver_name = (
-                route_run.driver.username
+                route_run.driver.display_name
                 if route_run.driver
                 else "Driver"
             )
