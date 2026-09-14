@@ -1358,6 +1358,7 @@
     {
       "id": {{ driver.id }},
       "username": "{{ driver.display_name|escapejs }}",
+      "display_name": "{{ driver.display_name|escapejs }}",
       "is_selectable": {% if driver.is_selectable == False %}false{% else %}true{% endif %}
     }{% if not forloop.last %},{% endif %}
     {% endfor %}
@@ -1397,9 +1398,9 @@
     </div>
 
     <div class="route-main-ai-row">
-        <button type="button" class="route-main-ai-btn" onclick="openAIRouteModal(event)">
-            ✨ Check AI Route
-        </button>
+        <a href="{% url 'admin_web:ai_route_search' %}" class="route-main-ai-btn" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">
+            ✨ AI Route Search
+        </a>
     </div>
 
     {% if messages %}
@@ -1866,64 +1867,6 @@
 </div>
 
 
-<!-- AI ROUTE MODAL -->
-<div class="route-modal-overlay" id="aiRouteModal">
-    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="aiRouteTitle">
-        <div class="route-modal-head">
-            <h3 id="aiRouteTitle">AI Route Assistant</h3>
-            <button type="button" class="route-modal-close" onclick="closeAIRouteModal()" aria-label="Close AI Route Modal">✕</button>
-        </div>
-
-        <div class="route-modal-hero">
-            <small>Future Smart Recommendation</small>
-            <h4 id="aiRouteName">Smart Route Recommendation</h4>
-        </div>
-
-        <div class="route-coming-soon">✨ AI recommendation engine — Coming Soon</div>
-
-        <div class="route-info-card">
-            <div class="route-info-icon">AI</div>
-            <p>
-                This screen is prepared for the future AI route engine. It will recommend the
-                best driver, cab and employee order before the admin applies any change.
-            </p>
-        </div>
-
-        <div class="route-feature-grid">
-            <div class="route-feature-card">
-                <strong>📍 Distance Optimization</strong>
-                <span>Suggest driver and employee order using route and pickup distance.</span>
-            </div>
-            <div class="route-feature-card">
-                <strong>🚖 Cab & Seat Match</strong>
-                <span>Select a suitable cab according to employee count and available seats.</span>
-            </div>
-            <div class="route-feature-card">
-                <strong>🛡️ Safety Check</strong>
-                <span>Apply employee safety rules before finalizing pickup and drop sequence.</span>
-            </div>
-            <div class="route-feature-card">
-                <strong>⏱️ Availability Check</strong>
-                <span>Avoid drivers or cabs already busy at the requested route time.</span>
-            </div>
-        </div>
-
-        <h4 class="route-section-title" style="margin-top:16px;">Planned AI Safety Rules</h4>
-        <ul class="route-ai-rules">
-            <li>Female employees should not be the first pickup when a safer route order is available.</li>
-            <li>Female employees should not be the last drop when a safer route order is available.</li>
-            <li>Cab capacity must cover the full employee count.</li>
-            <li>Prefer shorter practical route distance while keeping safety rules higher priority.</li>
-            <li>Do not recommend a driver or cab that is already occupied at the same time.</li>
-        </ul>
-
-        <div class="route-modal-actions">
-            <button type="button" class="route-cancel-btn" onclick="closeAIRouteModal()">Close</button>
-            <button type="button" class="route-save-btn route-disabled-action" disabled>Apply AI Route — Coming Soon</button>
-        </div>
-    </div>
-</div>
-
 <script>
 let ROUTE_FORM_DATA = {
     employees: [],
@@ -1932,23 +1875,6 @@ let ROUTE_FORM_DATA = {
 };
 
 let ROUTE_HOLIDAY_DATES = [];
-
-let selectedAIRouteId = null;
-
-function openAIRouteModal(event) {
-    if (event) event.stopPropagation();
-    selectedAIRouteId = "GLOBAL";
-    const title = document.getElementById("aiRouteName");
-    if (title) title.textContent = "Smart Route Recommendation";
-    const modal = document.getElementById("aiRouteModal");
-    if (modal) modal.classList.add("show");
-}
-
-function closeAIRouteModal() {
-    selectedAIRouteId = null;
-    const modal = document.getElementById("aiRouteModal");
-    if (modal) modal.classList.remove("show");
-}
 
 try {
     const routeFormDataEl = document.getElementById("routeFormData");
@@ -2821,7 +2747,6 @@ document.addEventListener("DOMContentLoaded", function() {
         bindOverlayClose("createRouteModal", closeCreateRouteModal);
         bindOverlayClose("routeActionModal", closeActionModal);
         bindOverlayClose("repeatAllModal", closeRepeatAllModal);
-        bindOverlayClose("aiRouteModal", closeAIRouteModal);
     } catch (error) {
         console.error("Routes page init error:", error);
     }
