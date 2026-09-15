@@ -272,7 +272,7 @@ Bulk validate, create and activate {{ import_title|lower }} accounts
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        min-width: 1180px;
+        min-width: 1280px;
     }
 
     .preview-table th {
@@ -454,12 +454,23 @@ Bulk validate, create and activate {{ import_title|lower }} accounts
                 {% endif %}
 
                 <li>Phone Number</li>
-                <li>Username</li>
                 <li>Password</li>
                 <li>Email</li>
                 <li>Gender</li>
                 <li>Address</li>
+
+                {% if import_role == "DRIVER" %}
+                    <li>Vehicle Number</li>
+                    <li>Vehicle Model</li>
+                    <li>Seats</li>
+                {% endif %}
             </ul>
+
+            <div class="note">
+                <strong>Login ID:</strong>
+                A separate Username column is not required. CabMate automatically
+                uses the Phone Number as the account Username/Login ID.
+            </div>
 
             <div class="note">
                 <strong>Dummy Password:</strong>
@@ -525,12 +536,18 @@ Bulk validate, create and activate {{ import_title|lower }} accounts
                             <th>Employee ID</th>
                         {% endif %}
 
-                        <th>Phone</th>
-                        <th>Username</th>
+                        <th>Phone / Login ID</th>
                         <th>Password</th>
                         <th>Email</th>
                         <th>Gender</th>
                         <th>Address</th>
+
+                        {% if import_role == "DRIVER" %}
+                            <th>Vehicle Number</th>
+                            <th>Vehicle Model</th>
+                            <th>Seats</th>
+                        {% endif %}
+
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -546,11 +563,16 @@ Bulk validate, create and activate {{ import_title|lower }} accounts
                         {% endif %}
 
                         <td>{{ row.phone_number|default:"--" }}</td>
-                        <td>{{ row.username|default:"--" }}</td>
                         <td>{{ row.password|default:"--" }}</td>
                         <td>{{ row.email|default:"--" }}</td>
                         <td>{{ row.gender|default:"--" }}</td>
                         <td>{{ row.address|default:"--" }}</td>
+
+                        {% if import_role == "DRIVER" %}
+                            <td>{{ row.vehicle_number|default:"--" }}</td>
+                            <td>{{ row.vehicle_model|default:"--" }}</td>
+                            <td>{{ row.seat_count|default:"--" }}</td>
+                        {% endif %}
 
                         <td>
                             {% if row.is_valid %}
