@@ -403,7 +403,11 @@ Bulk validate, create and activate {{ import_title|lower }} accounts
                 complete sheet before any account is created.
             </p>
 
-            <form method="post" enctype="multipart/form-data">
+            {% if import_role == "EMPLOYEE" %}
+            <form method="post" action="{% url 'admin_web:employee_excel_import' %}" enctype="multipart/form-data">
+            {% else %}
+            <form method="post" action="{% url 'admin_web:driver_excel_import' %}" enctype="multipart/form-data">
+            {% endif %}
                 {% csrf_token %}
 
                 <div class="upload-zone">
@@ -481,6 +485,20 @@ Bulk validate, create and activate {{ import_title|lower }} accounts
         </div>
 
     </section>
+
+
+    {% if validation_errors and not has_preview %}
+    <section class="preview-card">
+        <div class="error-panel" style="margin-top:0;">
+            <h4>Excel validation could not start</h4>
+            <ul>
+                {% for error in validation_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+    {% endif %}
 
 
     {% if has_preview %}

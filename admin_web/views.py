@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta, time
 from django.conf import settings
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -2401,7 +2400,6 @@ def _excel_import_config(role):
                 "fullname": "Full Name",
                 "employeeid": "Employee ID",
                 "phonenumber": "Phone Number",
-                "username": "Username",
                 "password": "Password",
             },
         }
@@ -2414,8 +2412,10 @@ def _excel_import_config(role):
             "required": {
                 "fullname": "Full Name",
                 "phonenumber": "Phone Number",
-                "username": "Username",
                 "password": "Password",
+                "vehiclenumber": "Vehicle Number",
+                "vehiclemodel": "Vehicle Model",
+                "seats": "Seats",
             },
         }
 
@@ -2475,6 +2475,7 @@ def _read_user_import_workbook(uploaded_file, role):
     workbook_usernames = set()
     workbook_phones = set()
     workbook_employee_ids = set()
+    workbook_vehicle_numbers = set()
 
     for excel_row_number, row in enumerate(rows_iter, start=2):
         if not any(_excel_text(value) for value in row):
@@ -2487,11 +2488,20 @@ def _read_user_import_workbook(uploaded_file, role):
         phone_number = _excel_text(
             cell(row, "phonenumber", "phone", "mobile")
         )
-        username = _excel_text(
-            cell(row, "username", "loginid")
-        )
+        # Phone Number is the permanent Login ID / Django username.
+        username = phone_number
         raw_password = _excel_text(
             cell(row, "password")
+        )
+
+        vehicle_number = _excel_text(
+            cell(row, "vehiclenumber", "vehicle", "cabnumber")
+        ).upper()
+        vehicle_model = _excel_text(
+            cell(row, "vehiclemodel", "model", "cabmodel")
+        )
+        seats_text = _excel_text(
+            cell(row, "seats", "seatcount", "capacity")
         )
         email = _excel_text(
             cell(row, "email")
@@ -2515,11 +2525,28 @@ def _read_user_import_workbook(uploaded_file, role):
                 "Phone Number cannot exceed 15 characters."
             )
 
-        if not username:
-            row_errors.append("Username is required.")
-
         if not raw_password:
             row_errors.append("Password is required.")
+
+        seat_count = None
+        if config["role"] == User.Role.DRIVER:
+            if not vehicle_number:
+                row_errors.append("Vehicle Number is required.")
+
+            if not vehicle_model:
+                row_errors.append("Vehicle Model is required.")
+
+            if not seats_text:
+                row_errors.append("Seats is required.")
+            else:
+                try:
+                    seat_count = int(float(seats_text))
+                    if seat_count <= 0:
+                        raise ValueError
+                except (TypeError, ValueError):
+                    row_errors.append(
+                        "Seats must be a positive whole number."
+                    )
 
         if email and "@" not in email:
             row_errors.append("Email format looks invalid.")
@@ -2565,6 +2592,14 @@ def _read_user_import_workbook(uploaded_file, role):
                 )
             workbook_phones.add(phone_key)
 
+        if config["role"] == User.Role.DRIVER and vehicle_number:
+            vehicle_key = vehicle_number.lower()
+            if vehicle_key in workbook_vehicle_numbers:
+                row_errors.append(
+                    "Duplicate Vehicle Number inside this Excel file."
+                )
+            workbook_vehicle_numbers.add(vehicle_key)
+
         if (
             config["role"] == User.Role.EMPLOYEE
             and employee_id_key
@@ -2591,6 +2626,15 @@ def _read_user_import_workbook(uploaded_file, role):
             ).exists()
         ):
             row_errors.append("Phone Number already exists.")
+
+        if (
+            config["role"] == User.Role.DRIVER
+            and vehicle_number
+            and Vehicle.objects.filter(
+                vehicle_number__iexact=vehicle_number
+            ).exists()
+        ):
+            row_errors.append("Vehicle Number already exists.")
 
         if (
             config["role"] == User.Role.EMPLOYEE
@@ -2624,6 +2668,21 @@ def _read_user_import_workbook(uploaded_file, role):
             "email": email,
             "gender": gender,
             "address": address,
+            "vehicle_number": (
+                vehicle_number
+                if config["role"] == User.Role.DRIVER
+                else ""
+            ),
+            "vehicle_model": (
+                vehicle_model
+                if config["role"] == User.Role.DRIVER
+                else ""
+            ),
+            "seat_count": (
+                seat_count
+                if config["role"] == User.Role.DRIVER
+                else None
+            ),
             "errors": row_errors,
             "is_valid": not row_errors,
         }
@@ -2861,6 +2920,16 @@ def _create_excel_import_accounts(request, role):
                     )
 
                 if (
+                    config["role"] == User.Role.DRIVER
+                    and Vehicle.objects.filter(
+                        vehicle_number__iexact=row["vehicle_number"]
+                    ).exists()
+                ):
+                    raise ValueError(
+                        f'Vehicle Number "{row["vehicle_number"]}" already exists.'
+                    )
+
+                if (
                     config["role"] == User.Role.EMPLOYEE
                     and employee_id
                     and User.objects.filter(
@@ -2917,6 +2986,14 @@ def _create_excel_import_accounts(request, role):
                     exclude=["password"]
                 )
                 user.save()
+
+                if config["role"] == User.Role.DRIVER:
+                    Vehicle.objects.create(
+                        driver=user,
+                        vehicle_number=row["vehicle_number"],
+                        vehicle_model=row["vehicle_model"],
+                        seat_count=row["seat_count"],
+                    )
 
                 created_ids.append(user.id)
 
@@ -10658,3 +10735,4 @@ def assign_employee_to_route(request, employee_id, route_id):
     )
 
     return redirect("admin_web:employee_route_search", employee_id=employee.id)
+
