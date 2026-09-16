@@ -363,35 +363,124 @@
     @media(max-width:1100px){.fleet-summary-grid{grid-template-columns:repeat(3,1fr)}.fleet-metrics{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:650px){.fleet-summary-grid,.fleet-metrics,.explain-list{grid-template-columns:1fr}.fleet-save-bar,.fleet-banner{flex-direction:column;align-items:stretch}}
 
-
-    /* ===== 2026 CABMATE AI ROUTE PLANNING — MOCKUP MATCH ===== */
-    .ai-route-page{padding:16px 22px 28px;background:#F7F4EE;color:#25211F;}
-    .ai-route-hero{background:#FFFDF9;color:#24211F;border:1px solid #E5DED4;border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(64,45,31,.06);margin-bottom:14px;}
-    .ai-route-hero h1{font-size:25px;color:#201D1A;margin-bottom:4px}.ai-route-hero p{color:#756B63;font-size:13px;line-height:1.45;}
-    .ai-route-switch-btn{background:#FFFDF9!important;color:#5F4636!important;border:1px solid #DCD3C9!important;box-shadow:0 3px 10px rgba(36,33,31,.06)!important;}
-    .lux-card{border-radius:12px;border-color:#E3DDD5;box-shadow:0 3px 12px rgba(74,54,39,.05);}
-    .lux-card-header{background:#FFFDF9;padding:15px 17px}.lux-card-header h2{font-size:17px;color:#24211F}.lux-card-body{padding:16px}
-    .btn{border-radius:8px;padding:10px 14px}.btn-primary{background:#9B6847}.btn-primary:hover{background:#81563B}.btn-success{background:#159447}.btn-light{background:#FFFDF9;border-color:#DDD5CC;color:#4D4037}
-    .mode-grid{margin:0 0 14px}.mode-option{border-radius:9px;padding:12px;background:#fff}.mode-option:has(input:checked){border-color:#A97755;box-shadow:inset 0 0 0 1px #A97755;background:#FBF7F1}
-    .field select,.field input[type="date"],.field input[type="text"]{border-radius:8px;padding:10px 11px}
-    .mini-note{border-radius:8px;background:#FFF8EE;border-color:#E9DCCB;color:#695B50}
-    .fleet-summary-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.summary-box{border-radius:9px;background:#FFFDF9;padding:11px}.summary-box strong{font-size:17px;color:#24211F}
-    .fleet-banner{border-radius:10px;background:#FFFDF9;padding:13px 15px}.fleet-banner h3{color:#24211F}
-    .fleet-route-card{border-radius:12px;box-shadow:0 3px 13px rgba(55,39,27,.055)}
-    .fleet-route-head{background:#FFFDF9;padding:14px 16px}.fleet-route-head h3{color:#172035;font-size:18px}.fleet-route-body{padding:15px}
-    .fleet-metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.fleet-metric{background:#FFFDF9;border-radius:8px;padding:10px 12px}.fleet-metric strong{color:#24211F}
-    .route-flow{background:#FFFDF9;border-style:solid;border-radius:10px;padding:14px 12px;gap:8px}.route-flow-node{background:#F6F0E9;border:1px solid #E6DDD4;border-radius:999px;padding:8px 11px}.route-flow-arrow{color:#8B654B}.route-flow-arrow small{background:#fff}
-    .route-stop{border-radius:8px;padding:9px 10px;margin-bottom:7px;background:#fff}.stop-number{background:#F1ECE6;color:#59483D;width:25px;height:25px}.drag-handle{color:#59483D}
-    .unsaved-pill{background:#FFF3D9;color:#8D620B}.badge.ok{background:#E7F6EB;color:#13813B}.badge.warn{background:#FFF3D9;color:#8A610D}
-    .warning-box{border-radius:8px}.fleet-save-bar{border-radius:11px;bottom:10px;padding:12px 14px}
-    .mockup-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:0 0 12px;background:#FFFDF9;border:1px solid #E2DAD1;border-radius:10px;overflow:hidden}.mockup-mode-tab{padding:14px 18px;text-decoration:none;color:#19243A;font-weight:800;text-align:center;background:#FFFDF9}.mockup-mode-tab small{display:block;font-weight:500;color:#756B63;margin-top:2px}.mockup-mode-tab.active{background:linear-gradient(135deg,#74482E,#A36E4A);color:#fff}.mockup-mode-tab.active small{color:#F8EDE4}
-    .mockup-plan-bar{display:grid;grid-template-columns:1fr 1.1fr 1fr auto;gap:12px;align-items:end;background:#FFFDF9;border:1px solid #E3DDD5;border-radius:10px;padding:14px;margin-bottom:14px}.mockup-plan-bar .btn{height:41px;min-width:205px}
-    .mockup-two-col{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start}.mockup-side{position:sticky;top:12px}.mockup-side-card{background:#FFFDF9;border:1px solid #E3DDD5;border-radius:10px;padding:14px;margin-bottom:12px}.mockup-side-card h3{margin:0 0 10px;color:#24211F;font-size:16px}.mockup-check{display:flex;gap:8px;margin:9px 0;font-size:12px;line-height:1.4;color:#5F574F}.mockup-check b{color:#139144}.mockup-fixes{border-color:#22A657}.mockup-fixes h3{color:#16843E}.mockup-summary-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #EEE8E2;font-size:12px}.mockup-summary-row:last-child{border:0}.mockup-summary-row strong{color:#1D2738;text-align:right}
-    .all-route-name{border-radius:7px}.create-all-options{margin:0}
-    @media(max-width:1150px){.mockup-two-col{grid-template-columns:1fr}.mockup-side{position:static}.mockup-plan-bar{grid-template-columns:1fr 1fr}.mockup-plan-bar .btn{min-width:0}.fleet-summary-grid{grid-template-columns:repeat(3,1fr)}}
-    @media(max-width:700px){.mockup-mode-tabs,.mockup-plan-bar,.fleet-summary-grid,.fleet-metrics{grid-template-columns:1fr}.mockup-plan-bar .btn{width:100%}}
-
 </style>
+
+<style id="cabmate-ai-mockup-v2">
+/* ===== CABMATE AI ROUTE PLANNING — MOCKUP MATCH OVERRIDES ===== */
+.ai-route-page{padding:16px 20px 32px!important;background:#fbfaf7!important;max-width:1500px;margin:0 auto;color:#20160f}
+.ai-route-hero{background:#fff!important;color:#1d1a17!important;border:1px solid #e7dfd5!important;border-radius:12px!important;padding:15px 18px!important;box-shadow:0 3px 12px rgba(70,48,31,.05)!important;margin-bottom:10px!important}
+.ai-route-hero h1{font-size:24px!important;color:#17120e!important;margin-bottom:3px!important}
+.ai-route-hero p{font-size:12px!important;color:#75685d!important;line-height:1.35!important;max-width:980px!important}
+.ai-route-switch-btn{padding:9px 14px!important;border-radius:8px!important;background:#fff!important;color:#5f3d27!important;border:1px solid #dfd4c8!important;box-shadow:none!important}
+
+/* two top mode tabs */
+.ai-mode-tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid #ded5ca;border-radius:9px;overflow:hidden;background:#fff;margin:0 0 10px}
+.ai-mode-tab{min-height:55px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-decoration:none;color:#0d2445;font-weight:800;font-size:14px}
+.ai-mode-tab small{font-size:11px;font-weight:500;color:#725b49;margin-top:2px}
+.ai-mode-tab.active{background:linear-gradient(90deg,#805438,#a9704a);color:#fff}
+.ai-mode-tab.active small{color:#fff}
+
+.lux-card{border-radius:10px!important;border:1px solid #e3dbd1!important;box-shadow:0 3px 12px rgba(73,51,35,.045)!important;background:#fff!important}
+.lux-card-header{padding:12px 15px!important;background:#fff!important;border-bottom:1px solid #e6ded5!important}
+.lux-card-header h2{font-size:15px!important;color:#251a13!important}
+.lux-card-body{padding:14px!important}
+.form-row{gap:10px!important;margin-bottom:10px!important}
+.field label{font-size:11px!important;color:#65442e!important;margin-bottom:5px!important}
+.field select,.field input[type=date],.field input[type=text]{border-radius:7px!important;padding:9px 10px!important;font-size:12px!important}
+.mode-grid{gap:10px!important;margin:10px 0!important}
+.mode-option{border-radius:8px!important;padding:10px!important;font-size:12px!important}
+.mode-option:has(input:checked){border:1.5px solid #a66d48!important;background:#fffdfb!important}
+.mode-option small{font-size:11px!important}
+.mini-note{border-radius:7px!important;padding:10px 12px!important;font-size:11px!important;background:#fff9ee!important}
+.btn{border-radius:7px!important;padding:9px 13px!important;font-size:12px!important}
+.btn-primary{background:#a66d48!important}
+.btn-success{background:#168943!important}
+
+/* summary */
+.fleet-summary-grid{grid-template-columns:repeat(5,1fr)!important;gap:8px!important;margin:12px 0!important}
+.summary-box{border-radius:8px!important;padding:10px!important;background:#fff!important}
+.summary-box span{font-size:9px!important;color:#6b5545!important}
+.summary-box strong{font-size:17px!important;color:#101820!important;margin-top:3px!important}
+.fleet-banner{border-radius:8px!important;padding:10px 12px!important;background:#f6fff8!important;border-color:#cfe8d5!important}
+.fleet-banner h3{color:#15853d!important;font-size:17px!important}
+
+/* Route + AI explanation 2-column layout */
+.fleet-route-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start;margin-bottom:12px}
+.fleet-route-card{margin:0!important;border-radius:10px!important;box-shadow:none!important;background:#fff!important}
+.fleet-route-head{background:#fff!important;padding:12px 14px!important;align-items:center!important}
+.fleet-route-head h3{font-size:18px!important;color:#10213a!important}
+.fleet-route-head small{font-size:11px!important}
+.fleet-route-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.mock-action{border:1px solid #ddd3c8;background:#fff;border-radius:6px;padding:7px 10px;font-size:11px;font-weight:700;color:#3f2a1d}
+.fleet-route-body{padding:12px 14px!important}
+.all-route-name-wrap{display:none}
+.fleet-metrics{grid-template-columns:repeat(4,1fr)!important;gap:8px!important;margin-bottom:12px!important}
+.fleet-metric{background:#fffdf9!important;border-radius:7px!important;padding:10px!important;min-height:57px}
+.fleet-metric span{font-size:8px!important}
+.fleet-metric strong{font-size:13px!important}
+
+/* Timeline like requested image */
+.route-flow{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:nowrap!important;gap:5px!important;padding:15px 6px 12px!important;border:0!important;border-radius:0!important;background:#fff!important;overflow-x:auto!important;margin:5px 0 12px!important}
+.route-flow-node{min-width:76px!important;text-align:center!important;padding:0!important;background:transparent!important;font-size:11px!important;color:#17120e!important}
+.route-flow-node:before{content:"●";display:flex;align-items:center;justify-content:center;margin:0 auto 6px;width:35px;height:35px;border-radius:50%;background:#f6f1eb;color:#70482f;font-size:15px}
+.route-flow-node:first-child:before{content:"⌂";background:#805438;color:#fff;font-size:22px}
+.route-flow-node:last-of-type:before{content:"▦";background:#805438;color:#fff;font-size:20px}
+.route-flow-arrow{flex:1;min-width:72px;display:flex!important;flex-direction:column-reverse!important;gap:1px!important;color:#70482f!important;text-align:center;font-size:17px!important}
+.route-flow-arrow small{border:0!important;background:transparent!important;padding:0!important;font-size:9px!important;color:#172338!important;font-weight:800!important}
+.route-flow-caption{display:none!important}
+
+/* employee rows: compact, no full address */
+.route-columns{grid-template-columns:1fr!important;gap:8px!important}
+.route-columns>div:last-child{display:none!important}
+.route-columns h3{font-size:14px!important;margin:0!important;padding:9px 10px;background:#f8f5f0;border:1px solid #e4dbd1;border-bottom:0;border-radius:7px 7px 0 0}
+.route-columns .locked-note{display:none}
+.route-list{border:1px solid #e4dbd1;border-radius:0 0 7px 7px;overflow:hidden}
+.route-stop{grid-template-columns:28px 1fr auto!important;border:0!important;border-bottom:1px solid #ece5dd!important;border-radius:0!important;margin:0!important;padding:8px 10px!important;background:#fff!important;min-height:44px}
+.route-stop:last-child{border-bottom:0!important}
+.route-stop .stop-number{width:23px!important;height:23px!important;font-size:10px!important;background:#f4efe9!important;color:#33271f!important}
+.route-stop strong{font-size:12px}
+.route-stop small{font-size:10px!important;line-height:1.25}
+.route-stop small:first-of-type{display:none!important}
+.employee-compact-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.employee-pickup-details{margin-top:6px;padding:7px 9px;border:1px solid #eadfd4;border-radius:6px;background:#fbf8f4;color:#67594e;font-size:10px}
+.employee-pickup-details summary{cursor:pointer;font-weight:800;color:#744b31;list-style:none}
+.employee-pickup-details summary::-webkit-details-marker{display:none}
+.employee-pickup-details summary:after{content:" ▾"}
+.employee-pickup-details[open] summary:after{content:" ▴"}
+.assignment-reason{color:#7c6d61!important}
+
+/* right explanation */
+.ai-explanation-card{border:1px solid #e3dbd1;background:#fff;border-radius:10px;padding:14px;position:sticky;top:88px}
+.ai-explanation-card h3{margin:0 0 9px;font-size:16px;color:#2a2019}
+.ai-explanation-card h3:before{content:"✨ ";color:#e4a62b}
+.ai-explanation-card p{font-size:11px;margin:0 0 8px;color:#51463e}
+.ai-check-list{list-style:none;padding:0;margin:0}
+.ai-check-list li{position:relative;padding:0 0 9px 21px;font-size:11px;line-height:1.35;color:#50453d}
+.ai-check-list li:before{content:"✓";position:absolute;left:0;top:0;width:14px;height:14px;border-radius:50%;background:#159447;color:#fff;font-size:9px;text-align:center;line-height:14px;font-weight:900}
+.ai-route-summary{border:1px solid #e5ddd4;border-radius:7px;margin-top:8px;padding:9px}
+.ai-route-summary h4{margin:0 0 6px;color:#604027;font-size:12px}
+.ai-summary-line{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid #eee8e1;font-size:10px}
+.ai-summary-line strong{text-align:right}
+.ready-pill{background:#d9f4df;color:#117637;border-radius:999px;padding:4px 9px}
+
+/* reverse drop as a single note */
+.mock-drop-note{margin-top:9px;padding:9px 11px;border:1px solid #f0dfbd;background:#fff8ea;border-radius:7px;font-size:10px;color:#6d4b31}
+
+/* lower right fixes */
+.key-fixes-card{border:1.5px solid #159447;border-radius:9px;background:#fbfffc;padding:12px;margin-top:10px}
+.key-fixes-card h3{margin:0 0 7px;color:#13823e;font-size:14px}
+.key-fixes-card ol{padding-left:18px;margin:0;color:#235c37;font-size:10px;line-height:1.35}
+.key-fixes-card li{margin:5px 0}
+.unassigned-success{border:1px solid #ffd1d1;background:#fff0f1;border-radius:7px;padding:11px;color:#e3262e;font-size:11px;font-weight:800}
+
+/* save bar */
+.fleet-save-bar{border-radius:8px!important;bottom:8px!important}
+
+/* responsive */
+@media(max-width:1100px){.fleet-route-layout{grid-template-columns:1fr}.ai-explanation-card{position:static}.fleet-summary-grid{grid-template-columns:repeat(3,1fr)!important}}
+@media(max-width:760px){.ai-mode-tabs{grid-template-columns:1fr}.fleet-summary-grid,.fleet-metrics{grid-template-columns:repeat(2,1fr)!important}.route-flow{justify-content:flex-start!important}.ai-route-page{padding:10px!important}}
+</style>
+
 
 <div class="ai-route-page">
     <div class="ai-route-hero">
@@ -420,11 +509,18 @@
         </div>
     </div>
 
+    <div class="ai-mode-tabs">
+        <a class="ai-mode-tab {% if create_all_mode %}active{% endif %}" href="{% url 'admin_web:create_all_ai_routes' %}">
+            ✨ Create All AI Routes
+            <small>Plan entire fleet for a date</small>
+        </a>
+        <a class="ai-mode-tab {% if not create_all_mode %}active{% endif %}" href="{% url 'admin_web:ai_route_search' %}">
+            Create AI Route (One at a Time)
+            <small>Plan a single route</small>
+        </a>
+    </div>
+
     {% if create_all_mode %}
-        <div class="mockup-mode-tabs">
-            <a class="mockup-mode-tab active" href="{% url 'admin_web:create_all_ai_routes' %}">✨ Create All AI Routes<small>Plan entire fleet for a date</small></a>
-            <a class="mockup-mode-tab" href="{% url 'admin_web:ai_route_search' %}">Create AI Route (One at a Time)<small>Plan a single route</small></a>
-        </div>
         <div class="lux-card">
             <div class="lux-card-header"><h2>Generate Complete Fleet Plan</h2></div>
             <div class="lux-card-body">
@@ -492,19 +588,22 @@
                     <span class="unsaved-pill">AI Generated · Not Saved</span>
                 </div>
 
-                <div class="mockup-two-col">
-                    <div>
                 {% for route in create_all_preview.routes %}
+                    <div class="fleet-route-layout">
                     <div class="fleet-route-card" data-all-route-card data-route-index="{{ route.route_index }}" data-driver-id="{{ route.driver_id }}" data-vehicle-id="{{ route.vehicle_id }}">
                         <div class="fleet-route-head">
                             <div>
                                 <h3>ROUTE {{ route.route_index|stringformat:"02d" }} — <span class="route-title-preview">{{ route.route_name }}</span></h3>
                                 <small>{{ route.driver_name }} · {{ route.vehicle_number }} · {{ route.included_count }}/{{ route.seat_count }} seats</small>
                             </div>
-                            <span class="unsaved-pill">Not Saved</span>
+                            <div class="fleet-route-actions">
+                                <button type="button" class="mock-action edit-route-name-btn">✎ Edit Route Name</button>
+                                <button type="button" class="mock-action" onclick="alert('Map view will use this generated route when the map screen is connected.')">🗺 View on Map</button>
+                                <span class="unsaved-pill">Not Saved</span>
+                            </div>
                         </div>
                         <div class="fleet-route-body">
-                            <div class="field" style="margin-bottom:14px;">
+                            <div class="field all-route-name-wrap" style="margin-bottom:14px;">
                                 <label>Route Name</label>
                                 <input class="all-route-name" type="text" value="{{ route.route_name }}" maxlength="200">
                             </div>
@@ -568,9 +667,15 @@
                                                 data-conflict-routes="{{ row.conflict_routes|join:', '|escape }}">
                                                 <span class="stop-number">{{ forloop.counter }}</span>
                                                 <div>
-                                                    <strong>{{ row.name }}</strong>
-                                                    <small>{{ row.employee_id }} · {{ row.pickup_location }}</small>
-                                                    <small>{{ row.assignment_reason }}</small>
+                                                    <div class="employee-compact-line">
+                                                        <strong>{{ row.name }}</strong>
+                                                        {% if row.employee_id %}<span class="badge info">{{ row.employee_id }}</span>{% endif %}
+                                                    </div>
+                                                    <details class="employee-pickup-details">
+                                                        <summary>📍 View Pickup Address</summary>
+                                                        {{ row.pickup_location }}
+                                                    </details>
+                                                    <small class="assignment-reason">{{ row.assignment_reason }}</small>
                                                     {% if row.soft_conflict %}<small style="color:#9A6500;">Already on: {{ row.conflict_routes|join:", " }}</small>{% endif %}
                                                 </div>
                                                 <span class="drag-handle">☰</span>
@@ -584,50 +689,65 @@
                                     <ul class="route-list all-drop-list"></ul>
                                 </div>
                             </div>
+                            <div class="mock-drop-note">
+                                ⓘ Drop order will be the exact reverse of this pickup order. Office → final pickup employee → … → first pickup employee.
+                            </div>
                         </div>
+                    </div>
+
+                    <aside class="ai-explanation-card">
+                        <h3>AI Explanation</h3>
+                        <p>This route was created because:</p>
+                        <ul class="ai-check-list">
+                            <li><strong>{{ route.driver_name }}</strong> was selected as a practical driver for this employee cluster.</li>
+                            <li>{{ route.included_count }} employee(s) are grouped into an office-bound route using approved pickup points.</li>
+                            <li>The generated order targets a shorter practical route while respecting vehicle capacity.</li>
+                            <li>{% if route.safety_passed %}Safety checks passed for the generated sequence.{% else %}The sequence has a safety warning for Admin review.{% endif %}</li>
+                            <li>DROP remains the exact reverse of the final pickup order.</li>
+                        </ul>
+                        <div class="ai-route-summary">
+                            <h4>ⓘ Route Summary</h4>
+                            <div class="ai-summary-line"><span>Total Distance</span><strong>{% if route.distance_km %}{{ route.distance_km }} km{% else %}--{% endif %}</strong></div>
+                            <div class="ai-summary-line"><span>Estimated Duration</span><strong>{% if route.duration_minutes %}{{ route.duration_minutes }} mins{% else %}--{% endif %}</strong></div>
+                            <div class="ai-summary-line"><span>Employees</span><strong>{{ route.included_count }}/{{ route.seat_count }}</strong></div>
+                            <div class="ai-summary-line"><span>Empty Seats</span><strong>{{ route.remaining_seats }}</strong></div>
+                            <div class="ai-summary-line"><span>AI Mode</span><strong>{{ create_all_preview.mode_label }}</strong></div>
+                            <div class="ai-summary-line"><span>Status</span><strong class="ready-pill">Ready to Save</strong></div>
+                        </div>
+                    </aside>
                     </div>
                 {% empty %}
                     <div class="warning-box">No new AI route could be generated with the currently eligible fleet and employees.</div>
                 {% endfor %}
+
+                <div class="lux-card" style="margin-top:12px;">
+                    <div class="lux-card-header"><h2>Unassigned Employees · Why?</h2></div>
+                    <div class="lux-card-body">
+                        {% if create_all_preview.unassigned_employees %}
+                            <div class="explain-list">
+                                {% for row in create_all_preview.unassigned_employees %}
+                                    <div class="explain-item"><strong>{{ row.name }}</strong><small>{{ row.reason }}</small></div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="unassigned-success">
+                                ✓ All employees have been assigned to a route.
+                                <div style="font-weight:500;margin-top:4px;color:#7b4b4f;">No eligible employee remains unassigned in this generated plan.</div>
+                            </div>
+                        {% endif %}
                     </div>
-                    <aside class="mockup-side">
-                        <div class="mockup-side-card">
-                            <h3>✨ AI Explanation</h3>
-                            <div class="mockup-check"><b>●</b><span>Drivers are matched to nearby employee clusters using their saved driver address.</span></div>
-                            <div class="mockup-check"><b>●</b><span>Employees are grouped into practical office-bound routes instead of forcing every seat to be filled.</span></div>
-                            <div class="mockup-check"><b>●</b><span>Google optimisation is used where available; local fallback keeps planning usable if routing fails.</span></div>
-                            <div class="mockup-check"><b>●</b><span>Pickup order becomes the exact reverse DROP order.</span></div>
-                            <div class="mockup-check"><b>●</b><span>Safety warnings remain visible for Admin review before saving.</span></div>
-                        </div>
-                        <div class="mockup-side-card">
-                            <h3>ⓘ Fleet Summary</h3>
-                            <div class="mockup-summary-row"><span>Total Distance</span><strong>{{ create_all_preview.total_distance_km }} km</strong></div>
-                            <div class="mockup-summary-row"><span>Estimated Duration</span><strong>{{ create_all_preview.total_duration_minutes }} min</strong></div>
-                            <div class="mockup-summary-row"><span>Employees</span><strong>{{ create_all_preview.assigned_employee_count }}/{{ create_all_preview.eligible_employee_count }}</strong></div>
-                            <div class="mockup-summary-row"><span>Routes</span><strong>{{ create_all_preview.total_routes }}</strong></div>
-                            <div class="mockup-summary-row"><span>Empty Seats</span><strong>{{ create_all_preview.total_empty_seats }}</strong></div>
-                            <div class="mockup-summary-row"><span>Status</span><strong style="color:#159447;">Ready to Review</strong></div>
-                        </div>
-                        <div class="mockup-side-card mockup-fixes">
-                            <h3>✓ Key Fixes Implemented</h3>
-                            <div class="mockup-check"><b>1.</b><span><strong>Capacity is a maximum.</strong> Empty seats are allowed when another pickup creates a poor detour.</span></div>
-                            <div class="mockup-check"><b>2.</b><span><strong>Distance is visible.</strong> Route legs show available road distance and time.</span></div>
-                            <div class="mockup-check"><b>3.</b><span><strong>Conflicts are safe.</strong> Existing-route employees require explicit reassignment confirmation.</span></div>
-                            <div class="mockup-check"><b>4.</b><span><strong>Nothing auto-saves.</strong> Admin reviews the fleet plan before Save All &amp; Ready for Use.</span></div>
-                        </div>
-                    </aside>
                 </div>
 
-                {% if create_all_preview.unassigned_employees %}
-                    <div class="lux-card" style="margin-top:18px;">
-                        <div class="lux-card-header"><h2>Unassigned Employees · Why?</h2></div>
-                        <div class="lux-card-body explain-list">
-                            {% for row in create_all_preview.unassigned_employees %}
-                                <div class="explain-item"><strong>{{ row.name }}</strong><small>{{ row.reason }}</small></div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
+                <div class="key-fixes-card">
+                    <h3>✓ Key Route Rules</h3>
+                    <ol>
+                        <li><strong>All eligible employees are assigned</strong> whenever usable fleet capacity is available.</li>
+                        <li><strong>Distance is visible between route points</strong> using the road-route leg data supplied by the backend.</li>
+                        <li><strong>Clear AI explanation</strong> shows why the driver and employee cluster were selected.</li>
+                        <li><strong>Empty seats are allowed</strong> when forcing another stop would create an excessive detour.</li>
+                        <li><strong>Nothing auto-saves.</strong> Admin reviews the plan before Save All &amp; Ready for Use.</li>
+                    </ol>
+                </div>
 
                 {% if create_all_preview.drivers_not_required %}
                     <div class="lux-card" style="margin-top:18px;">
@@ -962,6 +1082,18 @@
 <script>
 (function(){
 
+
+ // Mockup-style route name editor: reveal the existing save-compatible input.
+ document.querySelectorAll('.edit-route-name-btn').forEach(btn=>{
+   btn.addEventListener('click',()=>{
+     const card=btn.closest('[data-all-route-card]');
+     if(!card)return;
+     const wrap=card.querySelector('.all-route-name-wrap');
+     const input=card.querySelector('.all-route-name');
+     if(wrap)wrap.style.display='block';
+     if(input){input.focus();input.select();}
+   });
+ });
 
  // CREATE ALL: per-route drag/drop + locked reverse DROP.
  document.querySelectorAll('[data-all-route-card]').forEach(card=>{
