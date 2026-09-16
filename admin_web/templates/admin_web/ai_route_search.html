@@ -597,7 +597,7 @@
                                 <small>{{ route.driver_name }} · {{ route.vehicle_number }} · {{ route.included_count }}/{{ route.seat_count }} seats</small>
                             </div>
                             <div class="fleet-route-actions">
-                                <button type="button" class="mock-action edit-route-name-btn">✎ Edit Route Name</button>
+                                <button type="button" class="mock-action edit-route-name-btn">✎ Edit Route</button>
                                 <button type="button" class="mock-action" onclick="alert('Map view will use this generated route when the map screen is connected.')">🗺 View on Map</button>
                                 <span class="unsaved-pill">Not Saved</span>
                             </div>
@@ -1083,15 +1083,24 @@
 (function(){
 
 
- // Mockup-style route name editor: reveal the existing save-compatible input.
+ // CREATE ALL: Edit Route opens/closes the route-name editor.
+ // Employee pickup order is edited directly by dragging the employee rows below.
  document.querySelectorAll('.edit-route-name-btn').forEach(btn=>{
    btn.addEventListener('click',()=>{
      const card=btn.closest('[data-all-route-card]');
      if(!card)return;
      const wrap=card.querySelector('.all-route-name-wrap');
      const input=card.querySelector('.all-route-name');
-     if(wrap)wrap.style.display='block';
-     if(input){input.focus();input.select();}
+     if(!wrap)return;
+
+     const isOpen=wrap.style.display === 'block';
+     wrap.style.display=isOpen ? 'none' : 'block';
+     btn.textContent=isOpen ? '✎ Edit Route' : '✓ Done Editing';
+
+     if(!isOpen && input){
+       input.focus();
+       input.select();
+     }
    });
  });
 
