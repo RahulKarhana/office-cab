@@ -349,7 +349,10 @@
     .fleet-metric{padding:10px;border:1px solid #E3DAD0;border-radius:12px;background:#F8F5ED}
     .fleet-metric span{display:block;color:#746B64;font-size:10px;text-transform:uppercase;font-weight:800}.fleet-metric strong{display:block;color:#5F4636;margin-top:5px;font-size:14px}
     .route-flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:12px;border:1px dashed #D9CEC2;border-radius:13px;background:#FFFDF9;margin:12px 0}
-    .route-flow-node{padding:7px 9px;border-radius:10px;background:#F3EEE6;color:#5F4636;font-size:12px;font-weight:700}.route-flow-arrow{color:#9B7457;font-weight:900}
+    .route-flow-node{padding:7px 9px;border-radius:10px;background:#F3EEE6;color:#5F4636;font-size:12px;font-weight:700}
+    .route-flow-arrow{display:inline-flex;align-items:center;gap:5px;color:#9B7457;font-weight:900;white-space:nowrap}
+    .route-flow-arrow small{display:inline-block;padding:3px 6px;border:1px solid #E3DAD0;border-radius:999px;background:#F8F5ED;color:#746B64;font-size:10px;font-weight:800;line-height:1.2}
+    .route-flow-caption{width:100%;margin-top:3px;color:#746B64;font-size:11px;line-height:1.45}
     .explain-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
     .explain-item{border:1px solid #E3DAD0;border-radius:12px;padding:12px;background:#FFFDF9}.explain-item strong{color:#5F4636}.explain-item small{display:block;color:#746B64;margin-top:5px;line-height:1.45}
     .fleet-save-bar{position:sticky;bottom:12px;z-index:20;background:#FFFDF9;border:1px solid #DED6CC;border-radius:16px;padding:14px;box-shadow:0 14px 35px rgba(36,33,31,.14);display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:20px}
@@ -492,11 +495,30 @@
                             {% if route.empty_seat_reason %}<div class="mini-note"><strong>{{ route.remaining_seats }} seat(s) intentionally empty.</strong> {{ route.empty_seat_reason }}</div>{% endif %}
 
                             <div class="route-flow">
-                                <span class="route-flow-node">🚕 {{ route.driver_name }}</span><span class="route-flow-arrow">→</span>
+                                <span class="route-flow-node">🚕 {{ route.driver_name }}</span>
                                 {% for row in route.employees %}
-                                    <span class="route-flow-node">{{ row.name }}</span><span class="route-flow-arrow">→</span>
+                                    {% with leg=route.route_legs|slice:forloop.counter0|first %}
+                                        <span class="route-flow-arrow">
+                                            →
+                                            {% if leg %}
+                                                <small>{{ leg.distance_text }} · {{ leg.duration_text }}</small>
+                                            {% endif %}
+                                        </span>
+                                    {% endwith %}
+                                    <span class="route-flow-node">{{ row.name }}</span>
                                 {% endfor %}
+                                {% with office_leg=route.route_legs|last %}
+                                    <span class="route-flow-arrow">
+                                        →
+                                        {% if office_leg %}
+                                            <small>{{ office_leg.distance_text }} · {{ office_leg.duration_text }}</small>
+                                        {% endif %}
+                                    </span>
+                                {% endwith %}
                                 <span class="route-flow-node">🏢 Office</span>
+                                <div class="route-flow-caption">
+                                    Distance/time shown on each arrow comes from the generated road-route legs. If Google routing falls back locally, a leg may display without a metric.
+                                </div>
                             </div>
 
                             <div class="route-columns">
@@ -758,6 +780,33 @@
                         <strong>Capacity limit:</strong> {{ preview.capacity_excluded|length }} additional eligible employee(s) were not included because the vehicle is full.
                     </div>
                 {% endif %}
+
+                <div class="route-flow" style="margin-top:20px;">
+                    <span class="route-flow-node">🚕 {{ preview.driver_name }}</span>
+                    {% for row in preview.employees %}
+                        {% with leg=preview.route_legs|slice:forloop.counter0|first %}
+                            <span class="route-flow-arrow">
+                                →
+                                {% if leg %}
+                                    <small>{{ leg.distance_text }} · {{ leg.duration_text }}</small>
+                                {% endif %}
+                            </span>
+                        {% endwith %}
+                        <span class="route-flow-node">{{ row.name }}</span>
+                    {% endfor %}
+                    {% with office_leg=preview.route_legs|last %}
+                        <span class="route-flow-arrow">
+                            →
+                            {% if office_leg %}
+                                <small>{{ office_leg.distance_text }} · {{ office_leg.duration_text }}</small>
+                            {% endif %}
+                        </span>
+                    {% endwith %}
+                    <span class="route-flow-node">🏢 Office</span>
+                    <div class="route-flow-caption">
+                        Driver Address → approved employee pickup points → CabMate office. Each available arrow metric is the corresponding road-route leg.
+                    </div>
+                </div>
 
                 <div class="route-columns" style="margin-top:20px;">
                     <div>

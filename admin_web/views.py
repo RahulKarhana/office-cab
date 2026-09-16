@@ -10051,6 +10051,7 @@ def _google_optimise_employee_order(driver_start, employee_rows, mode):
             "duration_minutes": 0,
             "polyline": "",
             "google_optimised": False,
+            "legs": [],
         }
 
     if len(employee_rows) > 23:
@@ -10064,6 +10065,7 @@ def _google_optimise_employee_order(driver_start, employee_rows, mode):
             "duration_minutes": None,
             "polyline": "",
             "google_optimised": False,
+            "legs": [],
             "warning": (
                 "More than 23 employee stops were selected, so CabMate used local "
                 "nearest-neighbour ordering instead of Google waypoint optimisation."
@@ -10108,6 +10110,25 @@ def _google_optimise_employee_order(driver_start, employee_rows, mode):
         for leg in legs
     )
 
+    # Preserve every Google Directions leg so the UI can show real road
+    # distance/time on each arrow:
+    # Driver -> Employee A -> Employee B -> ... -> Office.
+    route_legs = []
+    point_names = ["Driver Address"] + [row["name"] for row in ordered] + ["Office"]
+    for leg_index, leg in enumerate(legs):
+        distance = leg.get("distance") or {}
+        duration = leg.get("duration") or {}
+        distance_value = int(distance.get("value") or 0)
+        duration_value = int(duration.get("value") or 0)
+        route_legs.append({
+            "from_name": point_names[leg_index] if leg_index < len(point_names) else "",
+            "to_name": point_names[leg_index + 1] if leg_index + 1 < len(point_names) else "",
+            "distance_km": round(distance_value / 1000, 2),
+            "distance_text": distance.get("text") or f"{round(distance_value / 1000, 2)} km",
+            "duration_minutes": max(1, round(duration_value / 60)) if duration_value else 0,
+            "duration_text": duration.get("text") or (f"{max(1, round(duration_value / 60))} min" if duration_value else "--"),
+        })
+
     overview_polyline = ((route_data.get("overview_polyline") or {}).get("points") or "")
 
     return ordered, {
@@ -10115,6 +10136,7 @@ def _google_optimise_employee_order(driver_start, employee_rows, mode):
         "duration_minutes": round(duration_seconds / 60),
         "polyline": overview_polyline,
         "google_optimised": True,
+        "legs": route_legs,
     }
 
 
@@ -10412,6 +10434,7 @@ def ai_route_search(request):
             "distance_km": metrics.get("distance_km"),
             "duration_minutes": metrics.get("duration_minutes"),
             "polyline": metrics.get("polyline") or "",
+            "route_legs": metrics.get("legs") or [],
             "google_optimised": bool(metrics.get("google_optimised")),
             "optimizer_warning": metrics.get("warning") or "",
             "leave_excluded": excluded_leave_rows,
@@ -10740,10 +10763,14 @@ def _ai_all_generate_plan(route_date, mode, include_assigned=False):
       3. Exclude drivers already owning an active saved route.
       4. Geocode available driver addresses.
       5. Seed routes from geographically useful employees.
-      6. Add employees only when they fit the route naturally.
-         Capacity is a maximum, not a seat-filling target.
-      7. Match the best available driver to each cluster.
-      8. Run Google waypoint optimisation separately for every route.
+      6. Prefer natural route fit; capacity remains a hard maximum, not a target.
+      7. Guarantee coverage whenever total eligible fleet capacity can cover all
+         employees: if a detour is necessary to avoid leaving an employee behind,
+         use the nearest practical driver/route rather than leaving that employee
+         unassigned.
+      8. Match the best available driver to each cluster.
+      9. Run Google waypoint optimisation separately for every route and preserve
+         every road leg for Driver -> Employee -> ... -> Office display.
     """
     active_route_driver_ids = set(
         RouteTemplate.objects.filter(
@@ -11012,17 +11039,35 @@ def _ai_all_generate_plan(route_date, mode, include_assigned=False):
 
             nearest_stop = nearest_stop if nearest_stop is not None else 999999
 
-            # This is the key "empty seats are allowed" rule.
-            if (
+            # Empty seats are allowed when the remaining fleet can still cover
+            # everybody. But an employee must NOT be left behind merely because
+            # the route is less convenient. If the capacity of the OTHER unused
+            # drivers is insufficient for everyone still waiting, this route must
+            # take the nearest practical candidate (up to its hard seat limit).
+            other_driver_capacity = sum(
+                int(item.get("seat_count") or 0)
+                for item in unused_drivers
+                if item["id"] != driver_row["id"]
+            )
+            poor_detour = (
                 nearest_stop > AI_ALL_CLUSTER_JOIN_KM
                 and best_cost > AI_ALL_MAX_DETOUR_KM
-            ):
+            )
+            must_use_this_seat = len(remaining) > other_driver_capacity
+
+            if poor_detour and not must_use_this_seat:
                 break
 
-            best_candidate["assignment_reason"] = (
-                f"Fits this office-bound employee cluster with an estimated "
-                f"{best_cost:.1f} km geographic join cost."
-            )
+            if poor_detour and must_use_this_seat:
+                best_candidate["assignment_reason"] = (
+                    f"Assigned to the nearest practical available route to guarantee "
+                    f"employee coverage; estimated geographic join cost {best_cost:.1f} km."
+                )
+            else:
+                best_candidate["assignment_reason"] = (
+                    f"Fits this office-bound employee cluster with an estimated "
+                    f"{best_cost:.1f} km geographic join cost."
+                )
             cluster.append(best_candidate)
             remaining.remove(best_candidate)
 
@@ -11052,6 +11097,7 @@ def _ai_all_generate_plan(route_date, mode, include_assigned=False):
                 "duration_minutes": None,
                 "polyline": "",
                 "google_optimised": False,
+                "legs": [],
                 "warning": str(exc),
             }
 
@@ -11102,6 +11148,7 @@ def _ai_all_generate_plan(route_date, mode, include_assigned=False):
             "distance_km": metrics.get("distance_km"),
             "duration_minutes": metrics.get("duration_minutes"),
             "polyline": metrics.get("polyline") or "",
+            "route_legs": metrics.get("legs") or [],
             "google_optimised": bool(metrics.get("google_optimised")),
             "optimizer_warning": metrics.get("warning") or "",
             "safety_passed": safety["passed"],
@@ -11111,11 +11158,15 @@ def _ai_all_generate_plan(route_date, mode, include_assigned=False):
             ),
         })
 
+    # Under normal conditions this list must be empty. The planner now consumes
+    # nearest practical spare seats when necessary. Anything still remaining here
+    # is a genuine hard fleet-capacity/resource block, not an AI preference.
     unassigned_employees = []
     for row in remaining:
         row["reason"] = (
-            "No additional eligible driver/vehicle remained for a sensible route. "
-            "The employee was not silently omitted."
+            "Hard fleet-capacity block: all eligible driver/vehicle seats are already "
+            "used. Add/enable another eligible driver or vehicle seat, then regenerate. "
+            "CabMate never leaves an employee unassigned only to keep a route shorter."
         )
         unassigned_employees.append(row)
 
@@ -11179,6 +11230,7 @@ def _ai_all_generate_plan(route_date, mode, include_assigned=False):
             len(route["safety_warnings"]) for route in proposed_routes
         ),
         "all_employees_covered": not unassigned_employees,
+        "coverage_blocked_by_capacity": bool(unassigned_employees),
         "include_assigned": include_assigned,
     }
 
