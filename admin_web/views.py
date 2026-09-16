@@ -10598,6 +10598,973 @@ def save_ai_route(request):
 
 
 
+# ============================================================
+# CREATE ALL AI ROUTES - FLEET-WIDE AI PLANNING
+# ============================================================
+# Important design rules:
+# - Generation creates an UNSAVED preview only.
+# - Vehicle seat_count is a HARD MAXIMUM, never a target.
+# - CabMate may intentionally leave seats empty when adding an employee
+#   would create an excessive geographic detour.
+# - Driver conflicts are hard-blocked from the available fleet.
+# - Employee active-route conflicts are soft warnings until Save All.
+# - Employee residential/profile address is never used as a pickup point.
+# - Driver address is the route origin.
+# - DROP order is always the exact reverse of final PICKUP order.
+# - Historical Trip / RouteRun / RouteRunStop data is never deleted here.
+
+AI_ALL_ROUTE_SESSION_KEY = "admin_web_ai_all_route_preview"
+
+# Local straight-line heuristics used only for fleet grouping.
+# Google Directions remains the final per-route road optimiser.
+AI_ALL_CLUSTER_JOIN_KM = 7.0
+AI_ALL_MAX_DETOUR_KM = 5.0
+
+
+def _ai_all_driver_row(driver, driver_start=None, unavailable_reason=""):
+    try:
+        vehicle = driver.vehicle
+    except Exception:
+        vehicle = None
+
+    return {
+        "id": driver.id,
+        "name": driver.display_name,
+        "username": driver.username,
+        "address": driver.address or "",
+        "vehicle_id": vehicle.id if vehicle else None,
+        "vehicle_number": vehicle.vehicle_number if vehicle else "--",
+        "vehicle_model": vehicle.vehicle_model if vehicle else "",
+        "seat_count": int(vehicle.seat_count or 0) if vehicle else 0,
+        "latitude": driver_start.get("latitude") if driver_start else None,
+        "longitude": driver_start.get("longitude") if driver_start else None,
+        "formatted_address": driver_start.get("formatted_address") if driver_start else "",
+        "unavailable_reason": unavailable_reason,
+    }
+
+
+def _ai_all_employee_gender(employee):
+    return str(getattr(employee, "gender", "") or "").strip().upper()
+
+
+def _ai_all_distance_to_office(row):
+    return _distance_km(
+        row["latitude"],
+        row["longitude"],
+        CABMATE_OFFICE_LATITUDE,
+        CABMATE_OFFICE_LONGITUDE,
+    )
+
+
+def _ai_all_route_join_cost(route_rows, candidate):
+    """
+    Cheap geographic pre-screen before a Google call.
+
+    Lower is better. The employee may join when close to an existing stop OR
+    naturally close to the current route corridor toward the office.
+    This deliberately does not reward filling an empty seat.
+    """
+    if not route_rows:
+        return 0.0
+
+    nearest_stop = min(
+        (
+            _distance_km(
+                candidate["latitude"],
+                candidate["longitude"],
+                row["latitude"],
+                row["longitude"],
+            )
+            for row in route_rows
+        ),
+        default=None,
+    )
+
+    candidate_office = _ai_all_distance_to_office(candidate)
+    route_office_values = [
+        value
+        for value in (_ai_all_distance_to_office(row) for row in route_rows)
+        if value is not None
+    ]
+    route_office = min(route_office_values) if route_office_values else None
+
+    nearest_stop = nearest_stop if nearest_stop is not None else 999999.0
+
+    # Corridor-friendly employees tend to have a similar office-bound distance.
+    office_delta = (
+        abs(candidate_office - route_office)
+        if candidate_office is not None and route_office is not None
+        else 999999.0
+    )
+
+    return round(nearest_stop + (office_delta * 0.35), 2)
+
+
+def _ai_all_apply_safety_status(ordered_rows, mode):
+    """
+    Safety status for the current product rule.
+
+    Because DROP is the reverse of PICKUP, the first pickup is also the last
+    drop. In safety mode we warn when a female employee occupies that position.
+    We do not silently override an Admin-edited order.
+    """
+    warnings = []
+
+    if mode == AI_ROUTE_MODE_SAFETY and ordered_rows:
+        first = ordered_rows[0]
+        if str(first.get("gender") or "").upper() == "FEMALE":
+            warnings.append(
+                f'{first["name"]} is the first pickup and therefore the last drop. '
+                "Review the sequence if a safer practical ordering is available."
+            )
+
+    return {
+        "passed": not warnings,
+        "warnings": warnings,
+    }
+
+
+def _ai_all_build_route_name(index, ordered_rows):
+    # Area extraction/geocoding can be added later. Keep names deterministic
+    # and collision-safe for the first production version.
+    return f"AI Route {index:02d}"
+
+
+def _ai_all_generate_plan(route_date, mode, include_assigned=False):
+    """
+    Build a complete UNSAVED fleet proposal.
+
+    Strategy:
+      1. Load eligible employees with approved pickup coordinates.
+      2. Optionally remove employees on leave.
+      3. Exclude drivers already owning an active saved route.
+      4. Geocode available driver addresses.
+      5. Seed routes from geographically useful employees.
+      6. Add employees only when they fit the route naturally.
+         Capacity is a maximum, not a seat-filling target.
+      7. Match the best available driver to each cluster.
+      8. Run Google waypoint optimisation separately for every route.
+    """
+    active_route_driver_ids = set(
+        RouteTemplate.objects.filter(
+            is_active=True,
+            driver__isnull=False,
+        ).values_list("driver_id", flat=True)
+    )
+
+    all_drivers = list(
+        User.objects.filter(
+            role=User.Role.DRIVER,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        )
+        .select_related("vehicle")
+        .order_by("full_name", "username")
+    )
+
+    available_drivers = []
+    unavailable_drivers = []
+
+    for driver in all_drivers:
+        if driver.id in active_route_driver_ids:
+            active_route = RouteTemplate.objects.filter(
+                is_active=True,
+                driver=driver,
+            ).first()
+            unavailable_drivers.append(
+                _ai_all_driver_row(
+                    driver,
+                    unavailable_reason=(
+                        f'Already assigned to active route "{active_route.name}".'
+                        if active_route
+                        else "Already assigned to an active saved route."
+                    ),
+                )
+            )
+            continue
+
+        try:
+            vehicle = driver.vehicle
+        except Exception:
+            vehicle = None
+
+        if not vehicle:
+            unavailable_drivers.append(
+                _ai_all_driver_row(
+                    driver,
+                    unavailable_reason="No vehicle is assigned to this driver.",
+                )
+            )
+            continue
+
+        if int(vehicle.seat_count or 0) <= 0:
+            unavailable_drivers.append(
+                _ai_all_driver_row(
+                    driver,
+                    unavailable_reason="Assigned vehicle has no usable seating capacity.",
+                )
+            )
+            continue
+
+        if not (driver.address or "").strip():
+            unavailable_drivers.append(
+                _ai_all_driver_row(
+                    driver,
+                    unavailable_reason="Driver Address is missing.",
+                )
+            )
+            continue
+
+        try:
+            driver_start = _geocode_driver_address(driver.address)
+        except ValueError as exc:
+            unavailable_drivers.append(
+                _ai_all_driver_row(
+                    driver,
+                    unavailable_reason=str(exc),
+                )
+            )
+            continue
+
+        row = _ai_all_driver_row(driver, driver_start=driver_start)
+        row["_driver_obj"] = driver
+        row["_vehicle_obj"] = vehicle
+        available_drivers.append(row)
+
+    employees_qs = User.objects.filter(
+        role=User.Role.EMPLOYEE,
+        is_active=True,
+        account_status=User.ACCOUNT_STATUS_APPROVED,
+        pickup_location__isnull=False,
+        pickup_latitude__isnull=False,
+        pickup_longitude__isnull=False,
+    ).exclude(pickup_location="")
+
+    leave_employee_ids = set()
+    if mode == AI_ROUTE_MODE_LEAVE:
+        leave_employee_ids = set(
+            EmployeeLeave.objects.filter(
+                leave_date=route_date,
+            ).values_list("employee_id", flat=True)
+        )
+        employees_qs = employees_qs.exclude(id__in=leave_employee_ids)
+
+    employees = list(employees_qs.order_by("full_name", "username"))
+    conflict_map = _ai_route_employee_conflicts([employee.id for employee in employees])
+
+    employee_rows = []
+    assigned_excluded = []
+
+    for employee in employees:
+        row = _ai_employee_row(employee)
+        row["gender"] = _ai_all_employee_gender(employee)
+        row["conflict_routes"] = conflict_map.get(employee.id, [])
+        row["soft_conflict"] = bool(row["conflict_routes"])
+        row["office_distance_km"] = _ai_all_distance_to_office(row)
+
+        if row["soft_conflict"] and not include_assigned:
+            row["reason"] = (
+                "Already assigned to active route(s): "
+                + ", ".join(row["conflict_routes"])
+            )
+            assigned_excluded.append(row)
+        else:
+            employee_rows.append(row)
+
+    leave_excluded = [
+        {
+            "id": employee.id,
+            "name": employee.display_name,
+            "employee_id": employee.employee_id or "--",
+            "reason": "Employee is on leave for the selected route date.",
+        }
+        for employee in User.objects.filter(
+            id__in=leave_employee_ids
+        ).order_by("full_name", "username")
+    ]
+
+    if not employee_rows:
+        return {
+            "route_date": route_date.isoformat(),
+            "mode": mode,
+            "mode_label": (
+                "Shortest Distance + Safety-aware roads"
+                if mode == AI_ROUTE_MODE_SAFETY
+                else "Shortest Distance + Remove Leave Employees"
+            ),
+            "routes": [],
+            "assigned_employee_count": 0,
+            "eligible_employee_count": 0,
+            "unassigned_employees": [],
+            "assigned_excluded": assigned_excluded,
+            "leave_excluded": leave_excluded,
+            "drivers_used": 0,
+            "drivers_not_required": [],
+            "drivers_unavailable": unavailable_drivers,
+            "total_available_drivers": len(available_drivers),
+            "total_routes": 0,
+            "total_distance_km": 0,
+            "total_duration_minutes": 0,
+            "total_empty_seats": 0,
+            "soft_conflict_count": 0,
+            "all_employees_covered": True,
+            "include_assigned": include_assigned,
+        }
+
+    if not available_drivers:
+        for row in employee_rows:
+            row["reason"] = "No eligible driver/vehicle is available for a new AI route."
+        return {
+            "route_date": route_date.isoformat(),
+            "mode": mode,
+            "mode_label": (
+                "Shortest Distance + Safety-aware roads"
+                if mode == AI_ROUTE_MODE_SAFETY
+                else "Shortest Distance + Remove Leave Employees"
+            ),
+            "routes": [],
+            "assigned_employee_count": 0,
+            "eligible_employee_count": len(employee_rows),
+            "unassigned_employees": employee_rows,
+            "assigned_excluded": assigned_excluded,
+            "leave_excluded": leave_excluded,
+            "drivers_used": 0,
+            "drivers_not_required": [],
+            "drivers_unavailable": unavailable_drivers,
+            "total_available_drivers": 0,
+            "total_routes": 0,
+            "total_distance_km": 0,
+            "total_duration_minutes": 0,
+            "total_empty_seats": 0,
+            "soft_conflict_count": 0,
+            "all_employees_covered": False,
+            "include_assigned": include_assigned,
+        }
+
+    # Work from employees furthest from the office inward. This tends to create
+    # natural office-bound corridors instead of repeatedly crossing the city.
+    remaining = sorted(
+        employee_rows,
+        key=lambda row: (
+            -(row["office_distance_km"] or 0),
+            row["name"].lower(),
+        ),
+    )
+
+    unused_drivers = list(available_drivers)
+    proposed_routes = []
+
+    while remaining and unused_drivers:
+        seed = remaining[0]
+
+        # Pick the driver whose home/base is closest to this seed.
+        driver_row = min(
+            unused_drivers,
+            key=lambda item: (
+                _distance_km(
+                    item["latitude"],
+                    item["longitude"],
+                    seed["latitude"],
+                    seed["longitude"],
+                )
+                if _distance_km(
+                    item["latitude"],
+                    item["longitude"],
+                    seed["latitude"],
+                    seed["longitude"],
+                ) is not None
+                else 999999,
+                item["name"].lower(),
+            ),
+        )
+
+        capacity = int(driver_row["seat_count"] or 0)
+        cluster = [seed]
+        remaining.remove(seed)
+
+        # Add only geographically sensible employees. We intentionally stop
+        # before capacity when every remaining employee would be a poor detour.
+        while remaining and len(cluster) < capacity:
+            ranked = sorted(
+                (
+                    (_ai_all_route_join_cost(cluster, candidate), candidate)
+                    for candidate in remaining
+                ),
+                key=lambda pair: (
+                    pair[0],
+                    pair[1]["name"].lower(),
+                ),
+            )
+
+            best_cost, best_candidate = ranked[0]
+            nearest_stop = min(
+                (
+                    _distance_km(
+                        best_candidate["latitude"],
+                        best_candidate["longitude"],
+                        row["latitude"],
+                        row["longitude"],
+                    )
+                    for row in cluster
+                ),
+                default=None,
+            )
+
+            nearest_stop = nearest_stop if nearest_stop is not None else 999999
+
+            # This is the key "empty seats are allowed" rule.
+            if (
+                nearest_stop > AI_ALL_CLUSTER_JOIN_KM
+                and best_cost > AI_ALL_MAX_DETOUR_KM
+            ):
+                break
+
+            best_candidate["assignment_reason"] = (
+                f"Fits this office-bound employee cluster with an estimated "
+                f"{best_cost:.1f} km geographic join cost."
+            )
+            cluster.append(best_candidate)
+            remaining.remove(best_candidate)
+
+        unused_drivers.remove(driver_row)
+
+        driver_start = {
+            "latitude": driver_row["latitude"],
+            "longitude": driver_row["longitude"],
+            "formatted_address": driver_row["formatted_address"],
+        }
+
+        try:
+            ordered_rows, metrics = _google_optimise_employee_order(
+                driver_start,
+                cluster,
+                mode,
+            )
+        except ValueError as exc:
+            # Do not lose the whole fleet plan because one Google route failed.
+            ordered_rows = _nearest_neighbor_order(
+                driver_start["latitude"],
+                driver_start["longitude"],
+                cluster,
+            )
+            metrics = {
+                "distance_km": None,
+                "duration_minutes": None,
+                "polyline": "",
+                "google_optimised": False,
+                "warning": str(exc),
+            }
+
+        for stop_order, row in enumerate(ordered_rows, start=1):
+            row["stop_order"] = stop_order
+            row.setdefault(
+                "assignment_reason",
+                "Selected as the geographic seed for this office-bound route.",
+            )
+
+        first_stop_distance = None
+        if ordered_rows:
+            first_stop_distance = _distance_km(
+                driver_start["latitude"],
+                driver_start["longitude"],
+                ordered_rows[0]["latitude"],
+                ordered_rows[0]["longitude"],
+            )
+
+        safety = _ai_all_apply_safety_status(ordered_rows, mode)
+        route_index = len(proposed_routes) + 1
+
+        proposed_routes.append({
+            "route_index": route_index,
+            "route_name": _ai_all_build_route_name(route_index, ordered_rows),
+            "driver_id": driver_row["id"],
+            "driver_name": driver_row["name"],
+            "driver_username": driver_row["username"],
+            "driver_address": driver_row["address"],
+            "driver_formatted_address": driver_row["formatted_address"],
+            "driver_latitude": driver_row["latitude"],
+            "driver_longitude": driver_row["longitude"],
+            "vehicle_id": driver_row["vehicle_id"],
+            "vehicle_number": driver_row["vehicle_number"],
+            "vehicle_model": driver_row["vehicle_model"],
+            "seat_count": capacity,
+            "employees": ordered_rows,
+            "drop_employees": list(reversed(ordered_rows)),
+            "included_count": len(ordered_rows),
+            "remaining_seats": max(capacity - len(ordered_rows), 0),
+            "empty_seat_reason": (
+                "Seat(s) intentionally left empty because no remaining employee "
+                "fit this route without an excessive geographic detour."
+                if len(ordered_rows) < capacity and remaining
+                else ""
+            ),
+            "first_stop_distance_km": first_stop_distance,
+            "distance_km": metrics.get("distance_km"),
+            "duration_minutes": metrics.get("duration_minutes"),
+            "polyline": metrics.get("polyline") or "",
+            "google_optimised": bool(metrics.get("google_optimised")),
+            "optimizer_warning": metrics.get("warning") or "",
+            "safety_passed": safety["passed"],
+            "safety_warnings": safety["warnings"],
+            "soft_conflict_count": sum(
+                1 for row in ordered_rows if row.get("soft_conflict")
+            ),
+        })
+
+    unassigned_employees = []
+    for row in remaining:
+        row["reason"] = (
+            "No additional eligible driver/vehicle remained for a sensible route. "
+            "The employee was not silently omitted."
+        )
+        unassigned_employees.append(row)
+
+    drivers_not_required = []
+    for driver_row in unused_drivers:
+        clean_row = {
+            key: value
+            for key, value in driver_row.items()
+            if not key.startswith("_")
+        }
+        clean_row["reason"] = (
+            "Not required: all currently assignable employees were already covered "
+            "by more efficient routes. Creating another route would be unnecessary."
+        )
+        drivers_not_required.append(clean_row)
+
+    total_distance = round(
+        sum(
+            float(route["distance_km"] or 0)
+            for route in proposed_routes
+        ),
+        2,
+    )
+    total_duration = sum(
+        int(route["duration_minutes"] or 0)
+        for route in proposed_routes
+    )
+    total_empty_seats = sum(
+        int(route["remaining_seats"] or 0)
+        for route in proposed_routes
+    )
+
+    return {
+        "route_date": route_date.isoformat(),
+        "mode": mode,
+        "mode_label": (
+            "Shortest Distance + Safety-aware roads"
+            if mode == AI_ROUTE_MODE_SAFETY
+            else "Shortest Distance + Remove Leave Employees"
+        ),
+        "routes": proposed_routes,
+        "assigned_employee_count": sum(
+            route["included_count"] for route in proposed_routes
+        ),
+        "eligible_employee_count": len(employee_rows),
+        "unassigned_employees": unassigned_employees,
+        "assigned_excluded": assigned_excluded,
+        "leave_excluded": leave_excluded,
+        "drivers_used": len(proposed_routes),
+        "drivers_not_required": drivers_not_required,
+        "drivers_unavailable": unavailable_drivers,
+        "total_available_drivers": len(available_drivers),
+        "total_routes": len(proposed_routes),
+        "total_distance_km": total_distance,
+        "total_duration_minutes": total_duration,
+        "total_empty_seats": total_empty_seats,
+        "soft_conflict_count": sum(
+            route["soft_conflict_count"] for route in proposed_routes
+        ),
+        "safety_warning_count": sum(
+            len(route["safety_warnings"]) for route in proposed_routes
+        ),
+        "all_employees_covered": not unassigned_employees,
+        "include_assigned": include_assigned,
+    }
+
+
+def _ai_all_session_plan(plan):
+    """Keep only JSON/session-safe, server-validated data required for Save All."""
+    routes = []
+    for route in plan.get("routes") or []:
+        routes.append({
+            "route_index": route["route_index"],
+            "route_name": route["route_name"],
+            "driver_id": route["driver_id"],
+            "vehicle_id": route["vehicle_id"],
+            "employee_ids": [row["id"] for row in route["employees"]],
+        })
+
+    return {
+        "route_date": plan.get("route_date"),
+        "mode": plan.get("mode"),
+        "include_assigned": bool(plan.get("include_assigned")),
+        "routes": routes,
+    }
+
+
+@login_required
+@admin_required
+def create_all_ai_routes(request):
+    """
+    Fleet-wide AI route planning page.
+
+    GET  -> opens Create All mode without changing the database.
+    POST -> generates an UNSAVED multi-route preview.
+    """
+    preview = None
+
+    if request.method == "POST":
+        route_date_text = str(request.POST.get("route_date") or "").strip()
+        mode = str(
+            request.POST.get("mode") or AI_ROUTE_MODE_SAFETY
+        ).strip().upper()
+        include_assigned = str(
+            request.POST.get("include_assigned") or ""
+        ).lower() in {"1", "true", "yes", "on"}
+
+        if mode not in {AI_ROUTE_MODE_SAFETY, AI_ROUTE_MODE_LEAVE}:
+            messages.error(request, "Please select a valid Create All AI Routes mode.")
+            return redirect("admin_web:create_all_ai_routes")
+
+        route_date = (
+            parse_date(route_date_text)
+            if route_date_text
+            else timezone.localdate()
+        )
+        if route_date is None:
+            messages.error(request, "Please select a valid route date.")
+            return redirect("admin_web:create_all_ai_routes")
+
+        try:
+            preview = _ai_all_generate_plan(
+                route_date=route_date,
+                mode=mode,
+                include_assigned=include_assigned,
+            )
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("admin_web:create_all_ai_routes")
+
+        request.session[AI_ALL_ROUTE_SESSION_KEY] = _ai_all_session_plan(preview)
+        request.session.modified = True
+
+    context = _ai_route_page_context(request, preview=None)
+    context.update({
+        "page_name": "Create All AI Routes",
+        "create_all_mode": True,
+        "create_all_preview": preview,
+    })
+
+    return render(
+        request,
+        "admin_web/ai_route_search.html",
+        context,
+    )
+
+
+@login_required
+@admin_required
+@require_POST
+@transaction.atomic
+def save_all_ai_routes(request):
+    """
+    Atomically save the current fleet preview as normal active RouteTemplates.
+
+    The preview is revalidated immediately before save. Employee conflicts are
+    reassigned only after explicit Admin confirmation. Driver conflicts remain
+    hard blocks. Historical route-run/trip data is preserved.
+    """
+    session_plan = request.session.get(AI_ALL_ROUTE_SESSION_KEY) or {}
+    session_routes = session_plan.get("routes") or []
+
+    if not session_routes:
+        messages.error(
+            request,
+            "Create All AI Routes preview expired. Generate the fleet plan again before saving.",
+        )
+        return redirect("admin_web:create_all_ai_routes")
+
+    confirm_reassignment = str(
+        request.POST.get("confirm_reassignment") or ""
+    ) == "1"
+
+    # Optional browser-edited plan. The HTML stage can submit route_plan_json
+    # after drag/drop, driver replacement, and route-name edits.
+    posted_plan_text = str(
+        request.POST.get("route_plan_json") or ""
+    ).strip()
+
+    routes_to_save = session_routes
+
+    if posted_plan_text:
+        try:
+            posted_routes = json.loads(posted_plan_text)
+        except Exception:
+            messages.error(
+                request,
+                "The edited AI route plan could not be read. Generate the plan again.",
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+        if not isinstance(posted_routes, list) or not posted_routes:
+            messages.error(request, "The edited AI route plan is empty.")
+            return redirect("admin_web:create_all_ai_routes")
+
+        # Security/integrity rule: browser may reorder the SAME employees among
+        # the SAME generated routes, but it may not inject arbitrary IDs.
+        session_employee_ids = {
+            int(employee_id)
+            for route in session_routes
+            for employee_id in (route.get("employee_ids") or [])
+        }
+        posted_employee_ids = {
+            int(employee_id)
+            for route in posted_routes
+            for employee_id in (route.get("employee_ids") or [])
+            if str(employee_id).isdigit()
+        }
+
+        if posted_employee_ids != session_employee_ids:
+            messages.error(
+                request,
+                "Employee membership changed unexpectedly. Recalculate Create All AI Routes before saving.",
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+        routes_to_save = posted_routes
+
+    # Validate unique drivers, employees and route names across this batch.
+    seen_driver_ids = set()
+    seen_employee_ids = set()
+    seen_route_names = set()
+
+    normalized_routes = []
+
+    for index, route_data in enumerate(routes_to_save, start=1):
+        route_name = str(
+            route_data.get("route_name") or f"AI Route {index:02d}"
+        ).strip()
+        driver_id = route_data.get("driver_id")
+        vehicle_id = route_data.get("vehicle_id")
+        employee_ids = [
+            int(value)
+            for value in (route_data.get("employee_ids") or [])
+            if str(value).isdigit()
+        ]
+
+        if not route_name:
+            messages.error(request, f"Route {index} does not have a valid route name.")
+            return redirect("admin_web:create_all_ai_routes")
+
+        route_name_key = route_name.lower()
+        if route_name_key in seen_route_names:
+            messages.error(request, f'Duplicate route name "{route_name}" in the AI plan.')
+            return redirect("admin_web:create_all_ai_routes")
+        seen_route_names.add(route_name_key)
+
+        if RouteTemplate.objects.filter(
+            is_active=True,
+            name__iexact=route_name,
+        ).exists():
+            messages.error(
+                request,
+                f'An active route named "{route_name}" already exists.',
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+        if not str(driver_id).isdigit() or not str(vehicle_id).isdigit():
+            messages.error(request, f"Route {index} has an invalid driver or vehicle.")
+            return redirect("admin_web:create_all_ai_routes")
+
+        driver_id = int(driver_id)
+        vehicle_id = int(vehicle_id)
+
+        if driver_id in seen_driver_ids:
+            messages.error(
+                request,
+                "The same driver cannot be assigned to two Create All AI Routes.",
+            )
+            return redirect("admin_web:create_all_ai_routes")
+        seen_driver_ids.add(driver_id)
+
+        duplicate_employee = next(
+            (employee_id for employee_id in employee_ids if employee_id in seen_employee_ids),
+            None,
+        )
+        if duplicate_employee is not None:
+            messages.error(
+                request,
+                "The same employee cannot appear in two Create All AI Routes.",
+            )
+            return redirect("admin_web:create_all_ai_routes")
+        seen_employee_ids.update(employee_ids)
+
+        driver = get_object_or_404(
+            User,
+            id=driver_id,
+            role=User.Role.DRIVER,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        )
+        vehicle = get_object_or_404(
+            Vehicle,
+            id=vehicle_id,
+            driver=driver,
+        )
+
+        # Hard conflict re-check at the exact moment of save.
+        existing_driver_route = RouteTemplate.objects.filter(
+            is_active=True,
+            driver=driver,
+        ).first()
+        if existing_driver_route:
+            messages.error(
+                request,
+                f'{driver.display_name} is now assigned to active route '
+                f'"{existing_driver_route.name}". Nothing was saved.',
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+        if not employee_ids:
+            messages.error(
+                request,
+                f'Route "{route_name}" has no employees.',
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+        if len(employee_ids) > int(vehicle.seat_count or 0):
+            messages.error(
+                request,
+                f'Route "{route_name}" exceeds vehicle capacity.',
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+        normalized_routes.append({
+            "route_name": route_name,
+            "driver": driver,
+            "vehicle": vehicle,
+            "employee_ids": employee_ids,
+        })
+
+    all_employee_ids = [
+        employee_id
+        for route in normalized_routes
+        for employee_id in route["employee_ids"]
+    ]
+
+    employees = {
+        employee.id: employee
+        for employee in User.objects.filter(
+            id__in=all_employee_ids,
+            role=User.Role.EMPLOYEE,
+            is_active=True,
+            account_status=User.ACCOUNT_STATUS_APPROVED,
+        )
+    }
+
+    if set(employees.keys()) != set(all_employee_ids):
+        messages.error(
+            request,
+            "One or more employees are no longer eligible. Nothing was saved.",
+        )
+        return redirect("admin_web:create_all_ai_routes")
+
+    for employee in employees.values():
+        if (
+            not employee.pickup_location
+            or employee.pickup_latitude is None
+            or employee.pickup_longitude is None
+        ):
+            messages.error(
+                request,
+                f"{employee.display_name} no longer has a complete approved pickup point. Nothing was saved.",
+            )
+            return redirect("admin_web:create_all_ai_routes")
+
+    conflict_map = _ai_route_employee_conflicts(all_employee_ids)
+
+    if conflict_map and not confirm_reassignment:
+        conflict_names = []
+        for employee_id, route_names in conflict_map.items():
+            employee = employees.get(employee_id)
+            if employee:
+                conflict_names.append(
+                    f'{employee.display_name} ({", ".join(route_names)})'
+                )
+
+        messages.warning(
+            request,
+            "Employee route conflict found. Confirm employee reassignment before Save All. "
+            + "; ".join(conflict_names),
+        )
+        return redirect("admin_web:create_all_ai_routes")
+
+    # Reassign current saved-route membership only. Historical Trip / RouteRun /
+    # RouteRunStop rows remain untouched.
+    if conflict_map:
+        affected_old_route_ids = set(
+            RouteStop.objects.filter(
+                employee_id__in=all_employee_ids,
+                route__is_active=True,
+            ).values_list("route_id", flat=True)
+        )
+
+        RouteStop.objects.filter(
+            employee_id__in=all_employee_ids,
+            route__is_active=True,
+        ).delete()
+
+        for old_route_id in affected_old_route_ids:
+            remaining_stops = RouteStop.objects.filter(
+                route_id=old_route_id,
+            ).order_by("stop_order", "id")
+
+            for new_order, stop in enumerate(remaining_stops, start=1):
+                if stop.stop_order != new_order:
+                    stop.stop_order = new_order
+                    stop.save(update_fields=["stop_order"])
+
+    created_routes = []
+
+    for route_data in normalized_routes:
+        route = RouteTemplate.objects.create(
+            name=route_data["route_name"],
+            driver=route_data["driver"],
+            vehicle=route_data["vehicle"],
+            is_active=True,
+        )
+
+        for stop_order, employee_id in enumerate(
+            route_data["employee_ids"],
+            start=1,
+        ):
+            employee = employees[employee_id]
+            RouteStop.objects.create(
+                route=route,
+                employee=employee,
+                pickup_location=employee.pickup_location,
+                pickup_latitude=employee.pickup_latitude,
+                pickup_longitude=employee.pickup_longitude,
+                stop_order=stop_order,
+            )
+
+        created_routes.append(route)
+
+    request.session.pop(AI_ALL_ROUTE_SESSION_KEY, None)
+    request.session.modified = True
+
+    messages.success(
+        request,
+        (
+            f"{len(created_routes)} AI route(s) saved as Ready for Use with "
+            f"{len(all_employee_ids)} employee(s). Pickup order is saved; "
+            "DROP will use the exact reverse order when trips are generated."
+        ),
+    )
+    return redirect("admin_web:routes")
+
+
 @login_required
 @admin_required
 @require_GET

@@ -18,6 +18,32 @@
         margin-bottom: 22px;
     }
 
+    .ai-route-hero-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+    }
+
+    .ai-route-hero-copy {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .ai-route-switch-btn {
+        flex-shrink: 0;
+        background: #FFFDF9;
+        color: #5F4636;
+        border: 1px solid rgba(255,255,255,.78);
+        box-shadow: 0 8px 18px rgba(36,33,31,.13);
+        white-space: nowrap;
+    }
+
+    .ai-route-switch-btn:hover {
+        background: #F8F5ED;
+        transform: translateY(-1px);
+    }
+
     .ai-route-hero h1 {
         margin: 0 0 7px;
         font-size: 30px;
@@ -283,27 +309,296 @@
         color: #5F4636;
     }
 
+    .employee-toolbar-actions,.employee-filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .employee-filter-bar{padding:10px 14px;background:#FFFDF9;border-bottom:1px solid #E3DAD0}
+    .filter-btn.active{background:#5F4636;color:#fff;border-color:#5F4636}
+    .employee-row.filtered-hidden{display:none}
+    .conflict-modal-backdrop{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(36,33,31,.58);backdrop-filter:blur(3px)}
+    .conflict-modal-backdrop.show{display:flex}
+    .conflict-modal{width:min(620px,100%);max-height:85vh;overflow:auto;background:#FFFDF9;border:1px solid #DED6CC;border-radius:20px;box-shadow:0 24px 70px rgba(36,33,31,.28)}
+    .conflict-modal-header{padding:20px 22px 14px;border-bottom:1px solid #E8E0D7}
+    .conflict-modal-header h3{margin:0 0 6px;color:#5F4636;font-size:21px}
+    .conflict-modal-header p{margin:0;color:#746B64;line-height:1.5;font-size:13px}
+    .conflict-modal-body{padding:18px 22px}
+    .conflict-person{border:1px solid #E9C879;background:#FFF8E8;border-radius:12px;padding:11px 13px;margin-bottom:9px}
+    .conflict-person strong{color:#5F4636}.conflict-person small{display:block;margin-top:4px;color:#9A6500}
+    .conflict-modal-warning{margin-top:14px;color:#76520A;line-height:1.55;font-size:13px}
+    .conflict-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:15px 22px 20px;border-top:1px solid #E8E0D7}
+
     @media (max-width: 980px) {
         .ai-grid, .route-columns { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 650px) {
         .ai-route-page { padding: 14px; }
+        .ai-route-hero-top { flex-direction: column; }
+        .ai-route-switch-btn { width: 100%; }
         .form-row, .mode-grid, .summary-grid { grid-template-columns: 1fr; }
         .employee-row { grid-template-columns: 30px 1fr; }
         .employee-row .pickup-cell, .employee-row .status-cell { grid-column: 2; }
     }
+    /* ================= CREATE ALL AI ROUTES ================= */
+    .fleet-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:18px}
+    .fleet-banner{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:16px 18px;border:1px solid #DED6CC;border-radius:16px;background:#F3EEE6;margin-bottom:18px}
+    .fleet-banner h3{margin:0 0 5px;color:#5F4636}.fleet-banner p{margin:0;color:#746B64;font-size:13px;line-height:1.5}
+    .fleet-route-card{border:1px solid #DED6CC;border-radius:18px;background:#FFFDF9;margin:0 0 18px;overflow:hidden;box-shadow:0 8px 24px rgba(95,70,54,.07)}
+    .fleet-route-head{padding:16px 18px;background:#F3EEE6;border-bottom:1px solid #E3DAD0;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .fleet-route-head h3{margin:0;color:#5F4636}.fleet-route-head small{display:block;color:#746B64;margin-top:4px}
+    .fleet-route-body{padding:18px}
+    .fleet-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:16px}
+    .fleet-metric{padding:10px;border:1px solid #E3DAD0;border-radius:12px;background:#F8F5ED}
+    .fleet-metric span{display:block;color:#746B64;font-size:10px;text-transform:uppercase;font-weight:800}.fleet-metric strong{display:block;color:#5F4636;margin-top:5px;font-size:14px}
+    .route-flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:12px;border:1px dashed #D9CEC2;border-radius:13px;background:#FFFDF9;margin:12px 0}
+    .route-flow-node{padding:7px 9px;border-radius:10px;background:#F3EEE6;color:#5F4636;font-size:12px;font-weight:700}.route-flow-arrow{color:#9B7457;font-weight:900}
+    .explain-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .explain-item{border:1px solid #E3DAD0;border-radius:12px;padding:12px;background:#FFFDF9}.explain-item strong{color:#5F4636}.explain-item small{display:block;color:#746B64;margin-top:5px;line-height:1.45}
+    .fleet-save-bar{position:sticky;bottom:12px;z-index:20;background:#FFFDF9;border:1px solid #DED6CC;border-radius:16px;padding:14px;box-shadow:0 14px 35px rgba(36,33,31,.14);display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:20px}
+    .fleet-save-copy strong{color:#5F4636}.fleet-save-copy small{display:block;color:#746B64;margin-top:3px}
+    .unsaved-pill{background:#FFF3D9;color:#9A6500;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800}
+    .all-route-name{width:100%;border:1px solid #D9CEC2;border-radius:10px;padding:9px 10px;background:#fff;color:#24211F}
+    .create-all-options{display:flex;align-items:center;gap:9px;margin-top:12px;color:#5F4636;font-size:13px}
+    @media(max-width:1100px){.fleet-summary-grid{grid-template-columns:repeat(3,1fr)}.fleet-metrics{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:650px){.fleet-summary-grid,.fleet-metrics,.explain-list{grid-template-columns:1fr}.fleet-save-bar,.fleet-banner{flex-direction:column;align-items:stretch}}
+
 </style>
 
 <div class="ai-route-page">
     <div class="ai-route-hero">
-        <h1>AI Route Search</h1>
-        <p>
-            Build a capacity-aware pickup route from the driver's base address to employee pickup points and then the office.
-            Driver/vehicle conflicts are hard-blocked. Employee route conflicts are shown as warnings and require Admin confirmation before reassignment.
-        </p>
+        <div class="ai-route-hero-top">
+            <div class="ai-route-hero-copy">
+                {% if create_all_mode %}
+                    <h1>Create All AI Routes — Fleet Planning Workspace</h1>
+                    <p>
+                        Build a complete unsaved fleet plan using eligible drivers, vehicle capacity, approved employee pickup points,
+                        shortest practical office-bound grouping and safety rules. Empty seats are allowed when adding another employee would create an excessive detour.
+                    </p>
+                {% else %}
+                    <h1>Create AI Route — One Route at a Time</h1>
+                    <p>
+                        Build one capacity-aware AI route at a time from the driver's base address to employee pickup points and then the office.
+                        Driver/vehicle conflicts are hard-blocked. Employee route conflicts are shown as warnings and require Admin confirmation before reassignment.
+                    </p>
+                {% endif %}
+            </div>
+
+            {% if create_all_mode %}
+                <a class="btn ai-route-switch-btn" href="{% url 'admin_web:ai_route_search' %}">← Create One AI Route</a>
+            {% else %}
+                <a class="btn ai-route-switch-btn" href="{% url 'admin_web:create_all_ai_routes' %}">✨ Create All AI Routes</a>
+            {% endif %}
+        </div>
     </div>
 
+    {% if create_all_mode %}
+        <div class="lux-card">
+            <div class="lux-card-header"><h2>Generate Complete Fleet Plan</h2></div>
+            <div class="lux-card-body">
+                <form method="post" action="{% url 'admin_web:create_all_ai_routes' %}">
+                    {% csrf_token %}
+                    <div class="form-row">
+                        <div class="field">
+                            <label>Route Date</label>
+                            <input type="date" name="route_date" value="{% if create_all_preview %}{{ create_all_preview.route_date }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" required>
+                        </div>
+                        <div class="field">
+                            <label>Planning Scope</label>
+                            <input type="text" value="All eligible drivers + employees" disabled>
+                        </div>
+                    </div>
+
+                    <div class="mode-grid">
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="{{ mode_safety }}" {% if not create_all_preview or create_all_preview.mode == mode_safety %}checked{% endif %}>
+                            <strong>AI Route Shortest Distance + Safety Rules</strong>
+                            <small>Creates practical office-bound groups, then optimises every route from Driver Address → employee pickup points → CabMate office.</small>
+                        </label>
+                        <label class="mode-option">
+                            <input type="radio" name="mode" value="{{ mode_leave }}" {% if create_all_preview.mode == mode_leave %}checked{% endif %}>
+                            <strong>Shortest Distance + Remove Leave Employees</strong>
+                            <small>Employees recorded on leave for the selected date are removed before fleet planning.</small>
+                        </label>
+                    </div>
+
+                    <label class="create-all-options">
+                        <input type="checkbox" name="include_assigned" value="1" {% if create_all_preview.include_assigned %}checked{% endif %}>
+                        Include employees already assigned to active routes
+                    </label>
+
+                    <div class="mini-note">
+                        <strong>Capacity rule:</strong> seats are a maximum, not a target. CabMate will not force a 5/5 vehicle if the extra pickup creates an excessive detour.
+                        Generated routes remain <strong>Not Saved</strong> until Admin chooses Save All &amp; Ready for Use.
+                    </div>
+
+                    <button class="btn btn-primary btn-full" style="margin-top:16px;" type="submit">✨ Generate All AI Routes</button>
+                </form>
+            </div>
+        </div>
+
+        {% if create_all_preview %}
+            <div class="result-section">
+                <div class="fleet-summary-grid">
+                    <div class="summary-box"><span>Employees Assigned</span><strong>{{ create_all_preview.assigned_employee_count }}/{{ create_all_preview.eligible_employee_count }}</strong></div>
+                    <div class="summary-box"><span>Drivers Assigned</span><strong>{{ create_all_preview.drivers_used }}</strong></div>
+                    <div class="summary-box"><span>Drivers Not Required</span><strong>{{ create_all_preview.drivers_not_required|length }}</strong></div>
+                    <div class="summary-box"><span>Unassigned Employees</span><strong>{{ create_all_preview.unassigned_employees|length }}</strong></div>
+                    <div class="summary-box"><span>Total Routes</span><strong>{{ create_all_preview.total_routes }}</strong></div>
+                    <div class="summary-box"><span>Total Fleet KM</span><strong>{{ create_all_preview.total_distance_km }} km</strong></div>
+                    <div class="summary-box"><span>Estimated Drive Time</span><strong>{{ create_all_preview.total_duration_minutes }} min</strong></div>
+                    <div class="summary-box"><span>Empty Seats</span><strong>{{ create_all_preview.total_empty_seats }}</strong></div>
+                    <div class="summary-box"><span>Route Conflicts</span><strong>{{ create_all_preview.soft_conflict_count }}</strong></div>
+                    <div class="summary-box"><span>Safety Warnings</span><strong>{{ create_all_preview.safety_warning_count|default:0 }}</strong></div>
+                </div>
+
+                <div class="fleet-banner">
+                    <div>
+                        <h3>{% if create_all_preview.all_employees_covered %}Fleet plan generated{% else %}Fleet plan generated with uncovered employees{% endif %}</h3>
+                        <p>{{ create_all_preview.mode_label }} · {{ create_all_preview.route_date }} · Nothing has been saved yet.</p>
+                    </div>
+                    <span class="unsaved-pill">AI Generated · Not Saved</span>
+                </div>
+
+                {% for route in create_all_preview.routes %}
+                    <div class="fleet-route-card" data-all-route-card data-route-index="{{ route.route_index }}" data-driver-id="{{ route.driver_id }}" data-vehicle-id="{{ route.vehicle_id }}">
+                        <div class="fleet-route-head">
+                            <div>
+                                <h3>ROUTE {{ route.route_index|stringformat:"02d" }} — <span class="route-title-preview">{{ route.route_name }}</span></h3>
+                                <small>{{ route.driver_name }} · {{ route.vehicle_number }} · {{ route.included_count }}/{{ route.seat_count }} seats</small>
+                            </div>
+                            <span class="unsaved-pill">Not Saved</span>
+                        </div>
+                        <div class="fleet-route-body">
+                            <div class="field" style="margin-bottom:14px;">
+                                <label>Route Name</label>
+                                <input class="all-route-name" type="text" value="{{ route.route_name }}" maxlength="200">
+                            </div>
+
+                            <div class="fleet-metrics">
+                                <div class="fleet-metric"><span>Driver</span><strong>{{ route.driver_name }}</strong></div>
+                                <div class="fleet-metric"><span>Vehicle</span><strong>{{ route.vehicle_number }}</strong></div>
+                                <div class="fleet-metric"><span>Employees</span><strong>{{ route.included_count }}/{{ route.seat_count }}</strong></div>
+                                <div class="fleet-metric"><span>Driver → First</span><strong>{% if route.first_stop_distance_km %}{{ route.first_stop_distance_km|floatformat:1 }} km{% else %}--{% endif %}</strong></div>
+                                <div class="fleet-metric"><span>Total Route</span><strong>{% if route.distance_km %}{{ route.distance_km }} km{% else %}--{% endif %}</strong></div>
+                                <div class="fleet-metric"><span>ETA</span><strong>{% if route.duration_minutes %}{{ route.duration_minutes }} min{% else %}--{% endif %}</strong></div>
+                            </div>
+
+                            <div>
+                                {% if route.google_optimised %}<span class="badge ok">Google optimised</span>{% else %}<span class="badge warn">Local fallback</span>{% endif %}
+                                {% if route.safety_passed %}<span class="badge ok">🛡 Safety passed</span>{% else %}<span class="badge warn">🛡 Safety review</span>{% endif %}
+                                {% if route.soft_conflict_count %}<span class="badge warn">{{ route.soft_conflict_count }} conflict(s)</span>{% endif %}
+                            </div>
+
+                            {% if route.optimizer_warning %}<div class="warning-box">{{ route.optimizer_warning }}</div>{% endif %}
+                            {% for warning in route.safety_warnings %}<div class="warning-box"><strong>Safety Sequence Warning:</strong> {{ warning }}</div>{% endfor %}
+                            {% if route.empty_seat_reason %}<div class="mini-note"><strong>{{ route.remaining_seats }} seat(s) intentionally empty.</strong> {{ route.empty_seat_reason }}</div>{% endif %}
+
+                            <div class="route-flow">
+                                <span class="route-flow-node">🚕 {{ route.driver_name }}</span><span class="route-flow-arrow">→</span>
+                                {% for row in route.employees %}
+                                    <span class="route-flow-node">{{ row.name }}</span><span class="route-flow-arrow">→</span>
+                                {% endfor %}
+                                <span class="route-flow-node">🏢 Office</span>
+                            </div>
+
+                            <div class="route-columns">
+                                <div>
+                                    <h3 style="color:#5F4636;margin-top:0;">Pickup Order · Drag to Reorder</h3>
+                                    <p class="locked-note">Admin may reorder this route before Save All. DROP stays the exact reverse.</p>
+                                    <ul class="route-list all-pickup-list">
+                                        {% for row in route.employees %}
+                                            <li class="route-stop" draggable="true"
+                                                data-employee-id="{{ row.id }}"
+                                                data-employee-name="{{ row.name|escape }}"
+                                                data-soft-conflict="{% if row.soft_conflict %}1{% else %}0{% endif %}"
+                                                data-conflict-routes="{{ row.conflict_routes|join:', '|escape }}">
+                                                <span class="stop-number">{{ forloop.counter }}</span>
+                                                <div>
+                                                    <strong>{{ row.name }}</strong>
+                                                    <small>{{ row.employee_id }} · {{ row.pickup_location }}</small>
+                                                    <small>{{ row.assignment_reason }}</small>
+                                                    {% if row.soft_conflict %}<small style="color:#9A6500;">Already on: {{ row.conflict_routes|join:", " }}</small>{% endif %}
+                                                </div>
+                                                <span class="drag-handle">☰</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3 style="color:#5F4636;margin-top:0;">Drop Order · Locked Reverse</h3>
+                                    <p class="locked-note">Pickup first becomes drop last. Drop cannot be edited separately.</p>
+                                    <ul class="route-list all-drop-list"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="warning-box">No new AI route could be generated with the currently eligible fleet and employees.</div>
+                {% endfor %}
+
+                {% if create_all_preview.unassigned_employees %}
+                    <div class="lux-card" style="margin-top:18px;">
+                        <div class="lux-card-header"><h2>Unassigned Employees · Why?</h2></div>
+                        <div class="lux-card-body explain-list">
+                            {% for row in create_all_preview.unassigned_employees %}
+                                <div class="explain-item"><strong>{{ row.name }}</strong><small>{{ row.reason }}</small></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if create_all_preview.drivers_not_required %}
+                    <div class="lux-card" style="margin-top:18px;">
+                        <div class="lux-card-header"><h2>Drivers Not Required</h2></div>
+                        <div class="lux-card-body explain-list">
+                            {% for driver in create_all_preview.drivers_not_required %}
+                                <div class="explain-item"><strong>{{ driver.name }} · {{ driver.vehicle_number }}</strong><small>{{ driver.reason }}</small></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if create_all_preview.drivers_unavailable %}
+                    <div class="lux-card" style="margin-top:18px;">
+                        <div class="lux-card-header"><h2>Drivers Unavailable for New Routes</h2></div>
+                        <div class="lux-card-body explain-list">
+                            {% for driver in create_all_preview.drivers_unavailable %}
+                                <div class="explain-item"><strong>{{ driver.name }}</strong><small>{{ driver.unavailable_reason }}</small></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if create_all_preview.assigned_excluded %}
+                    <div class="warning-box">
+                        <strong>Existing-route employees excluded:</strong>
+                        {% for row in create_all_preview.assigned_excluded %}{{ row.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+                        Enable “Include employees already assigned to active routes” and regenerate if Admin intends to reassign them.
+                    </div>
+                {% endif %}
+
+                {% if create_all_preview.leave_excluded %}
+                    <div class="warning-box">
+                        <strong>Leave employees removed:</strong>
+                        {% for row in create_all_preview.leave_excluded %}{{ row.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+                    </div>
+                {% endif %}
+
+                {% if create_all_preview.routes %}
+                    <form method="post" action="{% url 'admin_web:save_all_ai_routes' %}" id="saveAllAiRoutesForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="route_plan_json" id="allRoutePlanJson">
+                        <input type="hidden" name="confirm_reassignment" id="allConfirmReassignment" value="0">
+                        <div class="fleet-save-bar">
+                            <div class="fleet-save-copy">
+                                <strong>Ready to Save AI Route Plan</strong>
+                                <small>{{ create_all_preview.total_routes }} routes · {{ create_all_preview.assigned_employee_count }} employees · {{ create_all_preview.drivers_used }} drivers · {{ create_all_preview.soft_conflict_count }} conflict(s)</small>
+                            </div>
+                            <button class="btn btn-success" type="submit">Save All &amp; Ready for Use</button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
     <div class="ai-grid">
         <div class="lux-card">
             <div class="lux-card-header"><h2>Generate Route</h2></div>
@@ -350,15 +645,19 @@
                     <div class="employee-panel">
                         <div class="employee-toolbar">
                             <strong>Employees</strong>
-                            <div>
-                                <button type="button" class="btn btn-light" id="selectEligibleBtn">Select Eligible</button>
-                                <button type="button" class="btn btn-light" id="clearEmployeesBtn">Clear</button>
+                            <div class="employee-toolbar-actions">
+                                <button type="button" class="btn btn-light" id="selectAllBtn">Select All</button>
+                                <button type="button" class="btn btn-light" id="unselectAllBtn">Unselect All</button>
                             </div>
+                        </div>
+                        <div class="employee-filter-bar">
+                            <button type="button" class="btn btn-light filter-btn active" id="showAllEmployeesBtn">Show All Employees</button>
+                            <button type="button" class="btn btn-light filter-btn" id="showEligibleEmployeesBtn">Show Only Not Assigned Employees</button>
                         </div>
 
                         <div class="employee-list">
                             {% for employee in employees %}
-                                <div class="employee-row {% if not employee.has_pickup %}missing{% endif %}">
+                                <div class="employee-row {% if not employee.has_pickup %}missing{% endif %}" data-soft-conflict="{% if employee.soft_conflict %}1{% else %}0{% endif %}">
                                     <div>
                                         <input
                                             type="checkbox"
@@ -394,7 +693,7 @@
                     </div>
 
                     <div class="mini-note">
-                        Leave all employee checkboxes empty if you want CabMate to automatically consider all eligible employees. If eligible employees exceed vehicle capacity, CabMate prioritises employees nearest to the driver's base before optimising the final stop order.
+                        Use <strong>Show All Employees</strong> to see everyone, or <strong>Show Only Not Assigned Employees</strong> to see employees without an active route. <strong>Select All</strong> selects all currently visible employees with a valid pickup point. Vehicle capacity remains enforced.
                     </div>
 
                     <div style="margin-top:16px;">
@@ -466,7 +765,7 @@
                         <p class="locked-note">Your final dragged pickup order will be saved. DROP updates automatically to the exact reverse.</p>
                         <ul class="route-list" id="pickupList">
                             {% for row in preview.employees %}
-                                <li class="route-stop" draggable="true" data-employee-id="{{ row.id }}">
+                                <li class="route-stop" draggable="true" data-employee-id="{{ row.id }}" data-employee-name="{{ row.name|escape }}" data-soft-conflict="{% if row.soft_conflict %}1{% else %}0{% endif %}" data-conflict-routes="{{ row.conflict_routes|join:', '|escape }}">
                                     <span class="stop-number">{{ forloop.counter }}</span>
                                     <div>
                                         <strong>{{ row.name }}</strong>
@@ -498,109 +797,152 @@
 
                         <input type="hidden" name="ordered_employee_ids" id="orderedEmployeeIds">
 
+                        <input type="hidden" name="confirm_reassignment" id="confirmReassignmentInput" value="0">
                         {% if preview.soft_conflict_count %}
-                            <label class="confirm-box">
-                                <input type="checkbox" name="confirm_reassignment" value="1">
-                                <span>
-                                    <strong>Confirm employee reassignment</strong><br>
-                                    I understand that employees showing route conflicts will be removed from their current active saved route and moved to this AI route. Historical trips/runs are not deleted.
-                                </span>
-                            </label>
+                            <div class="warning-box"><strong>{{ preview.soft_conflict_count }} employee route conflict(s) detected.</strong> A confirmation popup will appear before reassignment.</div>
                         {% endif %}
-
                         <button class="btn btn-success btn-full" type="submit">Save as Ready for Use</button>
                     </form>
                 </div>
             </div>
         </div>
     {% endif %}
+    {% endif %}
 </div>
 
+{% if preview %}
+<div class="conflict-modal-backdrop" id="routeConflictModal">
+  <div class="conflict-modal" role="dialog" aria-modal="true">
+    <div class="conflict-modal-header"><h3>Employee Route Conflict</h3><p>The following employee(s) are already assigned to another active route.</p></div>
+    <div class="conflict-modal-body">
+      <div id="routeConflictEmployees"></div>
+      <div class="conflict-modal-warning">If you continue, these employees will be removed from their old active route and moved to this AI route. <strong>Historical trips/runs will not be deleted.</strong></div>
+    </div>
+    <div class="conflict-modal-actions">
+      <button type="button" class="btn btn-light" id="cancelRouteSaveBtn">Cancel</button>
+      <button type="button" class="btn btn-success" id="continueRouteSaveBtn">Continue</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if create_all_mode and create_all_preview.soft_conflict_count %}
+<div class="conflict-modal-backdrop" id="allRouteConflictModal">
+  <div class="conflict-modal" role="dialog" aria-modal="true">
+    <div class="conflict-modal-header">
+      <h3>Employee Route Conflict — Save All</h3>
+      <p>These employees already belong to active saved routes.</p>
+    </div>
+    <div class="conflict-modal-body">
+      <div id="allRouteConflictEmployees"></div>
+      <div class="conflict-modal-warning">
+        Continuing removes only their current active RouteStop membership and moves them into this new AI plan.
+        <strong>Historical trips and route runs are preserved.</strong>
+      </div>
+    </div>
+    <div class="conflict-modal-actions">
+      <button type="button" class="btn btn-light" id="cancelAllRouteSaveBtn">Cancel</button>
+      <button type="button" class="btn btn-success" id="continueAllRouteSaveBtn">Continue &amp; Reassign</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <script>
-(function () {
-    const selectEligibleBtn = document.getElementById('selectEligibleBtn');
-    const clearEmployeesBtn = document.getElementById('clearEmployeesBtn');
+(function(){
 
-    if (selectEligibleBtn) {
-        selectEligibleBtn.addEventListener('click', function () {
-            document.querySelectorAll('.employee-check:not(:disabled)').forEach(cb => cb.checked = true);
-        });
-    }
 
-    if (clearEmployeesBtn) {
-        clearEmployeesBtn.addEventListener('click', function () {
-            document.querySelectorAll('.employee-check').forEach(cb => cb.checked = false);
-        });
-    }
+ // CREATE ALL: per-route drag/drop + locked reverse DROP.
+ document.querySelectorAll('[data-all-route-card]').forEach(card=>{
+   const pickup=card.querySelector('.all-pickup-list'), drop=card.querySelector('.all-drop-list');
+   if(!pickup||!drop)return;
+   let dragging=null;
+   const items=()=>Array.from(pickup.querySelectorAll('.route-stop'));
+   const update=()=>{
+     const x=items();
+     x.forEach((i,n)=>i.querySelector('.stop-number').textContent=n+1);
+     drop.innerHTML='';
+     [...x].reverse().forEach((i,n)=>{
+       const c=i.cloneNode(true);c.removeAttribute('draggable');c.classList.remove('dragging');
+       c.querySelector('.stop-number').textContent=n+1;
+       const h=c.querySelector('.drag-handle');if(h)h.textContent='🔒';
+       drop.appendChild(c);
+     });
+   };
+   items().forEach(i=>{
+     i.addEventListener('dragstart',()=>{dragging=i;i.classList.add('dragging')});
+     i.addEventListener('dragend',()=>{i.classList.remove('dragging');dragging=null;update()});
+   });
+   pickup.addEventListener('dragover',e=>{
+     e.preventDefault();if(!dragging)return;
+     const candidates=[...pickup.querySelectorAll('.route-stop:not(.dragging)')];
+     const after=candidates.find(c=>{const r=c.getBoundingClientRect();return e.clientY<r.top+r.height/2});
+     after?pickup.insertBefore(dragging,after):pickup.appendChild(dragging);
+   });
+   update();
+ });
 
-    const pickupList = document.getElementById('pickupList');
-    const dropList = document.getElementById('dropList');
-    const orderedInput = document.getElementById('orderedEmployeeIds');
+ const saveAllForm=document.getElementById('saveAllAiRoutesForm');
+ const allPlanInput=document.getElementById('allRoutePlanJson');
+ const allConfirm=document.getElementById('allConfirmReassignment');
+ let allApproved=false;
 
-    if (!pickupList || !dropList || !orderedInput) return;
+ function buildAllPlan(){
+   return Array.from(document.querySelectorAll('[data-all-route-card]')).map(card=>({
+     route_name:(card.querySelector('.all-route-name')?.value||'').trim(),
+     driver_id:parseInt(card.dataset.driverId||'0',10),
+     vehicle_id:parseInt(card.dataset.vehicleId||'0',10),
+     employee_ids:Array.from(card.querySelectorAll('.all-pickup-list .route-stop')).map(i=>parseInt(i.dataset.employeeId,10))
+   }));
+ }
+ function allConflicts(){
+   return Array.from(document.querySelectorAll('[data-all-route-card] .all-pickup-list .route-stop'))
+     .filter(i=>i.dataset.softConflict==='1')
+     .map(i=>({name:i.dataset.employeeName||'Employee',routes:i.dataset.conflictRoutes||'Existing active route'}));
+ }
+ if(saveAllForm){
+   saveAllForm.addEventListener('submit',e=>{
+     if(allPlanInput)allPlanInput.value=JSON.stringify(buildAllPlan());
+     if(allApproved){if(allConfirm)allConfirm.value='1';return;}
+     const cs=allConflicts();
+     if(cs.length){
+       e.preventDefault();
+       if(allConfirm)allConfirm.value='0';
+       const modal=document.getElementById('allRouteConflictModal'),box=document.getElementById('allRouteConflictEmployees');
+       if(box){box.innerHTML='';cs.forEach(x=>{const d=document.createElement('div');d.className='conflict-person';const s=document.createElement('strong');s.textContent=x.name;const m=document.createElement('small');m.textContent='Already assigned to: '+x.routes;d.append(s,m);box.appendChild(d);});}
+       if(modal){modal.classList.add('show');document.body.style.overflow='hidden';}
+     }
+   });
+ }
+ const allCancel=document.getElementById('cancelAllRouteSaveBtn'),allContinue=document.getElementById('continueAllRouteSaveBtn'),allModal=document.getElementById('allRouteConflictModal');
+ function closeAllModal(){if(allModal){allModal.classList.remove('show');document.body.style.overflow='';}}
+ if(allCancel)allCancel.onclick=()=>{allApproved=false;if(allConfirm)allConfirm.value='0';closeAllModal();};
+ if(allContinue)allContinue.onclick=()=>{allApproved=true;if(allConfirm)allConfirm.value='1';closeAllModal();saveAllForm.requestSubmit();};
+ if(allModal)allModal.addEventListener('click',e=>{if(e.target===allModal){allApproved=false;if(allConfirm)allConfirm.value='0';closeAllModal();}});
 
-    function pickupItems() {
-        return Array.from(pickupList.querySelectorAll('.route-stop'));
-    }
+ const rows=()=>Array.from(document.querySelectorAll('.employee-list .employee-row'));
+ const all=document.getElementById('showAllEmployeesBtn'), eligible=document.getElementById('showEligibleEmployeesBtn');
+ function filter(mode){rows().forEach(r=>r.classList.toggle('filtered-hidden',mode==='eligible'&&r.dataset.softConflict==='1'));if(all)all.classList.toggle('active',mode==='all');if(eligible)eligible.classList.toggle('active',mode==='eligible');}
+ if(all)all.onclick=()=>filter('all'); if(eligible)eligible.onclick=()=>filter('eligible');
+ const select=document.getElementById('selectAllBtn'), unselect=document.getElementById('unselectAllBtn');
+ if(select)select.onclick=()=>rows().forEach(r=>{let c=r.querySelector('.employee-check');if(!r.classList.contains('filtered-hidden')&&c&&!c.disabled)c.checked=true;});
+ if(unselect)unselect.onclick=()=>document.querySelectorAll('.employee-check').forEach(c=>c.checked=false);
 
-    function updateOrders() {
-        const items = pickupItems();
-        const ids = [];
+ const pickup=document.getElementById('pickupList'), drop=document.getElementById('dropList'), ordered=document.getElementById('orderedEmployeeIds');
+ const items=()=>pickup?Array.from(pickup.querySelectorAll('.route-stop')):[];
+ function update(){if(!pickup||!drop||!ordered)return;let x=items();ordered.value=x.map(i=>i.dataset.employeeId).join(',');x.forEach((i,n)=>i.querySelector('.stop-number').textContent=n+1);drop.innerHTML='';[...x].reverse().forEach((i,n)=>{let c=i.cloneNode(true);c.removeAttribute('draggable');c.classList.remove('dragging');c.querySelector('.stop-number').textContent=n+1;let h=c.querySelector('.drag-handle');if(h)h.textContent='🔒';drop.appendChild(c);});}
+ if(pickup&&drop&&ordered){let dragging=null;items().forEach(i=>{i.addEventListener('dragstart',()=>{dragging=i;i.classList.add('dragging')});i.addEventListener('dragend',()=>{i.classList.remove('dragging');dragging=null;update()})});pickup.addEventListener('dragover',e=>{e.preventDefault();if(!dragging)return;let cs=[...pickup.querySelectorAll('.route-stop:not(.dragging)')],after=cs.find(c=>{let r=c.getBoundingClientRect();return e.clientY<r.top+r.height/2});after?pickup.insertBefore(dragging,after):pickup.appendChild(dragging)});update();}
 
-        items.forEach((item, index) => {
-            ids.push(item.dataset.employeeId);
-            const number = item.querySelector('.stop-number');
-            if (number) number.textContent = index + 1;
-        });
-
-        orderedInput.value = ids.join(',');
-        dropList.innerHTML = '';
-
-        [...items].reverse().forEach((item, index) => {
-            const clone = item.cloneNode(true);
-            clone.removeAttribute('draggable');
-            clone.classList.remove('dragging');
-            const number = clone.querySelector('.stop-number');
-            if (number) number.textContent = index + 1;
-            const handle = clone.querySelector('.drag-handle');
-            if (handle) handle.textContent = '🔒';
-            dropList.appendChild(clone);
-        });
-    }
-
-    let dragging = null;
-
-    pickupList.querySelectorAll('.route-stop').forEach(item => {
-        item.addEventListener('dragstart', function () {
-            dragging = item;
-            item.classList.add('dragging');
-        });
-
-        item.addEventListener('dragend', function () {
-            item.classList.remove('dragging');
-            dragging = null;
-            updateOrders();
-        });
-    });
-
-    pickupList.addEventListener('dragover', function (event) {
-        event.preventDefault();
-        if (!dragging) return;
-
-        const candidates = [...pickupList.querySelectorAll('.route-stop:not(.dragging)')];
-        const afterElement = candidates.find(candidate => {
-            const box = candidate.getBoundingClientRect();
-            return event.clientY < box.top + box.height / 2;
-        });
-
-        if (afterElement) {
-            pickupList.insertBefore(dragging, afterElement);
-        } else {
-            pickupList.appendChild(dragging);
-        }
-    });
-
-    updateOrders();
+ const form=document.getElementById('saveAiRouteForm'), confirm=document.getElementById('confirmReassignmentInput'), modal=document.getElementById('routeConflictModal'), box=document.getElementById('routeConflictEmployees');
+ let approved=false;
+ const conflicts=()=>items().filter(i=>i.dataset.softConflict==='1').map(i=>({name:i.dataset.employeeName||'Employee',routes:i.dataset.conflictRoutes||'Existing active route'}));
+ function close(){if(modal){modal.classList.remove('show');document.body.style.overflow='';}}
+ if(form)form.addEventListener('submit',e=>{update();if(approved){if(confirm)confirm.value='1';return;}let cs=conflicts();if(cs.length){e.preventDefault();if(confirm)confirm.value='0';box.innerHTML='';cs.forEach(x=>{let d=document.createElement('div');d.className='conflict-person';let s=document.createElement('strong');s.textContent=x.name;let m=document.createElement('small');m.textContent='Already assigned to: '+x.routes;d.append(s,m);box.appendChild(d)});modal.classList.add('show');document.body.style.overflow='hidden';}});
+ const cancel=document.getElementById('cancelRouteSaveBtn'), cont=document.getElementById('continueRouteSaveBtn');
+ if(cancel)cancel.onclick=()=>{approved=false;if(confirm)confirm.value='0';close();};
+ if(cont)cont.onclick=()=>{approved=true;if(confirm)confirm.value='1';close();form.requestSubmit();};
+ if(modal)modal.addEventListener('click',e=>{if(e.target===modal){approved=false;if(confirm)confirm.value='0';close();}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal&&modal.classList.contains('show')){approved=false;if(confirm)confirm.value='0';close();}});
 })();
 </script>
 {% endblock %}

@@ -74,7 +74,7 @@ urlpatterns = [
     path("routes/", views.routes_page, name="routes"),
 
     # ============================================================
-    # ADVANCED AI ROUTE SEARCH
+    # ADVANCED AI ROUTE SEARCH - ONE ROUTE AT A TIME
     # ============================================================
     path(
         "routes/ai-search/",
@@ -85,6 +85,20 @@ urlpatterns = [
         "routes/ai-search/save/",
         views.save_ai_route,
         name="save_ai_route",
+    ),
+
+    # ============================================================
+    # CREATE ALL AI ROUTES - FLEET-WIDE AI PLANNING
+    # ============================================================
+    path(
+        "routes/ai-search/create-all/",
+        views.create_all_ai_routes,
+        name="create_all_ai_routes",
+    ),
+    path(
+        "routes/ai-search/create-all/save/",
+        views.save_all_ai_routes,
+        name="save_all_ai_routes",
     ),
 
     path("routes/create/", views.create_route, name="create_route"),
