@@ -485,12 +485,23 @@
 <div class="ai-route-page">
     <div class="ai-route-hero">
         <div class="ai-route-hero-top">
-        
-            {% if create_all_mode %}
-                <a class="btn ai-route-switch-btn" href="{% url 'admin_web:ai_route_search' %}">← Create One AI Route</a>
-            {% else %}
-                <a class="btn ai-route-switch-btn" href="{% url 'admin_web:create_all_ai_routes' %}">✨ Create All AI Routes</a>
-            {% endif %}
+            <div class="ai-route-hero-copy">
+                {% if create_all_mode %}
+                    <h1>Create All AI Routes — Fleet Planning Workspace</h1>
+                    <p>
+                        Build a complete unsaved fleet plan using eligible drivers, vehicle capacity, approved employee pickup points,
+                        shortest practical office-bound grouping and safety rules. Empty seats are allowed when adding another employee would create an excessive detour.
+                    </p>
+                {% else %}
+                    <h1>Create AI Route — One Route at a Time</h1>
+                    <p>
+                        Build one capacity-aware AI route at a time from the driver's base address to employee pickup points and then the office.
+                        Driver/vehicle conflicts are hard-blocked. Employee route conflicts are shown as warnings and require Admin confirmation before reassignment.
+                    </p>
+                {% endif %}
+            </div>
+
+
         </div>
     </div>
 
