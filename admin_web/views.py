@@ -3619,6 +3619,45 @@ def routes_page(request):
     }
     return render(request, "admin_web/routes.html", context)
 
+
+# ============================================================
+# ADMIN WEBSITE DROP ORDER (SESSION-AUTHENTICATED)
+# ============================================================
+@login_required
+@admin_required
+@require_GET
+def route_drop_order_data(request, route_id):
+    route = get_object_or_404(RouteTemplate, pk=route_id, is_active=True)
+    stops = list(route.stops.order_by("stop_order", "id").values(
+        "employee_id", "stop_order", "drop_order"
+    ))
+    return JsonResponse({"stops": stops})
+
+
+@login_required
+@admin_required
+@require_POST
+def route_drop_order_action(request, route_id, action):
+    if action not in ("save-drop-order", "reset-drop-order"):
+        return JsonResponse({"error": "Invalid DROP action."}, status=400)
+    get_object_or_404(RouteTemplate, pk=route_id, is_active=True)
+    try:
+        payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid JSON request."}, status=400)
+    if not isinstance(payload, dict):
+        return JsonResponse({"error": "Expected a JSON object."}, status=400)
+    success, status_code, data = _call_same_server_api(
+        request,
+        f"/api/trips/routes/{route_id}/{action}/",
+        payload,
+        method="post",
+    )
+    if not isinstance(data, dict):
+        data = {"detail": str(data)}
+    return JsonResponse(data, status=status_code, safe=True)
+
+
 @login_required
 @admin_required
 @require_POST

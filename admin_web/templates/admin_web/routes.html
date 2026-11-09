@@ -2655,7 +2655,7 @@ async function websiteDropInit(routeId) {
     websiteDropIds=[...websiteDropOriginalMembers].reverse();
     websiteDropRender();websiteDropStatus('Loading saved DROP order...');
     try {
-        const data=await websiteDropFetchJson(`/api/trips/routes/${websiteDropRouteId}/`);
+        const data=await websiteDropFetchJson(`/admin-web/routes/${websiteDropRouteId}/drop-order/`);
         if(websiteDropRouteId!==Number(routeId))return;
         const stops=Array.isArray(data.stops)?data.stops:(Array.isArray(data.route_stops)?data.route_stops:[]);
         const saved=stops.filter(s=>s.drop_order!==null && s.drop_order!==undefined)
@@ -2682,7 +2682,7 @@ async function websiteDropSubmit(action, employeeIds) {
     try {
         const options={method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/json'}};
         if(employeeIds)options.body=JSON.stringify({employee_ids:employeeIds});
-        await websiteDropFetchJson(`/api/trips/routes/${websiteDropRouteId}/${action}/`,options);
+        await websiteDropFetchJson(`/admin-web/routes/${websiteDropRouteId}/drop-order/${action}/`,options);
         if(action==='reset-drop-order')websiteDropIds=[...websiteDropOriginalMembers].reverse();
         websiteDropStatus(action==='reset-drop-order'?'DROP order reset successfully.':'Custom DROP order saved successfully.');
     } catch(e) {websiteDropStatus('Could not save DROP order: '+e.message,true);}
