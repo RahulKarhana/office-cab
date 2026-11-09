@@ -1526,6 +1526,10 @@
 }
 
 
+/* Pickup + DROP drag handles */
+.route-pickup-grip {cursor:grab;touch-action:none;border:1px solid #d9c6b5;background:#f3eee6;border-radius:10px;padding:8px 11px;font-size:18px;color:#5f4636}
+.route-stop-card.route-pickup-dragging,.route-drop-row.route-drop-dragging{opacity:.45}
+.route-order-heading{font-size:16px;font-weight:900;color:#5f4636;margin:18px 0 8px}
 /* Independent DROP order editor (Admin Website) */
 .route-drop-panel {margin-top:20px;padding:18px;border:1px solid #d9c6b5;border-radius:18px;background:#fbf8f2}
 .route-drop-panel h4 {margin:0 0 6px;color:#5f4636;font-size:19px}
@@ -1990,6 +1994,13 @@
             <div class="route-stop-list" id="createStopList"></div>
             <div class="route-empty-box" id="createEmptyState">No employees added yet. Tap “Add Employee” to define employee order for this route.</div>
 
+            <section class="route-drop-panel" aria-label="Create DROP order">
+                <h4>🚖 DROP Order — Reverse PICKUP by default</h4>
+                <p class="route-drop-help">Drag to customize independently. Use the arrows if you prefer. Check the sequence before creating the route.</p>
+                <div id="createDropList"></div>
+                <div class="route-drop-buttons"><button type="button" class="route-drop-reset" onclick="resetDraftDrop('create')">Reset to Reverse PICKUP</button></div>
+                <p class="route-drop-status" id="createDropStatus"></p>
+            </section>
             <div class="route-modal-actions">
                 <button type="button" class="route-cancel-btn" onclick="closeCreateRouteModal()">Cancel</button>
                 <button type="submit" class="route-save-btn">Create Route</button>
@@ -2300,6 +2311,64 @@ function onEmployeeChanged(prefix, state, index, value) {
     renderStopList(prefix, state);
 }
 
+const draftDropOrders={create:[],edit:[]};
+function idsForStops(state){return state.stops.map(x=>Number(x.employee_id)).filter(x=>x>0);}
+function syncDraftDrop(prefix,state){
+    const ids=idsForStops(state),old=draftDropOrders[prefix];
+    if (prefix === 'create' && !draftDropCustomized.create) {
+        draftDropOrders.create = [...ids].reverse();
+    } else {
+        const keep=old.filter(id=>ids.includes(id));
+        const missing=[...ids].reverse().filter(id=>!keep.includes(id));
+        draftDropOrders[prefix]=[...keep,...missing];
+    }
+    if(prefix==='create')renderDraftDrop('create');
+}
+function movePickup(prefix,state,from,to){
+    if(from===to||from<0||to<0||from>=state.stops.length||to>=state.stops.length)return;
+    const [stop]=state.stops.splice(from,1);state.stops.splice(to,0,stop);
+    // Keep default reverse order until an admin explicitly customizes DROP.
+    if(prefix==='create'&&!draftDropCustomized.create)draftDropOrders.create=idsForStops(state).reverse();
+    renderStopList(prefix,state);
+}
+const draftDropCustomized={create:false,edit:false};
+function bindPickupDrag(prefix,state){
+    const list=document.getElementById(prefix+'StopList');if(!list)return;
+    let from=-1;
+    list.querySelectorAll('.route-pickup-grip').forEach(grip=>{
+        grip.addEventListener('dragstart',e=>{from=Number(grip.dataset.index);e.dataTransfer.setData('text/plain',String(from));grip.closest('.route-stop-card').classList.add('route-pickup-dragging');});
+        grip.addEventListener('dragend',()=>{from=-1;list.querySelectorAll('.route-stop-card').forEach(x=>x.classList.remove('route-pickup-dragging'));});
+    });
+    list.querySelectorAll('.route-stop-card').forEach((card,to)=>{
+        card.addEventListener('dragover',e=>e.preventDefault());
+        card.addEventListener('drop',e=>{e.preventDefault();if(from>=0)movePickup(prefix,state,from,to);});
+    });
+}
+function renderDraftDrop(prefix){
+    const list=document.getElementById(prefix+'DropList');if(!list)return;
+    list.replaceChildren();const ids=draftDropOrders[prefix];
+    ids.forEach((id,index)=>{
+        const row=document.createElement('div');row.className='route-drop-row';row.draggable=true;
+        const num=document.createElement('span');num.className='route-drop-num';num.textContent=index+1;
+        const name=document.createElement('span');name.className='route-drop-name';name.textContent=findEmployeeById(id)?.username||'Employee #'+id;
+        const grip=document.createElement('span');grip.textContent='⠿';row.append(grip,num,name);
+        for(const [symbol,delta] of [['↑',-1],['↓',1]]){
+            const b=document.createElement('button');b.type='button';b.className='route-drop-move';b.textContent=symbol;b.disabled=index+delta<0||index+delta>=ids.length;
+            b.addEventListener('click',()=>moveDraftDrop(prefix,index,index+delta));row.append(b);
+        }
+        row.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',String(index)));
+        row.addEventListener('dragover',e=>e.preventDefault());
+        row.addEventListener('drop',e=>{e.preventDefault();moveDraftDrop(prefix,Number(e.dataTransfer.getData('text/plain')),index);});
+        list.append(row);
+    });
+    const status=document.getElementById(prefix+'DropStatus');if(status)status.textContent=ids.length?`DROP sequence: ${ids.map(id=>findEmployeeById(id)?.username||id).join(' → ')}`:'Add employees to preview DROP order.';
+}
+function moveDraftDrop(prefix,from,to){
+    const ids=draftDropOrders[prefix];if(!Number.isInteger(from)||from===to||from<0||to<0||from>=ids.length||to>=ids.length)return;
+    const [id]=ids.splice(from,1);ids.splice(to,0,id);draftDropCustomized[prefix]=true;renderDraftDrop(prefix);
+}
+function resetDraftDrop(prefix){draftDropCustomized[prefix]=false;draftDropOrders[prefix]=idsForStops(prefix==='create'?createState:editState).reverse();renderDraftDrop(prefix);}
+
 function renderStopList(prefix, state) {
     const els = getModalElements(prefix);
     const seatCount = state.vehicle?.seat_count || 0;
@@ -2338,6 +2407,7 @@ function renderStopList(prefix, state) {
         card.className = `route-stop-card ${duplicate ? "duplicate" : ""}`;
         card.innerHTML = `
             <div class="route-stop-top">
+                <button type="button" class="route-pickup-grip" draggable="true" data-index="${index}" title="Drag to reorder PICKUP" aria-label="Drag pickup employee ${index+1}">⠿</button>
                 <div class="route-stop-index ${themeClass}">${index + 1}</div>
                 <div class="route-stop-title">
                     <strong>Employee ${index + 1} - ${employeeName}</strong>
@@ -2387,6 +2457,8 @@ function renderStopList(prefix, state) {
         });
     });
 
+    bindPickupDrag(prefix,state);
+    syncDraftDrop(prefix,state);
     els.addBtn.disabled = !state.vehicle || (seatCount > 0 && state.stops.length >= seatCount);
 }
 
@@ -2417,13 +2489,27 @@ function replaceEmployeeInEditRoute(prefix, state, index) {
     }, 0);
 }
 
-function prepareStopsJson(state) {
+function prepareStopsJson(state, prefix) {
+    if (prefix === 'create' && draftDropCustomized.create) {
+        const members = idsForStops(state);
+        const drop = draftDropOrders.create || [];
+        if (drop.length !== members.length ||
+            new Set(drop).size !== members.length ||
+            members.some(id => !drop.includes(id))) {
+            throw new Error('Custom DROP order is incomplete. Please check the employee list and DROP order.');
+        }
+    }
     return state.stops.map((stop, index) => ({
         employee: stop.employee_id,
         pickup_location: stop.pickup_location || "",
         pickup_latitude: stop.pickup_latitude === "" ? null : stop.pickup_latitude,
         pickup_longitude: stop.pickup_longitude === "" ? null : stop.pickup_longitude,
-        stop_order: index + 1
+        stop_order: index + 1,
+        ...(prefix === "create" ? {
+            drop_order: draftDropCustomized.create
+                ? draftDropOrders.create.indexOf(Number(stop.employee_id)) + 1
+                : null
+        } : {})
     }));
 }
 
@@ -2464,6 +2550,7 @@ function populateCreateModal() {
     createState.driverId = null;
     createState.vehicle = null;
     resetStops(createState);
+    draftDropCustomized.create=false;draftDropOrders.create=[];renderDraftDrop("create");
 
     if (els.vehicleDisplay) els.vehicleDisplay.textContent = "No vehicle selected";
     if (els.vehicleHidden) els.vehicleHidden.value = "";
@@ -2552,7 +2639,7 @@ function websiteDropRender() {
 }
 function websiteDropMove(from,to) {
     if(websiteDropBusy || from===to || from<0 || to<0 || from>=websiteDropIds.length || to>=websiteDropIds.length)return;
-    const [id]=websiteDropIds.splice(from,1);websiteDropIds.splice(to,0,id);websiteDropRender();
+    const [id]=websiteDropIds.splice(from,1);websiteDropIds.splice(to,0,id);draftDropOrders.edit=[...websiteDropIds];websiteDropRender();
     websiteDropStatus('DROP order changed. Click Save DROP Order to store it.');
 }
 async function websiteDropFetchJson(url, options={}) {
@@ -2564,6 +2651,7 @@ async function websiteDropFetchJson(url, options={}) {
 async function websiteDropInit(routeId) {
     websiteDropRouteId=Number(routeId);
     websiteDropOriginalMembers=websiteDropMembers();
+    draftDropOrders.edit=[...websiteDropOriginalMembers].reverse();
     websiteDropIds=[...websiteDropOriginalMembers].reverse();
     websiteDropRender();websiteDropStatus('Loading saved DROP order...');
     try {
@@ -2576,6 +2664,7 @@ async function websiteDropInit(routeId) {
             .filter(id=>websiteDropOriginalMembers.includes(id));
         if(saved.length===websiteDropOriginalMembers.length && new Set(saved).size===saved.length) {
             websiteDropIds=saved;
+            draftDropOrders.edit=[...saved];
             websiteDropStatus('Saved custom DROP order loaded.');
         } else {
             websiteDropStatus('Showing default reverse-PICKUP order.');
@@ -2984,7 +3073,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     return;
                 }
                 if (createEls.stopsJson) {
-                    createEls.stopsJson.value = JSON.stringify(prepareStopsJson(createState));
+                    try {
+                        createEls.stopsJson.value = JSON.stringify(prepareStopsJson(createState,"create"));
+                    } catch (error) {
+                        e.preventDefault();
+                        alert(error.message);
+                    }
                 }
             });
         }
@@ -2996,7 +3090,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     return;
                 }
                 if (editEls.stopsJson) {
-                    editEls.stopsJson.value = JSON.stringify(prepareStopsJson(editState));
+                    editEls.stopsJson.value = JSON.stringify(prepareStopsJson(editState,"edit"));
                 }
             });
         }
