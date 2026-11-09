@@ -8981,7 +8981,8 @@ def assigned_trips_page(request):
     trip_type_filter = request.GET.get("trip_type", "").strip().upper()
 
     today = timezone.localdate()
-    tomorrow = today + timezone.timedelta(days=1)
+    yesterday = today - timedelta(days=1)
+    tomorrow = today + timedelta(days=1)
 
     runs = RouteRun.objects.select_related(
         "route_template",
@@ -8995,7 +8996,7 @@ def assigned_trips_page(request):
             Trip.STATUS_ASSIGNED,
             Trip.STATUS_STARTED,
         ],
-        run_date__gte=today,
+        run_date__gte=yesterday,
     ).distinct()
 
     # -------------------------
