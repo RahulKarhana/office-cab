@@ -38,6 +38,17 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
                 "vehicle",
             ).order_by("-created_at")
 
+        # Employees may only access runs in which they have a trip.
+        # This does not grant access to other employees' routes.
+        if getattr(user, "role", "") == "EMPLOYEE" and self.action == "live_status":
+            return RouteRun.objects.filter(
+                trips__employee=user,
+            ).distinct().prefetch_related(
+                "stops__employee"
+            ).select_related(
+                "route_template", "driver", "vehicle"
+            ).order_by("-created_at")
+
         return RouteRun.objects.none()
 
     @action(detail=False, methods=["get"], url_path="today_active")
@@ -88,6 +99,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
         stop_employee_ids = self._get_route_employee_ids(route_run)
 
         return Trip.objects.filter(
+            route_run=route_run,
             employee_id__in=stop_employee_ids,
             trip_date=route_run.run_date,
             trip_type=route_run.trip_type,
@@ -114,15 +126,10 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
         # ---------------------------------------------------------
         # 1. Get only employees who actually boarded
         # ---------------------------------------------------------
-        boarded_stops = list(
-            route_run.stops
-            .select_related("employee")
-            .filter(
-                is_boarded=True,
-                is_no_show=False,
-            )
-            .order_by("-stop_order")
-        )
+        boarded_stops = list(RouteService.get_ordered_stops(route_run).filter(
+            is_boarded=True,
+            is_no_show=False,
+        ))
 
         total_boarded = len(boarded_stops)
 
@@ -195,15 +202,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
             },
         )
     def _send_pickup_start_notifications(self, route_run):
-        ordered_stops = list(
-            route_run.stops
-            .select_related("employee")
-            .filter(
-                is_picked=False,
-                is_no_show=False,
-            )
-            .order_by("-stop_order")
-        )
+        ordered_stops = list(RouteService.get_pending_stops(route_run))
 
         total_stops = len(ordered_stops)
 
@@ -603,10 +602,7 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
             trip_qs = self._get_related_trip_queryset(route_run)
 
             if route_run.trip_type == Trip.TRIP_TYPE_DROP:
-                boarded_stops = route_run.stops.filter(
-                    is_boarded=True,
-                    is_no_show=False,
-                ).order_by("-stop_order")
+                boarded_stops = RouteService.get_pending_stops(route_run)
 
                 boarded_employee_ids = list(
                     boarded_stops.values_list("employee_id", flat=True)

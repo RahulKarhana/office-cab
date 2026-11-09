@@ -1,22 +1,16 @@
 {% extends 'admin_web/base.html' %}
-
 {% block title %}Drivers - CabMate Admin{% endblock %}
 {% block nav_drivers %}active{% endblock %}
 {% block page_heading %}Drivers{% endblock %}
 {% block page_subheading %}Manage drivers and view complete driver profiles{% endblock %}
-
 {% block content %}
-
 <style>
-
 /* ============================================================
    SEARCH
 ============================================================ */
-
 .driver-search-form{
     margin-top:20px;
 }
-
 .driver-search-box{
     display:flex;
     align-items:center;
@@ -27,11 +21,9 @@
     padding:10px 14px;
     box-shadow:0 10px 30px rgba(95,70,54,.06);
 }
-
 .search-icon{
     font-size:18px;
 }
-
 .driver-search-box input{
     flex:1;
     border:none;
@@ -41,7 +33,6 @@
     font-weight:700;
     color:#24211f;
 }
-
 .driver-search-btn{
     border:none;
     padding:12px 24px;
@@ -52,24 +43,19 @@
     background:linear-gradient(135deg,#7e5c43,#9b7457);
     transition:.2s ease;
 }
-
 .driver-search-btn:hover{
     transform:translateY(-1px);
     box-shadow:0 8px 20px rgba(155,116,87,.22);
 }
-
-
 /* ============================================================
    IMPORT EXCEL
 ============================================================ */
-
 .driver-directory-actions{
     display:flex;
     align-items:center;
     gap:12px;
     flex-wrap:wrap;
 }
-
 .driver-import-btn{
     display:inline-flex;
     align-items:center;
@@ -86,24 +72,19 @@
     transition:.2s ease;
     white-space:nowrap;
 }
-
 .driver-import-btn:hover{
     color:#fffdf9;
     transform:translateY(-1px);
     box-shadow:0 12px 26px rgba(95,70,54,.20);
 }
-
-
 /* ============================================================
    DRIVER PROFILE
 ============================================================ */
-
 .driver-profile{
     display:flex;
     align-items:center;
     gap:12px;
 }
-
 .driver-avatar{
     width:42px;
     height:42px;
@@ -116,21 +97,16 @@
     font-weight:950;
     flex-shrink:0;
 }
-
 .driver-name{
     color:#24211f;
     font-weight:900;
 }
-
 .driver-sub{
     font-size:12px;
     color:#746b64;
     font-weight:800;
     margin-top:3px;
 }
-
-
-
 .dummy-driver-icon{
     width:24px;
     height:24px;
@@ -139,14 +115,10 @@
     stroke-width:2;
     stroke-linecap:round;
 }
-
 /* Decorative profile marker only. No driver photo upload is required. */
-
-
 /* ============================================================
    VEHICLE
 ============================================================ */
-
 .vehicle-badge{
     display:inline-flex;
     align-items:center;
@@ -158,7 +130,6 @@
     font-weight:900;
     white-space:nowrap;
 }
-
 .vehicle-missing{
     display:inline-flex;
     background:#f8ece9;
@@ -168,12 +139,9 @@
     font-weight:900;
     white-space:nowrap;
 }
-
-
 /* ============================================================
    DRIVER VEHICLE STATUS CARD
 ============================================================ */
-
 .driver-status-card{
     grid-column:1/-1;
     background:linear-gradient(135deg,#fffdf9,#fbf8f2);
@@ -185,7 +153,6 @@
     gap:18px;
     box-shadow:0 18px 40px rgba(95,70,54,.07);
 }
-
 .driver-status-icon{
     width:64px;
     height:64px;
@@ -197,30 +164,24 @@
     color:#9b7457;
     flex-shrink:0;
 }
-
 .driver-status-card.warning .driver-status-icon{
     background:#fbf3e7;
     color:#8b612e;
 }
-
 .driver-status-card h3{
     margin:0;
     font-size:28px;
     font-weight:950;
     color:#5f4636;
 }
-
 .driver-status-card p{
     margin:5px 0 0;
     color:#746b64;
     font-weight:850;
 }
-
-
 /* ============================================================
    STATUS
 ============================================================ */
-
 .driver-active{
     display:inline-flex;
     align-items:center;
@@ -232,7 +193,6 @@
     font-size:11px;
     font-weight:900;
 }
-
 .driver-inactive{
     display:inline-flex;
     align-items:center;
@@ -244,12 +204,9 @@
     font-size:11px;
     font-weight:900;
 }
-
-
 /* ============================================================
    VIEW PROFILE BUTTON
 ============================================================ */
-
 .view-driver-btn{
     display:inline-flex;
     align-items:center;
@@ -267,163 +224,111 @@
     white-space:nowrap;
     transition:.2s ease;
 }
-
 .view-driver-btn:hover{
     color:#fffdf9;
     transform:translateY(-1px);
     box-shadow:0 8px 18px rgba(155,116,87,.22);
 }
-
-
 /* ============================================================
    TABLE
 ============================================================ */
-
 .admin-table tbody tr{
     transition:.15s ease;
 }
-
 .admin-table tbody tr:hover{
     background:#fbf8f2;
 }
-
 .admin-table th{
     white-space:nowrap;
 }
-
 .admin-table td{
     vertical-align:middle;
 }
-
-
 /* ============================================================
    EMPTY STATE
 ============================================================ */
-
 .empty-drivers{
     text-align:center;
     padding:35px 20px !important;
     color:#746b64;
     font-weight:800;
 }
-
-
 /* ============================================================
    RESPONSIVE
 ============================================================ */
-
 @media(max-width:700px){
-
     .driver-search-box{
         flex-direction:column;
         align-items:stretch;
     }
-
     .driver-search-btn{
         width:100%;
     }
-
     .driver-directory-actions,
     .driver-import-btn{
         width:100%;
     }
-
     .driver-status-card{
         align-items:flex-start;
     }
-
     .driver-status-card h3{
         font-size:22px;
     }
-
 }
-
 </style>
-
-
 <div class="dashboard-grid">
-
-
     <!-- ========================================================
          STATISTICS
     ========================================================= -->
-
     <section class="stats-row">
-
         <div class="mini-stat-card">
-
             <p>
                 Total Drivers
             </p>
-
             <h3>
                 {{ total_drivers }}
             </h3>
-
             <span>
                 All registered drivers
             </span>
-
         </div>
-
-
         <div class="mini-stat-card">
-
             <p>
                 Active Drivers
             </p>
-
             <h3>
                 {{ active_drivers }}
             </h3>
-
             <span>
                 Currently active accounts
             </span>
-
         </div>
-
-
         <div class="mini-stat-card">
-
             <p>
                 Assigned Vehicles
             </p>
-
             <h3>
                 {{ assigned_vehicles }}
             </h3>
-
             <span>
                 Vehicles linked to drivers
             </span>
-
         </div>
-
-
         <div class="mini-stat-card">
-
             <p>
                 Total Seats
             </p>
-
             <h3>
                 {{ total_seats }}
             </h3>
-
             <span>
                 Total capacity of all cabs
             </span>
-
         </div>
-
     </section>
-
-
     <!-- ========================================================
          DRIVER VEHICLE STATUS
     ========================================================= -->
-
     <section
         class="driver-status-card
         {% if drivers_without_vehicle > 0 %}
@@ -432,62 +337,40 @@
             good
         {% endif %}"
     >
-
         <div class="driver-status-icon">
             🚖
         </div>
-
-
         <div>
-
             <h3>
                 Driver Vehicle Status
             </h3>
-
             <p>
-
                 {% if drivers_without_vehicle > 0 %}
-
                     {{ drivers_without_vehicle }}
                     driver{{ drivers_without_vehicle|pluralize }}
                     without assigned vehicle.
-
                 {% else %}
-
                     All drivers have assigned vehicles.
-
                 {% endif %}
-
             </p>
-
         </div>
-
     </section>
-
-
     <!-- ========================================================
          DRIVER DIRECTORY
     ========================================================= -->
-
     <section
         class="panel-card"
         style="grid-column:1 / -1;"
     >
-
         <div class="panel-head">
-
             <div>
-
                 <h3>
                     Driver Directory
                 </h3>
-
                 <p>
                     Search drivers and open complete driver profiles
                 </p>
-
             </div>
-
             <div class="driver-directory-actions">
                 <a
                     href="{% url 'admin_web:driver_excel_import' %}"
@@ -496,299 +379,169 @@
                     Import Excel
                 </a>
             </div>
-
         </div>
-
-
         <!-- ====================================================
              SEARCH
         ===================================================== -->
-
         <form
             method="get"
             class="driver-search-form"
         >
-
             <div class="driver-search-box">
-
                 <span class="search-icon">
                     🔍
                 </span>
-
-
                 <input
                     type="text"
                     name="q"
                     value="{{ query }}"
                     placeholder="Search full name, username, phone, address, vehicle number or model..."
                 >
-
-
                 <button
                     type="submit"
                     class="driver-search-btn"
                 >
                     Search Driver
                 </button>
-
             </div>
-
         </form>
-
-
         <!-- ====================================================
              TABLE
         ===================================================== -->
-
         <div
             class="table-wrap"
             style="margin-top:18px;"
         >
-
             <table class="admin-table">
-
                 <thead>
-
                     <tr>
-
                         <th>
                             ID
                         </th>
-
                         <th>
                             Driver
                         </th>
-
                         <th>
                             Phone
                         </th>
-
                         <th>
                             Address
                         </th>
-
                         <th>
                             Vehicle Number
                         </th>
-
                         <th>
                             Vehicle Model
                         </th>
-
                         <th>
                             Seats
                         </th>
-
                         <th>
                             Status
                         </th>
-
                         <th>
                             View
                         </th>
-
                     </tr>
-
                 </thead>
-
-
                 <tbody>
-
                     {% for driver in drivers %}
-
                     <tr>
-
-
                         <!-- ID -->
-
                         <td>
                             {{ driver.id }}
                         </td>
-
-
                         <!-- DRIVER -->
-
                         <td>
-
                             <div class="driver-profile">
-
                                 <div class="driver-avatar" title="Driver profile avatar">
                                     <svg class="dummy-driver-icon" viewBox="0 0 64 64" aria-hidden="true">
                                         <circle cx="32" cy="22" r="12"></circle>
                                         <path d="M12 56c1.8-12.5 9.8-20 20-20s18.2 7.5 20 20"></path>
                                     </svg>
                                 </div>
-
-
                                 <div>
-
                                     <div class="driver-name">
-
                                         {{ driver.display_name }}
-
                                     </div>
-
                                     <div class="driver-sub">
-
                                         Driver ID #{{ driver.id }} · Login ID: {{ driver.username }}
-
                                     </div>
-
                                 </div>
-
                             </div>
-
                         </td>
-
-
                         <!-- PHONE -->
-
                         <td>
-
                             {{ driver.phone_number|default:"--" }}
-
                         </td>
-
-
                         <!-- ADDRESS -->
-
                         <td>
                             {{ driver.address|default:"--" }}
                         </td>
-
-
                         <!-- VEHICLE NUMBER -->
-
                         <td>
-
                             {% if driver.vehicle %}
-
                                 <span class="vehicle-badge">
-
                                     🚖
-
                                     {{ driver.vehicle.vehicle_number }}
-
                                 </span>
-
                             {% else %}
-
                                 <span class="vehicle-missing">
-
                                     No Vehicle
-
                                 </span>
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- VEHICLE MODEL -->
-
                         <td>
-
                             {% if driver.vehicle %}
-
                                 {{ driver.vehicle.vehicle_model|default:"--" }}
-
                             {% else %}
-
                                 --
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- SEATS -->
-
                         <td>
-
                             {% if driver.vehicle %}
-
                                 {{ driver.vehicle.seat_count|default:"--" }}
-
                             {% else %}
-
                                 --
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- STATUS -->
-
                         <td>
-
                             {% if driver.is_active %}
-
                                 <span class="driver-active">
-
                                     Active
-
                                 </span>
-
                             {% else %}
-
                                 <span class="driver-inactive">
-
                                     Inactive
-
                                 </span>
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- VIEW PROFILE -->
-
                         <td>
-
                             <a
                                 href="{% url 'admin_web:driver_profile' driver.id %}"
                                 class="view-driver-btn"
                             >
-
                                 View
-
                             </a>
-
                         </td>
-
-
                     </tr>
-
-
                     {% empty %}
-
-
                     <tr>
-
                         <td
                             colspan="9"
                             class="empty-drivers"
                         >
-
                             No drivers found.
-
                         </td>
-
                     </tr>
-
-
                     {% endfor %}
-
                 </tbody>
-
             </table>
-
         </div>
-
     </section>
-
 </div>
-
 {% endblock %}

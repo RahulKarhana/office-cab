@@ -1,5 +1,5 @@
 {% extends "admin_web/base.html" %}
-
+{% load tz %}
 {% block title %}Employee Late Report{% endblock %}
 
 {% block content %}
@@ -1090,7 +1090,9 @@
 
                                 {% if row.arrival_time %}
 
-                                    {{ row.arrival_time|date:"h:i:s A" }}
+                                    {% timezone "Asia/Kolkata" %}
+                                        {{ row.arrival_time|date:"h:i:s A" }}
+                                    {% endtimezone %}
 
                                 {% else %}
 
@@ -1107,7 +1109,9 @@
 
                                 {% if row.finished_at %}
 
-                                    {{ row.finished_at|date:"h:i:s A" }}
+                                    {% timezone "Asia/Kolkata" %}
+                                        {{ row.finished_at|date:"h:i:s A" }}
+                                    {% endtimezone %}
 
                                 {% else %}
 

@@ -1,6 +1,5 @@
-from datetime import datetime, time
+from datetime import datetime, timedelta
 import traceback
-from trips.models import EmployeeLeave
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -148,8 +147,29 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
-
     
+    def _resolve_shift_datetime(self, date_str, time_str, trip_type):
+        """
+        Admin enters the office shift date.
+
+        For DROP trips scheduled after midnight, the actual
+        departure belongs to the following calendar day.
+        """
+        pickup_datetime, error_response = self._parse_pickup_datetime(
+            date_str,
+            time_str,
+        )
+
+        if error_response is not None:
+            return None, None, error_response
+
+        shift_date = pickup_datetime.date()
+
+        if trip_type == Trip.TRIP_TYPE_DROP:
+            if pickup_datetime.hour < 12:
+                pickup_datetime = pickup_datetime + timedelta(days=1)
+
+        return shift_date, pickup_datetime, None
 
     def _parse_pickup_datetime(self, date_str, time_str):
         if not date_str or not time_str:
@@ -178,13 +198,17 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    def _get_duplicate_users(self, route, pickup_datetime, trip_type):
+    def _get_duplicate_users(
+        self, route, pickup_datetime, trip_type, shift_date
+    ):
         duplicate_users = []
 
         for stop in route.stops.all():
+            if EmployeeLeave.objects.filter(employee=stop.employee, leave_date=shift_date).exists():
+                continue
             exists = Trip.objects.filter(
                 employee=stop.employee,
-                trip_date=pickup_datetime.date(),
+                trip_date=shift_date,
                 trip_type=trip_type,
                 status__in=[
                     Trip.STATUS_ASSIGNED,
@@ -198,11 +222,14 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
         return duplicate_users
 
-    def _validate_duplicate_trips(self, route, pickup_datetime, trip_type):
+    def _validate_duplicate_trips(
+        self, route, pickup_datetime, trip_type, shift_date
+    ):
         duplicate_users = self._get_duplicate_users(
             route,
             pickup_datetime,
             trip_type,
+            shift_date,
         )
 
         if duplicate_users:
@@ -217,23 +244,35 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
 
         return None
 
-    def _create_route_run_and_trips(self, route, pickup_datetime, trip_type):
+    def _create_route_run_and_trips(
+            self, route, pickup_datetime, trip_type, shift_date
+        ):
         with transaction.atomic():
+            template_stops = list(route.stops.all())
+            custom_drop = trip_type == Trip.TRIP_TYPE_DROP and bool(template_stops) and all(
+                stop.drop_order is not None for stop in template_stops
+            )
+            if custom_drop:
+                orders = [stop.drop_order for stop in template_stops]
+                if sorted(orders) != list(range(1, len(template_stops) + 1)):
+                    raise ValueError("Saved DROP order is invalid. Please save it again.")
+
             route_run = RouteRun.objects.create(
                 route_template=route,
                 driver=route.driver,
                 vehicle=route.vehicle,
                 trip_type=trip_type,
-                run_date=pickup_datetime.date(),
+                run_date=shift_date,
+                use_custom_drop_order=custom_drop,
             )
 
             created_count = 0
             skipped_leave_count = 0
 
-            for stop in route.stops.all():
+            for stop in template_stops:
                 is_on_leave = EmployeeLeave.objects.filter(
                     employee=stop.employee,
-                    leave_date=pickup_datetime.date(),
+                    leave_date=shift_date,
                 ).exists()
 
                 if is_on_leave:
@@ -246,7 +285,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                     pickup_location=stop.pickup_location,
                     pickup_latitude=stop.pickup_latitude,
                     pickup_longitude=stop.pickup_longitude,
-                    stop_order=stop.stop_order,
+                    stop_order=(stop.drop_order if custom_drop else stop.stop_order),
                 )
 
                 Trip.objects.create(
@@ -260,7 +299,7 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                     pickup_latitude=stop.pickup_latitude,
                     pickup_longitude=stop.pickup_longitude,
                     pickup_time=pickup_datetime,
-                    trip_date=pickup_datetime.date(),
+                    trip_date=shift_date,
                     status=Trip.STATUS_ASSIGNED,
                     notification_sent=False,
                 )
@@ -279,13 +318,20 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
         ten_am_today = timezone.localtime().replace(
         hour=10, minute=0, second=0, microsecond=0
     )
-        return route_run.run_date == today and now >= ten_am_today
+        # For an overnight DROP, the shift date can be yesterday while
+        # the actual departure is today. Never send future-shift notices early.
+        return route_run.run_date <= today and now >= ten_am_today
 
     def _send_assignment_notifications(self, route, route_run, trip_type):
+        departure = Trip.objects.filter(route_run=route_run).order_by("id").first()
+        departure_label = (
+            timezone.localtime(departure.pickup_time).strftime("%d %b %Y, %I:%M %p")
+            if departure else "the scheduled time"
+        )
         send_push_notification(
             route.driver,
             "New Trip Assigned 🚖",
-            f"You have a new {trip_type.lower()} route assigned.",
+            f"You have a new {trip_type.lower()} route assigned for {departure_label}.",
             {
                 "type": "TRIP_ASSIGNED",
                 "trip_type": trip_type,
@@ -294,20 +340,11 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             },
         )
 
-        for stop in route.stops.all():
-
-            is_on_leave = EmployeeLeave.objects.filter(
-                employee=stop.employee,
-                leave_date=route_run.run_date,
-            ).exists()
-
-            if is_on_leave:
-                continue
-
+        for trip in Trip.objects.filter(route_run=route_run).select_related("employee"):
             send_push_notification(
-                stop.employee,
+                trip.employee,
                 "Cab Assigned 🚖",
-                f"Your cab for {trip_type.lower()} has been assigned.",
+                f"Your {trip_type.lower()} cab is assigned for {departure_label}.",
                 {
                     "type": "TRIP_ASSIGNED",
                     "trip_type": trip_type,
@@ -342,30 +379,35 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            pickup_datetime, error_response = self._parse_pickup_datetime(
-                request.data.get("date"),
-                request.data.get("time"),
+            shift_date, pickup_datetime, error_response = (
+                self._resolve_shift_datetime(
+                    request.data.get("date"),
+                    request.data.get("time"),
+                    trip_type,
+                )
             )
 
-            if error_response:
+            if error_response is not None:
                 return error_response
 
             duplicate_response = self._validate_duplicate_trips(
                 route,
                 pickup_datetime,
                 trip_type,
+                shift_date,
             )
 
-            if duplicate_response:
+            if duplicate_response is not None:
                 return duplicate_response
 
             route_run, created_count, skipped_leave_count = self._create_route_run_and_trips(
                 route,
                 pickup_datetime,
                 trip_type,
+                shift_date,
             )
 
-            if not route_run:
+            if route_run is None:
                 return Response(
                     {
                         "error": "No trips created. All employees may be on leave for selected date.",
@@ -385,6 +427,8 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 {
                     "message": f"{created_count} trip(s) created successfully. {skipped_leave_count} employee(s) skipped due to leave.",
                     "route_run_id": route_run.id,
+                    "office_shift_date": shift_date.isoformat(),
+                    "actual_departure_datetime": pickup_datetime.isoformat(),
                     "notification_sent": notification_sent,
                     "notification_note": (
                         "Notification sent instantly."
@@ -407,6 +451,8 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
     @action(detail=False,methods=["post"],url_path="preview-route-order",authentication_classes=[JWTAuthentication, SessionAuthentication],
     permission_classes=[IsAuthenticated],)
     def preview_route_order(self, request):
+        if not is_admin_user(request.user):
+            return Response({"error": "Only admin can preview route order."}, status=403)
         employee_ids = request.data.get("employee_ids", [])
         mode = request.data.get("mode", "MANUAL")
 
@@ -487,31 +533,72 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
             }
             for emp in ordered
         ])    
+    def _validate_complete_stop_order(self, route, employee_ids):
+        """Validate an exact permutation of the employees on this route."""
+        if not isinstance(employee_ids, list) or not employee_ids:
+            return None, "employee_ids must be a non-empty list."
+        try:
+            ids = [int(value) for value in employee_ids]
+        except (TypeError, ValueError):
+            return None, "All employee_ids must be integers."
+        if len(set(ids)) != len(ids):
+            return None, "Duplicate employee IDs are not allowed."
+        existing_ids = set(route.stops.values_list("employee_id", flat=True))
+        if set(ids) != existing_ids or len(ids) != len(existing_ids):
+            return None, "Provide every employee already assigned to this route, exactly once."
+        return ids, None
+
     @action(detail=True, methods=["post"], url_path="save-route-order")
     def save_route_order(self, request, pk=None):
-        route = self.get_object()
-        ordered_ids = request.data.get("employee_ids", [])
-
-        if not ordered_ids:
-            return Response({"error": "employee_ids required"}, status=400)
-
-        RouteStop.objects.filter(route=route).delete()
-
-        for index, emp_id in enumerate(ordered_ids, start=1):
-            emp = User.objects.get(id=emp_id)
-
-            RouteStop.objects.create(
-                route=route,
-                employee=emp,
-                stop_order=index,
-                pickup_location=emp.pickup_location,
-                pickup_latitude=emp.pickup_latitude,
-                pickup_longitude=emp.pickup_longitude,
+        if not is_admin_user(request.user):
+            return Response({"error": "Only admin can save route order."}, status=403)
+        with transaction.atomic():
+            route = self.get_object()
+            ordered_ids, error = self._validate_complete_stop_order(
+                route, request.data.get("employee_ids", [])
             )
+            if error:
+                return Response({"error": error}, status=400)
+            stops_by_employee = {
+                stop.employee_id: stop
+                for stop in RouteStop.objects.select_for_update().filter(route=route)
+            }
+            for index, employee_id in enumerate(ordered_ids, start=1):
+                stops_by_employee[employee_id].stop_order = index
+            RouteStop.objects.bulk_update(list(stops_by_employee.values()), ["stop_order"])
+        return Response({"message": "PICKUP order saved. Existing DROP order preserved."})
 
-        return Response({"message": "Route saved successfully"})
+    @action(detail=True, methods=["post"], url_path="save-drop-order")
+    def save_drop_order(self, request, pk=None):
+        """Save an independent DROP order; affects only future generated runs."""
+        if not is_admin_user(request.user):
+            return Response({"error": "Only admin can save DROP order."}, status=403)
+        with transaction.atomic():
+            route = self.get_object()
+            ordered_ids, error = self._validate_complete_stop_order(
+                route, request.data.get("employee_ids", [])
+            )
+            if error:
+                return Response({"error": error}, status=400)
+            stops_by_employee = {
+                stop.employee_id: stop
+                for stop in RouteStop.objects.select_for_update().filter(route=route)
+            }
+            for index, employee_id in enumerate(ordered_ids, start=1):
+                stops_by_employee[employee_id].drop_order = index
+            RouteStop.objects.bulk_update(list(stops_by_employee.values()), ["drop_order"])
+        return Response({"message": "Custom DROP order saved for future runs."})
 
-        
+    @action(detail=True, methods=["post"], url_path="reset-drop-order")
+    def reset_drop_order(self, request, pk=None):
+        """Return future DROP runs to the legacy reverse-PICKUP behavior."""
+        if not is_admin_user(request.user):
+            return Response({"error": "Only admin can reset DROP order."}, status=403)
+        with transaction.atomic():
+            route = self.get_object()
+            RouteStop.objects.select_for_update().filter(route=route).update(drop_order=None)
+        return Response({"message": "Future DROP runs will use reverse PICKUP order."})
+
     @action(detail=True, methods=["post"], url_path="repeat_route")
     def repeat_route(self, request, pk=None):
         if not is_admin_user(request.user):
@@ -530,28 +617,41 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            pickup_datetime, error_response = self._parse_pickup_datetime(
+            shift_date, pickup_datetime, error_response = self._resolve_shift_datetime(
                 request.data.get("date"),
                 request.data.get("time"),
+                trip_type,
             )
 
-            if error_response:
+            if error_response is not None:
                 return error_response
 
             duplicate_response = self._validate_duplicate_trips(
                 route,
                 pickup_datetime,
                 trip_type,
+                shift_date,
             )
 
-            if duplicate_response:
+            if duplicate_response is not None:
                 return duplicate_response
 
-            route_run, created_count = self._create_route_run_and_trips(
+            route_run, created_count, skipped_leave_count = self._create_route_run_and_trips(
                 route,
                 pickup_datetime,
                 trip_type,
+                shift_date,
             )
+
+            if route_run is None:
+                return Response(
+                    {
+                        "error": "No trips created. All employees may be on leave for selected date.",
+                        "created_count": created_count,
+                        "skipped_leave_count": skipped_leave_count,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             notification_sent = self._handle_assignment_notification(
                 route,
@@ -563,6 +663,8 @@ class RouteTemplateViewSet(viewsets.ModelViewSet):
                 {
                     "message": f"{created_count} trip(s) created.",
                     "route_run_id": route_run.id,
+                    "office_shift_date": shift_date.isoformat(),
+                    "actual_departure_datetime": pickup_datetime.isoformat(),
                     "notification_sent": notification_sent,
                     "notification_note": (
                         "Notification sent instantly."

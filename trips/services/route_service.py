@@ -18,9 +18,13 @@ class RouteService:
         stops = route_run.stops.select_related("employee")
 
         if route_run.trip_type == Trip.TRIP_TYPE_DROP:
-            return stops.order_by("-stop_order")
+            # New custom DROP runs store the admin-selected sequence as
+            # ascending stop_order. Existing runs retain reverse PICKUP order.
+            if route_run.use_custom_drop_order:
+                return stops.order_by("stop_order", "pk")
+            return stops.order_by("-stop_order", "pk")
 
-        return stops.order_by("stop_order")
+        return stops.order_by("stop_order", "pk")
 
     @staticmethod
     def get_pending_stops(route_run):
@@ -474,7 +478,6 @@ class RouteService:
     # ============================================================
     # DRIVER ARRIVED
     # ============================================================
-
     @staticmethod
     def mark_arrived(route_run):
         current_stop = RouteService.get_current_stop(route_run)
@@ -488,61 +491,63 @@ class RouteService:
         now = timezone.now()
 
         current_stop.arrival_time = now
-        current_stop.waiting_started_at = now
 
-        update_fields = [
-            "arrival_time",
-            "waiting_started_at",
-        ]
+        is_pickup = route_run.trip_type == Trip.TRIP_TYPE_PICKUP
+
+        update_fields = ["arrival_time"]
+
+        # Waiting timer is used for employee PICKUP.
+        if is_pickup:
+            current_stop.waiting_started_at = now
+            update_fields.append("waiting_started_at")
 
         should_send = True
 
-        if hasattr(
-            current_stop,
-            "arrival_notification_sent",
-        ):
-            should_send = (
-                not current_stop.arrival_notification_sent
-            )
+        if hasattr(current_stop, "arrival_notification_sent"):
+            should_send = not current_stop.arrival_notification_sent
             current_stop.arrival_notification_sent = True
-            update_fields.append(
-                "arrival_notification_sent",
-            )
+            update_fields.append("arrival_notification_sent")
 
         current_stop.save(update_fields=update_fields)
 
         if should_send:
-            route_word = (
-                "drop"
-                if route_run.trip_type == Trip.TRIP_TYPE_DROP
-                else "pickup"
-            )
-
-            NotificationService.send_notification(
-                current_stop.employee,
-                (
-                    f"Your cab has arrived at your "
-                    f"{route_word} location.\n"
+            if is_pickup:
+                message = (
+                    "Your cab has arrived at your pickup location.\n"
                     "Please come to the cab."
-                ),
-                title="Cab Arrived 🚕",
-                push_data={
+                )
+                push_data = {
                     "type": "ARRIVED",
                     "route_run_id": str(route_run.id),
                     "stop_id": str(current_stop.id),
                     "trip_type": route_run.trip_type,
                     "chat_enabled": "true",
                     "screen": "pickup_chat",
-                },
+                }
+            else:
+                message = (
+                    "Your cab has arrived at your drop location."
+                )
+                push_data = {
+                    "type": "ARRIVED",
+                    "route_run_id": str(route_run.id),
+                    "stop_id": str(current_stop.id),
+                    "trip_type": route_run.trip_type,
+                    "chat_enabled": "false",
+                    "screen": "active_trip",
+                }
+
+            NotificationService.send_notification(
+                current_stop.employee,
+                message,
+                title="Cab Arrived 🚕",
+                push_data=push_data,
             )
 
         return current_stop
-
-    
     # ============================================================
     # NO SHOW
     # ============================================================
-
     @staticmethod
     def mark_no_show(route_run, driver):
         current_stop = RouteService.get_current_stop(route_run)

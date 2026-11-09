@@ -1,20 +1,17 @@
 {% extends "admin_web/base.html" %}
-
+{% load tz %}
 {% block title %}Driver Account Approval{% endblock %}
 {% block nav_requests %}active{% endblock %}
-
 {% block page_heading %}Driver Account Approval{% endblock %}
 {% block page_subheading %}
 Review new driver registrations before allowing login
 {% endblock %}
-
 {% block content %}
-
+{% timezone "Asia/Kolkata" %}
 <style>
     .approval-page {
         width: 100%;
     }
-
     .approval-header {
         background: linear-gradient(135deg, #f8f5ed, #fbf8f2);
         border: 1px solid #ded6cc;
@@ -23,7 +20,6 @@ Review new driver registrations before allowing login
         margin-bottom: 18px;
         box-shadow: 0 10px 30px rgba(95,70,54,.05);
     }
-
     .approval-header-top {
         display: flex;
         justify-content: space-between;
@@ -31,13 +27,11 @@ Review new driver registrations before allowing login
         gap: 16px;
         flex-wrap: wrap;
     }
-
     .approval-title-wrap {
         display: flex;
         align-items: center;
         gap: 14px;
     }
-
     .approval-icon {
         width: 52px;
         height: 52px;
@@ -50,21 +44,18 @@ Review new driver registrations before allowing login
         font-size: 26px;
         border: 1px solid #ded6cc;
     }
-
     .approval-title {
         margin: 0;
         color: #24211f;
         font-size: 24px;
         font-weight: 950;
     }
-
     .approval-subtitle {
         margin: 5px 0 0;
         color: #746b64;
         font-size: 13px;
         font-weight: 700;
     }
-
     .back-btn {
         display: inline-flex;
         align-items: center;
@@ -78,33 +69,27 @@ Review new driver registrations before allowing login
         font-size: 12px;
         font-weight: 900;
     }
-
     .summary-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 14px;
         margin-bottom: 18px;
     }
-
     .summary-card {
         border-radius: 20px;
         padding: 18px;
         color: #fffdf9;
         box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
     }
-
     .summary-pending {
         background: linear-gradient(135deg, #b98a67, #8b612e);
     }
-
     .summary-driver {
         background: linear-gradient(135deg, #9b7457, #7e5c43);
     }
-
     .summary-secure {
         background: linear-gradient(135deg, #7e5c43, #5f4636);
     }
-
     .summary-label {
         display: block;
         font-size: 11px;
@@ -112,14 +97,12 @@ Review new driver registrations before allowing login
         text-transform: uppercase;
         opacity: 0.88;
     }
-
     .summary-value {
         display: block;
         margin-top: 8px;
         font-size: 28px;
         font-weight: 950;
     }
-
     .summary-desc {
         display: block;
         margin-top: 7px;
@@ -127,7 +110,6 @@ Review new driver registrations before allowing login
         font-weight: 700;
         opacity: 0.85;
     }
-
     .approval-panel {
         background: #fffdf9;
         border: 1px solid #ded6cc;
@@ -135,7 +117,6 @@ Review new driver registrations before allowing login
         overflow: hidden;
         box-shadow: 0 12px 30px rgba(95,70,54,.06);
     }
-
     .panel-header {
         padding: 18px 20px;
         border-bottom: 1px solid #ded6cc;
@@ -145,21 +126,18 @@ Review new driver registrations before allowing login
         gap: 14px;
         flex-wrap: wrap;
     }
-
     .panel-header h3 {
         margin: 0;
         color: #24211f;
         font-size: 17px;
         font-weight: 950;
     }
-
     .panel-header p {
         margin: 4px 0 0;
         color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
-
     .count-pill {
         padding: 7px 12px;
         border-radius: 999px;
@@ -168,13 +146,11 @@ Review new driver registrations before allowing login
         font-size: 11px;
         font-weight: 950;
     }
-
     .driver-list {
         padding: 16px;
         display: grid;
         gap: 14px;
     }
-
     .driver-card {
         border: 1px solid #ded6cc;
         border-radius: 18px;
@@ -182,12 +158,10 @@ Review new driver registrations before allowing login
         background: #fffdf9;
         transition: 0.2s ease;
     }
-
     .driver-card:hover {
         box-shadow: 0 10px 24px rgba(95,70,54,.07);
         transform: translateY(-1px);
     }
-
     .driver-card-top {
         display: flex;
         justify-content: space-between;
@@ -196,13 +170,11 @@ Review new driver registrations before allowing login
         flex-wrap: wrap;
         margin-bottom: 14px;
     }
-
     .driver-main {
         display: flex;
         align-items: center;
         gap: 13px;
     }
-
     .driver-avatar {
         width: 48px;
         height: 48px;
@@ -215,21 +187,18 @@ Review new driver registrations before allowing login
         font-size: 20px;
         font-weight: 950;
     }
-
     .driver-main h4 {
         margin: 0;
         color: #24211f;
         font-size: 16px;
         font-weight: 950;
     }
-
     .driver-main p {
         margin: 4px 0 0;
         color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
-
     .pending-badge {
         display: inline-flex;
         align-items: center;
@@ -241,20 +210,17 @@ Review new driver registrations before allowing login
         font-size: 10px;
         font-weight: 950;
     }
-
     .details-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 10px;
     }
-
     .detail-box {
         padding: 12px;
         border-radius: 13px;
         background: #fbf8f2;
         border: 1px solid #ded6cc;
     }
-
     .detail-box span {
         display: block;
         margin-bottom: 4px;
@@ -263,19 +229,16 @@ Review new driver registrations before allowing login
         font-weight: 900;
         text-transform: uppercase;
     }
-
     .detail-box strong {
         color: #24211f;
         font-size: 12px;
         font-weight: 900;
         word-break: break-word;
     }
-
     .vehicle-box {
         background: #f2e9e1;
         border-color: #d8c4b4;
     }
-
     .actions-row {
         display: flex;
         gap: 9px;
@@ -284,7 +247,6 @@ Review new driver registrations before allowing login
         padding-top: 15px;
         border-top: 1px solid #eee6de;
     }
-
     .approve-btn,
     .reject-btn {
         border: none;
@@ -294,24 +256,20 @@ Review new driver registrations before allowing login
         font-weight: 950;
         cursor: pointer;
     }
-
     .approve-btn {
         background: linear-gradient(135deg, #6f8b74, #4f6d58);
         color: #fffdf9;
     }
-
     .reject-btn {
         background: #f8ece9;
         color: #7f3f39;
     }
-
     .reject-form {
         display: flex;
         gap: 8px;
         flex: 1;
         min-width: 280px;
     }
-
     .reject-form input {
         flex: 1;
         min-width: 180px;
@@ -322,17 +280,14 @@ Review new driver registrations before allowing login
         outline: none;
         font-size: 12px;
     }
-
     .reject-form input:focus {
         border-color: #a6584f;
         box-shadow: 0 0 0 3px rgba(166,88,79,.08);
     }
-
     .empty-state {
         padding: 50px 20px;
         text-align: center;
     }
-
     .empty-icon {
         width: 66px;
         height: 66px;
@@ -344,210 +299,159 @@ Review new driver registrations before allowing login
         justify-content: center;
         font-size: 30px;
     }
-
     .empty-state h3 {
         margin: 0 0 6px;
         color: #24211f;
         font-size: 18px;
         font-weight: 950;
     }
-
     .empty-state p {
         margin: 0;
         color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
-
     @media (max-width: 1000px) {
         .summary-grid {
             grid-template-columns: 1fr;
         }
-
         .details-grid {
             grid-template-columns: repeat(2, 1fr);
         }
     }
-
     @media (max-width: 650px) {
         .details-grid {
             grid-template-columns: 1fr;
         }
-
         .reject-form {
             flex-direction: column;
         }
     }
 </style>
-
 <div class="approval-page">
-
     <div class="approval-header">
         <div class="approval-header-top">
-
             <div class="approval-title-wrap">
-
                 <div class="approval-icon">
                     🧑‍✈️
                 </div>
-
                 <div>
                     <h2 class="approval-title">
                         Driver Account Approval
                     </h2>
-
                     <p class="approval-subtitle">
                         Review new driver registrations and vehicle
                         details before allowing login access.
                     </p>
                 </div>
-
             </div>
-
             <a
                 href="{% url 'admin_web:requests' %}"
                 class="back-btn"
             >
                 ← Back to Requests
             </a>
-
         </div>
     </div>
-
     <div class="summary-grid">
-
         <div class="summary-card summary-pending">
             <span class="summary-label">
                 Pending Drivers
             </span>
-
             <strong class="summary-value">
                 {{ pending_count }}
             </strong>
-
             <span class="summary-desc">
                 Waiting for Admin approval
             </span>
         </div>
-
         <div class="summary-card summary-driver">
             <span class="summary-label">
                 Vehicle Verification
             </span>
-
             <strong class="summary-value">
                 🚕
             </strong>
-
             <span class="summary-desc">
                 Check cab and seat details
             </span>
         </div>
-
         <div class="summary-card summary-secure">
             <span class="summary-label">
                 Login Access
             </span>
-
             <strong class="summary-value">
                 Locked
             </strong>
-
             <span class="summary-desc">
                 Until Admin approval
             </span>
         </div>
-
     </div>
-
     <div class="approval-panel">
-
         <div class="panel-header">
-
             <div>
                 <h3>
                     Pending Driver Registrations
                 </h3>
-
                 <p>
                     Verify driver and vehicle information before approval.
                 </p>
             </div>
-
             <div class="count-pill">
                 {{ pending_count }} Pending
             </div>
-
         </div>
-
         {% if pending_drivers %}
-
         <div class="driver-list">
-
             {% for driver in pending_drivers %}
-
             <div class="driver-card">
-
                 <div class="driver-card-top">
-
                     <div class="driver-main">
-
                         <div class="driver-avatar">
                             {{ driver.display_name|slice:":1"|upper }}
                         </div>
-
                         <div>
                             <h4>
                                 {{ driver.display_name }}
                             </h4>
-
                             <p>
                                 Registered:
                                 {{ driver.date_joined|date:"d M Y, h:i A" }}
                             </p>
                         </div>
-
                     </div>
-
                     <span class="pending-badge">
                         ⏳ Pending Approval
                     </span>
-
                 </div>
-
                 <div class="details-grid">
-
                     <div class="detail-box">
                         <span>Login ID</span>
                         <strong>
                             {{ driver.display_name }}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Phone</span>
                         <strong>
                             {{ driver.phone_number|default:"--" }}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Address</span>
                         <strong>
                             {{ driver.address|default:"--" }}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Role</span>
                         <strong>
                             {{ driver.role }}
                         </strong>
                     </div>
-
                     <div class="detail-box vehicle-box">
                         <span>Vehicle Number</span>
-
                         <strong>
                             {% if driver.vehicle %}
                                 {{ driver.vehicle.vehicle_number }}
@@ -556,10 +460,8 @@ Review new driver registrations before allowing login
                             {% endif %}
                         </strong>
                     </div>
-
                     <div class="detail-box vehicle-box">
                         <span>Vehicle Model</span>
-
                         <strong>
                             {% if driver.vehicle %}
                                 {{ driver.vehicle.vehicle_model }}
@@ -568,10 +470,8 @@ Review new driver registrations before allowing login
                             {% endif %}
                         </strong>
                     </div>
-
                     <div class="detail-box vehicle-box">
                         <span>Seat Count</span>
-
                         <strong>
                             {% if driver.vehicle %}
                                 {{ driver.vehicle.seat_count }}
@@ -580,18 +480,14 @@ Review new driver registrations before allowing login
                             {% endif %}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Account Status</span>
-
                         <strong>
                             {{ driver.account_status }}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Login Active</span>
-
                         <strong>
                             {% if driver.is_active %}
                                 Yes
@@ -600,19 +496,14 @@ Review new driver registrations before allowing login
                             {% endif %}
                         </strong>
                     </div>
-
                 </div>
-
                 <div class="actions-row">
-
                     <!-- APPROVE -->
-
                     <form
                         method="post"
                         action="{% url 'admin_web:approve_driver_account' driver.id %}"
                     >
                         {% csrf_token %}
-
                         <button
                             type="submit"
                             class="approve-btn"
@@ -620,26 +511,20 @@ Review new driver registrations before allowing login
                         >
                             ✅ Approve Account
                         </button>
-
                     </form>
-
-
                     <!-- REJECT -->
-
                     <form
                         method="post"
                         action="{% url 'admin_web:reject_driver_account' driver.id %}"
                         class="reject-form"
                     >
                         {% csrf_token %}
-
                         <input
                             type="text"
                             name="rejection_reason"
                             placeholder="Enter rejection reason"
                             required
                         >
-
                         <button
                             type="submit"
                             class="reject-btn"
@@ -647,39 +532,25 @@ Review new driver registrations before allowing login
                         >
                             ❌ Reject
                         </button>
-
                     </form>
-
                 </div>
-
             </div>
-
             {% endfor %}
-
         </div>
-
         {% else %}
-
         <div class="empty-state">
-
             <div class="empty-icon">
                 ✅
             </div>
-
             <h3>
                 No Pending Driver Accounts
             </h3>
-
             <p>
                 All driver registration requests have been reviewed.
             </p>
-
         </div>
-
         {% endif %}
-
     </div>
-
 </div>
-
+{% endtimezone %}
 {% endblock %}

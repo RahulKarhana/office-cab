@@ -1,6 +1,7 @@
 {% extends "admin_web/base.html" %}
-
+{% load tz %}
 {% block content %}
+{% timezone "Asia/Kolkata" %}
 <style>
     .ai-route-page {
         padding: 24px;
@@ -8,7 +9,6 @@
         min-height: calc(100vh - 80px);
         color: #24211F;
     }
-
     .ai-route-hero {
         background: linear-gradient(135deg, #5F4636, #7E5C43 55%, #9B7457);
         color: #FFFDF9;
@@ -17,19 +17,16 @@
         box-shadow: 0 16px 40px rgba(95, 70, 54, 0.18);
         margin-bottom: 22px;
     }
-
     .ai-route-hero-top {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 18px;
     }
-
     .ai-route-hero-copy {
         min-width: 0;
         flex: 1;
     }
-
     .ai-route-switch-btn {
         flex-shrink: 0;
         background: #FFFDF9;
@@ -38,32 +35,27 @@
         box-shadow: 0 8px 18px rgba(36,33,31,.13);
         white-space: nowrap;
     }
-
     .ai-route-switch-btn:hover {
         background: #F8F5ED;
         transform: translateY(-1px);
     }
-
     .ai-route-hero h1 {
         margin: 0 0 7px;
         font-size: 30px;
         font-weight: 800;
     }
-
     .ai-route-hero p {
         margin: 0;
         opacity: .92;
         max-width: 900px;
         line-height: 1.6;
     }
-
     .ai-grid {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(310px, 0.42fr);
         gap: 20px;
         align-items: start;
     }
-
     .lux-card {
         background: #FFFDF9;
         border: 1px solid #DED6CC;
@@ -71,28 +63,23 @@
         box-shadow: 0 10px 30px rgba(95, 70, 54, .08);
         overflow: hidden;
     }
-
     .lux-card-header {
         padding: 18px 20px;
         border-bottom: 1px solid #E8E0D7;
         background: #F3EEE6;
     }
-
     .lux-card-header h2 {
         margin: 0;
         font-size: 19px;
         color: #5F4636;
     }
-
     .lux-card-body { padding: 20px; }
-
     .form-row {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 14px;
         margin-bottom: 15px;
     }
-
     .field label {
         display: block;
         font-weight: 700;
@@ -100,7 +87,6 @@
         color: #5F4636;
         margin-bottom: 7px;
     }
-
     .field select,
     .field input[type="date"],
     .field input[type="text"] {
@@ -112,37 +98,31 @@
         color: #24211F;
         outline: none;
     }
-
     .field select:focus,
     .field input:focus {
         border-color: #9B7457;
         box-shadow: 0 0 0 3px rgba(155, 116, 87, .12);
     }
-
     .mode-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
         margin: 12px 0 18px;
     }
-
     .mode-option {
         border: 1px solid #DED6CC;
         border-radius: 14px;
         padding: 14px;
         background: #FFFDF9;
     }
-
     .mode-option strong { color: #5F4636; }
     .mode-option small { color: #746B64; display: block; margin-top: 5px; line-height: 1.45; }
-
     .employee-panel {
         border: 1px solid #E3DAD0;
         border-radius: 14px;
         overflow: hidden;
         margin-top: 16px;
     }
-
     .employee-toolbar {
         display: flex;
         gap: 10px;
@@ -152,12 +132,10 @@
         background: #F8F5ED;
         border-bottom: 1px solid #E3DAD0;
     }
-
     .employee-list {
         max-height: 330px;
         overflow: auto;
     }
-
     .employee-row {
         display: grid;
         grid-template-columns: 34px minmax(160px, 1fr) minmax(170px, 1.4fr) 120px;
@@ -167,10 +145,8 @@
         border-bottom: 1px solid #F0EAE3;
         font-size: 13px;
     }
-
     .employee-row:last-child { border-bottom: 0; }
     .employee-row.missing { opacity: .55; background: #FBF5F3; }
-
     .badge {
         display: inline-flex;
         align-items: center;
@@ -180,12 +156,10 @@
         font-weight: 800;
         white-space: nowrap;
     }
-
     .badge.ok { background: #EAF6ED; color: #256D3C; }
     .badge.warn { background: #FFF3D9; color: #9A6500; }
     .badge.bad { background: #FDE9E7; color: #A9342B; }
     .badge.info { background: #EEE8E2; color: #5F4636; }
-
     .btn {
         border: 0;
         border-radius: 12px;
@@ -198,13 +172,11 @@
         justify-content: center;
         gap: 8px;
     }
-
     .btn-primary { background: #5F4636; color: #fff; }
     .btn-primary:hover { background: #7E5C43; }
     .btn-light { background: #F3EEE6; color: #5F4636; border: 1px solid #DED6CC; }
     .btn-success { background: #2F6B46; color: #fff; }
     .btn-full { width: 100%; }
-
     .mini-note {
         background: #F8F5ED;
         border: 1px solid #E3DAD0;
@@ -215,38 +187,31 @@
         font-size: 13px;
         margin-top: 13px;
     }
-
     .summary-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
     }
-
     .summary-box {
         border: 1px solid #E3DAD0;
         background: #F8F5ED;
         border-radius: 13px;
         padding: 13px;
     }
-
     .summary-box span { display: block; color: #746B64; font-size: 11px; text-transform: uppercase; font-weight: 800; }
     .summary-box strong { display: block; margin-top: 6px; color: #5F4636; font-size: 18px; }
-
     .result-section { margin-top: 20px; }
-
     .route-columns {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px;
     }
-
     .route-list {
         list-style: none;
         padding: 0;
         margin: 0;
         min-height: 80px;
     }
-
     .route-stop {
         display: grid;
         grid-template-columns: 34px 1fr auto;
@@ -258,7 +223,6 @@
         margin-bottom: 9px;
         background: #FFFDF9;
     }
-
     .route-stop[draggable="true"] { cursor: grab; }
     .route-stop.dragging { opacity: .5; }
     .stop-number {
@@ -273,16 +237,13 @@
         font-weight: 800;
         font-size: 12px;
     }
-
     .route-stop small { display: block; color: #746B64; margin-top: 3px; }
     .drag-handle { color: #9B7457; font-size: 18px; }
-
     .locked-note {
         color: #746B64;
         font-size: 12px;
         margin: 0 0 12px;
     }
-
     .warning-box {
         border: 1px solid #E9C879;
         background: #FFF8E8;
@@ -293,13 +254,11 @@
         font-size: 13px;
         line-height: 1.5;
     }
-
     .save-panel {
         margin-top: 18px;
         border-top: 1px solid #E6DED4;
         padding-top: 18px;
     }
-
     .confirm-box {
         display: flex;
         gap: 9px;
@@ -308,7 +267,6 @@
         font-size: 13px;
         color: #5F4636;
     }
-
     .employee-toolbar-actions,.employee-filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .employee-filter-bar{padding:10px 14px;background:#FFFDF9;border-bottom:1px solid #E3DAD0}
     .filter-btn.active{background:#5F4636;color:#fff;border-color:#5F4636}
@@ -324,11 +282,9 @@
     .conflict-person strong{color:#5F4636}.conflict-person small{display:block;margin-top:4px;color:#9A6500}
     .conflict-modal-warning{margin-top:14px;color:#76520A;line-height:1.55;font-size:13px}
     .conflict-modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:15px 22px 20px;border-top:1px solid #E8E0D7}
-
     @media (max-width: 980px) {
         .ai-grid, .route-columns { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 650px) {
         .ai-route-page { padding: 14px; }
         .ai-route-hero-top { flex-direction: column; }
@@ -362,9 +318,7 @@
     .create-all-options{display:flex;align-items:center;gap:9px;margin-top:12px;color:#5F4636;font-size:13px}
     @media(max-width:1100px){.fleet-summary-grid{grid-template-columns:repeat(3,1fr)}.fleet-metrics{grid-template-columns:repeat(3,1fr)}}
     @media(max-width:650px){.fleet-summary-grid,.fleet-metrics,.explain-list{grid-template-columns:1fr}.fleet-save-bar,.fleet-banner{flex-direction:column;align-items:stretch}}
-
 </style>
-
 <style id="cabmate-ai-mockup-v2">
 /* ===== CABMATE AI ROUTE PLANNING — MOCKUP MATCH OVERRIDES ===== */
 .ai-route-page{padding:16px 20px 32px!important;background:#fbfaf7!important;max-width:1500px;margin:0 auto;color:#20160f}
@@ -372,14 +326,12 @@
 .ai-route-hero h1{font-size:24px!important;color:#17120e!important;margin-bottom:3px!important}
 .ai-route-hero p{font-size:12px!important;color:#75685d!important;line-height:1.35!important;max-width:980px!important}
 .ai-route-switch-btn{padding:9px 14px!important;border-radius:8px!important;background:#fff!important;color:#5f3d27!important;border:1px solid #dfd4c8!important;box-shadow:none!important}
-
 /* two top mode tabs */
 .ai-mode-tabs{display:grid;grid-template-columns:1fr 1fr;border:1px solid #ded5ca;border-radius:9px;overflow:hidden;background:#fff;margin:0 0 10px}
 .ai-mode-tab{min-height:55px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-decoration:none;color:#0d2445;font-weight:800;font-size:14px}
 .ai-mode-tab small{font-size:11px;font-weight:500;color:#725b49;margin-top:2px}
 .ai-mode-tab.active{background:linear-gradient(90deg,#805438,#a9704a);color:#fff}
 .ai-mode-tab.active small{color:#fff}
-
 .lux-card{border-radius:10px!important;border:1px solid #e3dbd1!important;box-shadow:0 3px 12px rgba(73,51,35,.045)!important;background:#fff!important}
 .lux-card-header{padding:12px 15px!important;background:#fff!important;border-bottom:1px solid #e6ded5!important}
 .lux-card-header h2{font-size:15px!important;color:#251a13!important}
@@ -395,7 +347,6 @@
 .btn{border-radius:7px!important;padding:9px 13px!important;font-size:12px!important}
 .btn-primary{background:#a66d48!important}
 .btn-success{background:#168943!important}
-
 /* summary */
 .fleet-summary-grid{grid-template-columns:repeat(5,1fr)!important;gap:8px!important;margin:12px 0!important}
 .summary-box{border-radius:8px!important;padding:10px!important;background:#fff!important}
@@ -403,7 +354,6 @@
 .summary-box strong{font-size:17px!important;color:#101820!important;margin-top:3px!important}
 .fleet-banner{border-radius:8px!important;padding:10px 12px!important;background:#f6fff8!important;border-color:#cfe8d5!important}
 .fleet-banner h3{color:#15853d!important;font-size:17px!important}
-
 /* Route + AI explanation 2-column layout */
 .fleet-route-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;align-items:start;margin-bottom:12px}
 .fleet-route-card{margin:0!important;border-radius:10px!important;box-shadow:none!important;background:#fff!important}
@@ -418,7 +368,6 @@
 .fleet-metric{background:#fffdf9!important;border-radius:7px!important;padding:10px!important;min-height:57px}
 .fleet-metric span{font-size:8px!important}
 .fleet-metric strong{font-size:13px!important}
-
 /* Timeline like requested image */
 .route-flow{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-wrap:nowrap!important;gap:5px!important;padding:15px 6px 12px!important;border:0!important;border-radius:0!important;background:#fff!important;overflow-x:auto!important;margin:5px 0 12px!important}
 .route-flow-node{min-width:76px!important;text-align:center!important;padding:0!important;background:transparent!important;font-size:11px!important;color:#17120e!important}
@@ -428,7 +377,6 @@
 .route-flow-arrow{flex:1;min-width:72px;display:flex!important;flex-direction:column-reverse!important;gap:1px!important;color:#70482f!important;text-align:center;font-size:17px!important}
 .route-flow-arrow small{border:0!important;background:transparent!important;padding:0!important;font-size:9px!important;color:#172338!important;font-weight:800!important}
 .route-flow-caption{display:none!important}
-
 /* employee rows: compact, no full address */
 .route-columns{grid-template-columns:1fr!important;gap:8px!important}
 .route-columns>div:last-child{display:none!important}
@@ -448,7 +396,6 @@
 .employee-pickup-details summary:after{content:" ▾"}
 .employee-pickup-details[open] summary:after{content:" ▴"}
 .assignment-reason{color:#7c6d61!important}
-
 /* right explanation */
 .ai-explanation-card{border:1px solid #e3dbd1;background:#fff;border-radius:10px;padding:14px;position:sticky;top:88px}
 .ai-explanation-card h3{margin:0 0 9px;font-size:16px;color:#2a2019}
@@ -462,26 +409,20 @@
 .ai-summary-line{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid #eee8e1;font-size:10px}
 .ai-summary-line strong{text-align:right}
 .ready-pill{background:#d9f4df;color:#117637;border-radius:999px;padding:4px 9px}
-
 /* reverse drop as a single note */
 .mock-drop-note{margin-top:9px;padding:9px 11px;border:1px solid #f0dfbd;background:#fff8ea;border-radius:7px;font-size:10px;color:#6d4b31}
-
 /* lower right fixes */
 .key-fixes-card{border:1.5px solid #159447;border-radius:9px;background:#fbfffc;padding:12px;margin-top:10px}
 .key-fixes-card h3{margin:0 0 7px;color:#13823e;font-size:14px}
 .key-fixes-card ol{padding-left:18px;margin:0;color:#235c37;font-size:10px;line-height:1.35}
 .key-fixes-card li{margin:5px 0}
 .unassigned-success{border:1px solid #ffd1d1;background:#fff0f1;border-radius:7px;padding:11px;color:#e3262e;font-size:11px;font-weight:800}
-
 /* save bar */
 .fleet-save-bar{border-radius:8px!important;bottom:8px!important}
-
 /* responsive */
 @media(max-width:1100px){.fleet-route-layout{grid-template-columns:1fr}.ai-explanation-card{position:static}.fleet-summary-grid{grid-template-columns:repeat(3,1fr)!important}}
 @media(max-width:760px){.ai-mode-tabs{grid-template-columns:1fr}.fleet-summary-grid,.fleet-metrics{grid-template-columns:repeat(2,1fr)!important}.route-flow{justify-content:flex-start!important}.ai-route-page{padding:10px!important}}
 </style>
-
-
 <div class="ai-route-page">
     <div class="ai-route-hero">
         <div class="ai-route-hero-top">
@@ -500,11 +441,8 @@
                     </p>
                 {% endif %}
             </div>
-
-
         </div>
     </div>
-
     <div class="ai-mode-tabs">
         <a class="ai-mode-tab {% if create_all_mode %}active{% endif %}" href="{% url 'admin_web:create_all_ai_routes' %}">
             ✨ Create All AI Routes
@@ -515,7 +453,6 @@
             <small>Plan a single route</small>
         </a>
     </div>
-
     {% if create_all_mode %}
         <div class="lux-card">
             <div class="lux-card-header"><h2>Generate Complete Fleet Plan</h2></div>
@@ -532,7 +469,6 @@
                             <input type="text" value="All eligible drivers + employees" disabled>
                         </div>
                     </div>
-
                     <div class="mode-grid">
                         <label class="mode-option">
                             <input type="radio" name="mode" value="{{ mode_safety }}" {% if not create_all_preview or create_all_preview.mode == mode_safety %}checked{% endif %}>
@@ -545,22 +481,18 @@
                             <small>Employees recorded on leave for the selected date are removed before fleet planning.</small>
                         </label>
                     </div>
-
                     <label class="create-all-options">
                         <input type="checkbox" name="include_assigned" value="1" {% if create_all_preview.include_assigned %}checked{% endif %}>
                         Include employees already assigned to active routes
                     </label>
-
                     <div class="mini-note">
                         <strong>Capacity rule:</strong> seats are a maximum, not a target. CabMate will not force a 5/5 vehicle if the extra pickup creates an excessive detour.
                         Generated routes remain <strong>Not Saved</strong> until Admin chooses Save All &amp; Ready for Use.
                     </div>
-
                     <button class="btn btn-primary btn-full" style="margin-top:16px;" type="submit">✨ Generate All AI Routes</button>
                 </form>
             </div>
         </div>
-
         {% if create_all_preview %}
             <div class="result-section">
                 <div class="fleet-summary-grid">
@@ -575,7 +507,6 @@
                     <div class="summary-box"><span>Route Conflicts</span><strong>{{ create_all_preview.soft_conflict_count }}</strong></div>
                     <div class="summary-box"><span>Safety Warnings</span><strong>{{ create_all_preview.safety_warning_count|default:0 }}</strong></div>
                 </div>
-
                 <div class="fleet-banner">
                     <div>
                         <h3>{% if create_all_preview.all_employees_covered %}Fleet plan generated{% else %}Fleet plan generated with uncovered employees{% endif %}</h3>
@@ -583,7 +514,6 @@
                     </div>
                     <span class="unsaved-pill">AI Generated · Not Saved</span>
                 </div>
-
                 {% for route in create_all_preview.routes %}
                     <div class="fleet-route-layout">
                     <div class="fleet-route-card" data-all-route-card data-route-index="{{ route.route_index }}" data-driver-id="{{ route.driver_id }}" data-vehicle-id="{{ route.vehicle_id }}">
@@ -603,7 +533,6 @@
                                 <label>Route Name</label>
                                 <input class="all-route-name" type="text" value="{{ route.route_name }}" maxlength="200">
                             </div>
-
                             <div class="fleet-metrics">
                                 <div class="fleet-metric"><span>Driver</span><strong>{{ route.driver_name }}</strong></div>
                                 <div class="fleet-metric"><span>Vehicle</span><strong>{{ route.vehicle_number }}</strong></div>
@@ -612,17 +541,14 @@
                                 <div class="fleet-metric"><span>Total Route</span><strong>{% if route.distance_km %}{{ route.distance_km }} km{% else %}--{% endif %}</strong></div>
                                 <div class="fleet-metric"><span>ETA</span><strong>{% if route.duration_minutes %}{{ route.duration_minutes }} min{% else %}--{% endif %}</strong></div>
                             </div>
-
                             <div>
                                 {% if route.google_optimised %}<span class="badge ok">Google optimised</span>{% else %}<span class="badge warn">Local fallback</span>{% endif %}
                                 {% if route.safety_passed %}<span class="badge ok">🛡 Safety passed</span>{% else %}<span class="badge warn">🛡 Safety review</span>{% endif %}
                                 {% if route.soft_conflict_count %}<span class="badge warn">{{ route.soft_conflict_count }} conflict(s)</span>{% endif %}
                             </div>
-
                             {% if route.optimizer_warning %}<div class="warning-box">{{ route.optimizer_warning }}</div>{% endif %}
                             {% for warning in route.safety_warnings %}<div class="warning-box"><strong>Safety Sequence Warning:</strong> {{ warning }}</div>{% endfor %}
                             {% if route.empty_seat_reason %}<div class="mini-note"><strong>{{ route.remaining_seats }} seat(s) intentionally empty.</strong> {{ route.empty_seat_reason }}</div>{% endif %}
-
                             <div class="route-flow">
                                 <span class="route-flow-node">🚕 {{ route.driver_name }}</span>
                                 {% for row in route.employees %}
@@ -649,7 +575,6 @@
                                     Distance/time shown on each arrow comes from the generated road-route legs. If Google routing falls back locally, a leg may display without a metric.
                                 </div>
                             </div>
-
                             <div class="route-columns">
                                 <div>
                                     <h3 style="color:#5F4636;margin-top:0;">Pickup Order · Drag to Reorder</h3>
@@ -690,7 +615,6 @@
                             </div>
                         </div>
                     </div>
-
                     <aside class="ai-explanation-card">
                         <h3>AI Explanation</h3>
                         <p>This route was created because:</p>
@@ -715,7 +639,6 @@
                 {% empty %}
                     <div class="warning-box">No new AI route could be generated with the currently eligible fleet and employees.</div>
                 {% endfor %}
-
                 <div class="lux-card" style="margin-top:12px;">
                     <div class="lux-card-header"><h2>Unassigned Employees · Why?</h2></div>
                     <div class="lux-card-body">
@@ -733,7 +656,6 @@
                         {% endif %}
                     </div>
                 </div>
-
                 <div class="key-fixes-card">
                     <h3>✓ Key Route Rules</h3>
                     <ol>
@@ -744,7 +666,6 @@
                         <li><strong>Nothing auto-saves.</strong> Admin reviews the plan before Save All &amp; Ready for Use.</li>
                     </ol>
                 </div>
-
                 {% if create_all_preview.drivers_not_required %}
                     <div class="lux-card" style="margin-top:18px;">
                         <div class="lux-card-header"><h2>Drivers Not Required</h2></div>
@@ -755,7 +676,6 @@
                         </div>
                     </div>
                 {% endif %}
-
                 {% if create_all_preview.drivers_unavailable %}
                     <div class="lux-card" style="margin-top:18px;">
                         <div class="lux-card-header"><h2>Drivers Unavailable for New Routes</h2></div>
@@ -766,7 +686,6 @@
                         </div>
                     </div>
                 {% endif %}
-
                 {% if create_all_preview.assigned_excluded %}
                     <div class="warning-box">
                         <strong>Existing-route employees excluded:</strong>
@@ -774,14 +693,12 @@
                         Enable “Include employees already assigned to active routes” and regenerate if Admin intends to reassign them.
                     </div>
                 {% endif %}
-
                 {% if create_all_preview.leave_excluded %}
                     <div class="warning-box">
                         <strong>Leave employees removed:</strong>
                         {% for row in create_all_preview.leave_excluded %}{{ row.name }}{% if not forloop.last %}, {% endif %}{% endfor %}.
                     </div>
                 {% endif %}
-
                 {% if create_all_preview.routes %}
                     <form method="post" action="{% url 'admin_web:save_all_ai_routes' %}" id="saveAllAiRoutesForm">
                         {% csrf_token %}
@@ -805,7 +722,6 @@
             <div class="lux-card-body">
                 <form method="post" action="{% url 'admin_web:ai_route_search' %}">
                     {% csrf_token %}
-
                     <div class="form-row">
                         <div class="field">
                             <label>Driver</label>
@@ -821,27 +737,23 @@
                                 {% endfor %}
                             </select>
                         </div>
-
                         <div class="field">
                             <label>Route Date</label>
                             <input type="date" name="route_date" value="{{ today|date:'Y-m-d' }}" required>
                         </div>
                     </div>
-
                     <div class="mode-grid">
                         <label class="mode-option">
                             <input type="radio" name="mode" value="{{ mode_safety }}" checked>
                             <strong>Shortest Distance + Safety</strong>
                             <small>Google waypoint optimisation with a safety-aware road preference that avoids highways where Google supports it.</small>
                         </label>
-
                         <label class="mode-option">
                             <input type="radio" name="mode" value="{{ mode_leave }}">
                             <strong>Shortest Distance + Remove Leave Employees</strong>
                             <small>Employees with a leave record for the selected date are removed before route optimisation.</small>
                         </label>
                     </div>
-
                     <div class="employee-panel">
                         <div class="employee-toolbar">
                             <strong>Employees</strong>
@@ -854,7 +766,6 @@
                             <button type="button" class="btn btn-light filter-btn active" id="showAllEmployeesBtn">Show All Employees</button>
                             <button type="button" class="btn btn-light filter-btn" id="showEligibleEmployeesBtn">Show Only Not Assigned Employees</button>
                         </div>
-
                         <div class="employee-list">
                             {% for employee in employees %}
                                 <div class="employee-row {% if not employee.has_pickup %}missing{% endif %}" data-soft-conflict="{% if employee.soft_conflict %}1{% else %}0{% endif %}">
@@ -891,18 +802,15 @@
                             {% endfor %}
                         </div>
                     </div>
-
                     <div class="mini-note">
                         Use <strong>Show All Employees</strong> to see everyone, or <strong>Show Only Not Assigned Employees</strong> to see employees without an active route. <strong>Select All</strong> selects all currently visible employees with a valid pickup point. Vehicle capacity remains enforced.
                     </div>
-
                     <div style="margin-top:16px;">
                         <button class="btn btn-primary btn-full" type="submit">Generate AI Route</button>
                     </div>
                 </form>
             </div>
         </div>
-
         <div class="lux-card">
             <div class="lux-card-header"><h2>Rules Used</h2></div>
             <div class="lux-card-body">
@@ -922,7 +830,6 @@
             </div>
         </div>
     </div>
-
     {% if preview %}
         <div class="result-section lux-card">
             <div class="lux-card-header"><h2>AI Route Result · {{ preview.mode_label }}</h2></div>
@@ -937,28 +844,23 @@
                     <div class="summary-box"><span>Driver → first stop</span><strong>{% if preview.first_stop_distance_km %}{{ preview.first_stop_distance_km }} km{% else %}--{% endif %}</strong></div>
                     <div class="summary-box"><span>Employee conflicts</span><strong>{{ preview.soft_conflict_count }}</strong></div>
                 </div>
-
                 <div class="mini-note">
                     <strong>Driver base:</strong> {{ preview.driver_formatted_address }}<br>
                     <strong>Date:</strong> {{ preview.route_date }}<br>
                     {% if preview.google_optimised %}<span class="badge ok" style="margin-top:8px;">Google optimised</span>{% else %}<span class="badge warn" style="margin-top:8px;">Local fallback optimisation</span>{% endif %}
                 </div>
-
                 {% if preview.optimizer_warning %}<div class="warning-box">{{ preview.optimizer_warning }}</div>{% endif %}
-
                 {% if preview.leave_excluded %}
                     <div class="warning-box">
                         <strong>Leave employees removed:</strong>
                         {% for item in preview.leave_excluded %}{{ item.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                     </div>
                 {% endif %}
-
                 {% if preview.capacity_excluded %}
                     <div class="warning-box">
                         <strong>Capacity limit:</strong> {{ preview.capacity_excluded|length }} additional eligible employee(s) were not included because the vehicle is full.
                     </div>
                 {% endif %}
-
                 <div class="route-flow" style="margin-top:20px;">
                     <span class="route-flow-node">🚕 {{ preview.driver_name }}</span>
                     {% for row in preview.employees %}
@@ -985,7 +887,6 @@
                         Driver Address → approved employee pickup points → CabMate office. Each available arrow metric is the corresponding road-route leg.
                     </div>
                 </div>
-
                 <div class="route-columns" style="margin-top:20px;">
                     <div>
                         <h3 style="color:#5F4636;margin-top:0;">Pickup Order · Drag to Reorder</h3>
@@ -1006,14 +907,12 @@
                             {% endfor %}
                         </ul>
                     </div>
-
                     <div>
                         <h3 style="color:#5F4636;margin-top:0;">Drop Order · Locked Reverse</h3>
                         <p class="locked-note">Drop cannot be manually reordered. It always mirrors the final pickup sequence in reverse.</p>
                         <ul class="route-list" id="dropList"></ul>
                     </div>
                 </div>
-
                 <div class="save-panel">
                     <form method="post" action="{% url 'admin_web:save_ai_route' %}" id="saveAiRouteForm">
                         {% csrf_token %}
@@ -1021,9 +920,7 @@
                             <label>Route Name</label>
                             <input type="text" name="route_name" placeholder="Example: Gurugram Route A" required maxlength="200">
                         </div>
-
                         <input type="hidden" name="ordered_employee_ids" id="orderedEmployeeIds">
-
                         <input type="hidden" name="confirm_reassignment" id="confirmReassignmentInput" value="0">
                         {% if preview.soft_conflict_count %}
                             <div class="warning-box"><strong>{{ preview.soft_conflict_count }} employee route conflict(s) detected.</strong> A confirmation popup will appear before reassignment.</div>
@@ -1036,7 +933,6 @@
     {% endif %}
     {% endif %}
 </div>
-
 {% if preview %}
 <div class="conflict-modal-backdrop" id="routeConflictModal">
   <div class="conflict-modal" role="dialog" aria-modal="true">
@@ -1052,7 +948,6 @@
   </div>
 </div>
 {% endif %}
-
 {% if create_all_mode and create_all_preview.soft_conflict_count %}
 <div class="conflict-modal-backdrop" id="allRouteConflictModal">
   <div class="conflict-modal" role="dialog" aria-modal="true">
@@ -1074,11 +969,8 @@
   </div>
 </div>
 {% endif %}
-
 <script>
 (function(){
-
-
  // CREATE ALL: Edit Route opens/closes the route-name editor.
  // Employee pickup order is edited directly by dragging the employee rows below.
  document.querySelectorAll('.edit-route-name-btn').forEach(btn=>{
@@ -1088,18 +980,15 @@
      const wrap=card.querySelector('.all-route-name-wrap');
      const input=card.querySelector('.all-route-name');
      if(!wrap)return;
-
      const isOpen=wrap.style.display === 'block';
      wrap.style.display=isOpen ? 'none' : 'block';
      btn.textContent=isOpen ? '✎ Edit Route' : '✓ Done Editing';
-
      if(!isOpen && input){
        input.focus();
        input.select();
      }
    });
  });
-
  // CREATE ALL: per-route drag/drop + locked reverse DROP.
  document.querySelectorAll('[data-all-route-card]').forEach(card=>{
    const pickup=card.querySelector('.all-pickup-list'), drop=card.querySelector('.all-drop-list');
@@ -1129,12 +1018,10 @@
    });
    update();
  });
-
  const saveAllForm=document.getElementById('saveAllAiRoutesForm');
  const allPlanInput=document.getElementById('allRoutePlanJson');
  const allConfirm=document.getElementById('allConfirmReassignment');
  let allApproved=false;
-
  function buildAllPlan(){
    return Array.from(document.querySelectorAll('[data-all-route-card]')).map(card=>({
      route_name:(card.querySelector('.all-route-name')?.value||'').trim(),
@@ -1167,7 +1054,6 @@
  if(allCancel)allCancel.onclick=()=>{allApproved=false;if(allConfirm)allConfirm.value='0';closeAllModal();};
  if(allContinue)allContinue.onclick=()=>{allApproved=true;if(allConfirm)allConfirm.value='1';closeAllModal();saveAllForm.requestSubmit();};
  if(allModal)allModal.addEventListener('click',e=>{if(e.target===allModal){allApproved=false;if(allConfirm)allConfirm.value='0';closeAllModal();}});
-
  const rows=()=>Array.from(document.querySelectorAll('.employee-list .employee-row'));
  const all=document.getElementById('showAllEmployeesBtn'), eligible=document.getElementById('showEligibleEmployeesBtn');
  function filter(mode){rows().forEach(r=>r.classList.toggle('filtered-hidden',mode==='eligible'&&r.dataset.softConflict==='1'));if(all)all.classList.toggle('active',mode==='all');if(eligible)eligible.classList.toggle('active',mode==='eligible');}
@@ -1175,12 +1061,10 @@
  const select=document.getElementById('selectAllBtn'), unselect=document.getElementById('unselectAllBtn');
  if(select)select.onclick=()=>rows().forEach(r=>{let c=r.querySelector('.employee-check');if(!r.classList.contains('filtered-hidden')&&c&&!c.disabled)c.checked=true;});
  if(unselect)unselect.onclick=()=>document.querySelectorAll('.employee-check').forEach(c=>c.checked=false);
-
  const pickup=document.getElementById('pickupList'), drop=document.getElementById('dropList'), ordered=document.getElementById('orderedEmployeeIds');
  const items=()=>pickup?Array.from(pickup.querySelectorAll('.route-stop')):[];
  function update(){if(!pickup||!drop||!ordered)return;let x=items();ordered.value=x.map(i=>i.dataset.employeeId).join(',');x.forEach((i,n)=>i.querySelector('.stop-number').textContent=n+1);drop.innerHTML='';[...x].reverse().forEach((i,n)=>{let c=i.cloneNode(true);c.removeAttribute('draggable');c.classList.remove('dragging');c.querySelector('.stop-number').textContent=n+1;let h=c.querySelector('.drag-handle');if(h)h.textContent='🔒';drop.appendChild(c);});}
  if(pickup&&drop&&ordered){let dragging=null;items().forEach(i=>{i.addEventListener('dragstart',()=>{dragging=i;i.classList.add('dragging')});i.addEventListener('dragend',()=>{i.classList.remove('dragging');dragging=null;update()})});pickup.addEventListener('dragover',e=>{e.preventDefault();if(!dragging)return;let cs=[...pickup.querySelectorAll('.route-stop:not(.dragging)')],after=cs.find(c=>{let r=c.getBoundingClientRect();return e.clientY<r.top+r.height/2});after?pickup.insertBefore(dragging,after):pickup.appendChild(dragging)});update();}
-
  const form=document.getElementById('saveAiRouteForm'), confirm=document.getElementById('confirmReassignmentInput'), modal=document.getElementById('routeConflictModal'), box=document.getElementById('routeConflictEmployees');
  let approved=false;
  const conflicts=()=>items().filter(i=>i.dataset.softConflict==='1').map(i=>({name:i.dataset.employeeName||'Employee',routes:i.dataset.conflictRoutes||'Existing active route'}));
@@ -1193,4 +1077,5 @@
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal&&modal.classList.contains('show')){approved=false;if(confirm)confirm.value='0';close();}});
 })();
 </script>
+{% endtimezone %}
 {% endblock %}

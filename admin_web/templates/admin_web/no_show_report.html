@@ -1,31 +1,22 @@
 {% extends "admin_web/base.html" %}
-
+{% load tz %}
 {% block title %}No-show Report{% endblock %}
-
 {% block nav_reports %}active{% endblock %}
-
 {% block page_heading %}No-show Report{% endblock %}
-
 {% block page_subheading %}
 Driver waiting details for employees marked as No Show
 {% endblock %}
-
-
 {% block content %}
-
 <style>
     /* ============================================================
        NO SHOW REPORT
        ============================================================ */
-
     .ns-page {
         width: 100%;
     }
-
     /* ============================================================
        TOP HEADER
        ============================================================ */
-
     .ns-header {
         background: linear-gradient(
             135deg,
@@ -38,7 +29,6 @@ Driver waiting details for employees marked as No Show
         margin-bottom: 18px;
         box-shadow: 0 10px 30px rgba(95,70,54,.05);
     }
-
     .ns-header-top {
         display: flex;
         align-items: center;
@@ -46,13 +36,11 @@ Driver waiting details for employees marked as No Show
         gap: 16px;
         flex-wrap: wrap;
     }
-
     .ns-title-wrap {
         display: flex;
         align-items: center;
         gap: 14px;
     }
-
     .ns-title-icon {
         width: 52px;
         height: 52px;
@@ -65,21 +53,18 @@ Driver waiting details for employees marked as No Show
         font-size: 26px;
         border: 1px solid #e9c7c1;
     }
-
     .ns-title {
         margin: 0;
         color: #24211f;
         font-size: 24px;
         font-weight: 950;
     }
-
     .ns-subtitle {
         margin: 5px 0 0;
         color: #746b64;
         font-size: 13px;
         font-weight: 700;
     }
-
     .back-report-btn {
         display: inline-flex;
         align-items: center;
@@ -94,23 +79,19 @@ Driver waiting details for employees marked as No Show
         font-weight: 900;
         transition: 0.2s ease;
     }
-
     .back-report-btn:hover {
         background: #fbf8f2;
         transform: translateY(-1px);
     }
-
     /* ============================================================
        SUMMARY CARDS
        ============================================================ */
-
     .ns-summary-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 14px;
         margin-bottom: 18px;
     }
-
     .ns-summary-card {
         position: relative;
         overflow: hidden;
@@ -120,7 +101,6 @@ Driver waiting details for employees marked as No Show
         border: 1px solid #ded6cc;
         box-shadow: 0 10px 26px rgba(95,70,54,.06);
     }
-
     .ns-summary-card::after {
         content: "";
         position: absolute;
@@ -131,31 +111,26 @@ Driver waiting details for employees marked as No Show
         top: -30px;
         background: rgba(255, 255, 255, 0.22);
     }
-
     .summary-red {
         background: linear-gradient(135deg, #a6584f, #7f3f39);
         color: #fffdf9;
         border: none;
     }
-
     .summary-orange {
         background: linear-gradient(135deg, #b88746, #8b612e);
         color: #fffdf9;
         border: none;
     }
-
     .summary-green {
         background: linear-gradient(135deg, #4f6d58, #3f5d49);
         color: #fffdf9;
         border: none;
     }
-
     .summary-blue {
         background: linear-gradient(135deg, #9b7457, #7e5c43);
         color: #fffdf9;
         border: none;
     }
-
     .summary-label {
         display: block;
         font-size: 11px;
@@ -164,14 +139,12 @@ Driver waiting details for employees marked as No Show
         opacity: 0.88;
         margin-bottom: 7px;
     }
-
     .summary-value {
         display: block;
         font-size: 27px;
         font-weight: 950;
         line-height: 1;
     }
-
     .summary-description {
         display: block;
         margin-top: 8px;
@@ -179,11 +152,9 @@ Driver waiting details for employees marked as No Show
         font-weight: 700;
         opacity: 0.85;
     }
-
     /* ============================================================
        FILTER SECTION
        ============================================================ */
-
     .ns-filter-card {
         background: #fffdf9;
         border: 1px solid #ded6cc;
@@ -192,21 +163,18 @@ Driver waiting details for employees marked as No Show
         margin-bottom: 18px;
         box-shadow: 0 10px 26px rgba(95,70,54,.05);
     }
-
     .filter-title {
         color: #24211f;
         font-size: 15px;
         font-weight: 950;
         margin-bottom: 13px;
     }
-
     .ns-filter-form {
         display: grid;
         grid-template-columns: 2fr 1fr 1fr auto auto;
         gap: 12px;
         align-items: end;
     }
-
     .filter-group label {
         display: block;
         margin-bottom: 6px;
@@ -215,7 +183,6 @@ Driver waiting details for employees marked as No Show
         font-weight: 900;
         text-transform: uppercase;
     }
-
     .filter-control {
         width: 100%;
         height: 42px;
@@ -229,13 +196,11 @@ Driver waiting details for employees marked as No Show
         outline: none;
         box-sizing: border-box;
     }
-
     .filter-control:focus {
         border-color: #9b7457;
         background: #fffdf9;
         box-shadow: 0 0 0 3px rgba(155,116,87,.08);
     }
-
     .filter-btn {
         height: 42px;
         border: none;
@@ -247,7 +212,6 @@ Driver waiting details for employees marked as No Show
         font-weight: 950;
         cursor: pointer;
     }
-
     .reset-btn {
         height: 42px;
         border-radius: 12px;
@@ -262,11 +226,9 @@ Driver waiting details for employees marked as No Show
         text-decoration: none;
         border: 1px solid #ded6cc;
     }
-
     /* ============================================================
        REPORT TABLE
        ============================================================ */
-
     .ns-table-card {
         background: #fffdf9;
         border: 1px solid #ded6cc;
@@ -274,7 +236,6 @@ Driver waiting details for employees marked as No Show
         overflow: hidden;
         box-shadow: 0 12px 30px rgba(95,70,54,.06);
     }
-
     .table-card-header {
         padding: 18px 20px;
         border-bottom: 1px solid #ded6cc;
@@ -284,21 +245,18 @@ Driver waiting details for employees marked as No Show
         gap: 15px;
         flex-wrap: wrap;
     }
-
     .table-card-header h3 {
         margin: 0;
         font-size: 17px;
         font-weight: 950;
         color: #24211f;
     }
-
     .table-card-header p {
         margin: 4px 0 0;
         color: #746b64;
         font-size: 12px;
         font-weight: 700;
     }
-
     .record-count {
         padding: 7px 12px;
         border-radius: 999px;
@@ -307,18 +265,15 @@ Driver waiting details for employees marked as No Show
         font-size: 11px;
         font-weight: 950;
     }
-
     .ns-table-scroll {
         width: 100%;
         overflow-x: auto;
     }
-
     .ns-table {
         width: 100%;
         border-collapse: collapse;
         min-width: 1250px;
     }
-
     .ns-table thead th {
         background: #fbf8f2;
         color: #746b64;
@@ -331,7 +286,6 @@ Driver waiting details for employees marked as No Show
         border-bottom: 1px solid #ded6cc;
         white-space: nowrap;
     }
-
     .ns-table tbody td {
         padding: 14px 12px;
         border-bottom: 1px solid #eee6de;
@@ -340,20 +294,16 @@ Driver waiting details for employees marked as No Show
         font-weight: 700;
         vertical-align: middle;
     }
-
     .ns-table tbody tr:hover {
         background: #fbf8f2;
     }
-
     .employee-name {
         color: #24211f;
         font-weight: 950;
     }
-
     /* ============================================================
        TIME BADGES
        ============================================================ */
-
     .time-badge {
         display: inline-flex;
         align-items: center;
@@ -365,35 +315,29 @@ Driver waiting details for employees marked as No Show
         font-weight: 950;
         white-space: nowrap;
     }
-
     .free-time {
         background: #edf3ed;
         color: #4f6d58;
         border: 1px solid #cdddcf;
     }
-
     .late-time {
         background: #f8ece9;
         color: #7f3f39;
         border: 1px solid #e9c7c1;
     }
-
     .late-zero {
         background: #f3eee6;
         color: #746b64;
         border: 1px solid #ded6cc;
     }
-
     .total-time {
         background: #eee4db;
         color: #7e5c43;
         border: 1px solid #d8c4b4;
     }
-
     /* ============================================================
        STATUS BADGES
        ============================================================ */
-
     .status-badge {
         display: inline-flex;
         align-items: center;
@@ -404,17 +348,14 @@ Driver waiting details for employees marked as No Show
         font-weight: 950;
         white-space: nowrap;
     }
-
     .status-late {
         background: #f8ece9;
         color: #7f3f39;
     }
-
     .status-free {
         background: #edf3ed;
         color: #4f6d58;
     }
-
     .no-show-badge {
         display: inline-flex;
         align-items: center;
@@ -427,17 +368,14 @@ Driver waiting details for employees marked as No Show
         font-size: 10px;
         font-weight: 950;
     }
-
     /* ============================================================
        WAITING FLOW
        ============================================================ */
-
     .waiting-flow {
         padding: 15px 20px;
         background: linear-gradient(135deg, #fbf8f2, #fffdf9);
         border-top: 1px solid #ded6cc;
     }
-
     .waiting-flow-title {
         color: #5b524c;
         font-size: 11px;
@@ -445,14 +383,12 @@ Driver waiting details for employees marked as No Show
         text-transform: uppercase;
         margin-bottom: 10px;
     }
-
     .flow-items {
         display: flex;
         align-items: center;
         gap: 9px;
         flex-wrap: wrap;
     }
-
     .flow-item {
         display: inline-flex;
         align-items: center;
@@ -462,41 +398,33 @@ Driver waiting details for employees marked as No Show
         font-size: 11px;
         font-weight: 900;
     }
-
     .flow-arrived {
         background: #eee4db;
         color: #7e5c43;
     }
-
     .flow-free {
         background: #edf3ed;
         color: #3f5d49;
     }
-
     .flow-late {
         background: #f8ece9;
         color: #7f3f39;
     }
-
     .flow-noshow {
         background: #f8ece9;
         color: #7f3f39;
     }
-
     .flow-arrow {
         color: #9a8d83;
         font-weight: 950;
     }
-
     /* ============================================================
        EMPTY STATE
        ============================================================ */
-
     .empty-state {
         padding: 55px 20px;
         text-align: center;
     }
-
     .empty-icon {
         width: 68px;
         height: 68px;
@@ -508,178 +436,133 @@ Driver waiting details for employees marked as No Show
         justify-content: center;
         font-size: 31px;
     }
-
     .empty-state h3 {
         margin: 0 0 7px;
         color: #24211f;
         font-size: 18px;
         font-weight: 950;
     }
-
     .empty-state p {
         margin: 0;
         color: #746b64;
         font-size: 13px;
         font-weight: 700;
     }
-
     /* ============================================================
        RESPONSIVE
        ============================================================ */
-
     @media (max-width: 1100px) {
         .ns-summary-grid {
             grid-template-columns: repeat(2, 1fr);
         }
-
         .ns-filter-form {
             grid-template-columns: repeat(2, 1fr);
         }
     }
-
     @media (max-width: 650px) {
         .ns-summary-grid {
             grid-template-columns: 1fr;
         }
-
         .ns-filter-form {
             grid-template-columns: 1fr;
         }
-
         .ns-header {
             padding: 18px;
         }
     }
 </style>
-
-
 <div class="ns-page">
-
     <!-- =========================================================
          HEADER
          ========================================================= -->
-
     <div class="ns-header">
         <div class="ns-header-top">
-
             <div class="ns-title-wrap">
-
                 <div class="ns-title-icon">
                     🚫
                 </div>
-
                 <div>
                     <h2 class="ns-title">
                         Employee No-show Report
                     </h2>
-
                     <p class="ns-subtitle">
                         Complete driver waiting history for employees
                         marked as No Show.
                     </p>
                 </div>
-
             </div>
-
             <a
                 href="{% url 'admin_web:reports' %}"
                 class="back-report-btn"
             >
                 ← Back to Reports
             </a>
-
         </div>
     </div>
-
-
     <!-- =========================================================
          SUMMARY
          ========================================================= -->
-
     <div class="ns-summary-grid">
-
         <div class="ns-summary-card summary-red">
             <span class="summary-label">
                 🚫 Total No Shows
             </span>
-
             <strong class="summary-value">
                 {{ total_no_shows }}
             </strong>
-
             <span class="summary-description">
                 Employees marked No Show
             </span>
         </div>
-
-
         <div class="ns-summary-card summary-orange">
             <span class="summary-label">
                 🔴 Late No Shows
             </span>
-
             <strong class="summary-value">
                 {{ late_no_show_count }}
             </strong>
-
             <span class="summary-description">
                 No Show after free waiting
             </span>
         </div>
-
-
         <div class="ns-summary-card summary-green">
             <span class="summary-label">
                 🟢 Within Free Time
             </span>
-
             <strong class="summary-value">
                 {{ within_free_count }}
             </strong>
-
             <span class="summary-description">
                 No Show before late timer
             </span>
         </div>
-
-
         <div class="ns-summary-card summary-blue">
             <span class="summary-label">
                 ⏱ Total Driver Waiting
             </span>
-
             <strong class="summary-value">
                 {{ total_waiting_minutes }} min
             </strong>
-
             <span class="summary-description">
                 Combined waiting duration
             </span>
         </div>
-
     </div>
-
-
     <!-- =========================================================
          FILTERS
          ========================================================= -->
-
     <div class="ns-filter-card">
-
         <div class="filter-title">
             Search & Filter
         </div>
-
         <form
             method="get"
             class="ns-filter-form"
         >
-
             <div class="filter-group">
                 <label>
                     Search
                 </label>
-
                 <input
                     type="text"
                     name="q"
@@ -688,13 +571,10 @@ Driver waiting details for employees marked as No Show
                     placeholder="Employee, driver, vehicle or route"
                 >
             </div>
-
-
             <div class="filter-group">
                 <label>
                     Date
                 </label>
-
                 <input
                     type="date"
                     name="date"
@@ -702,13 +582,10 @@ Driver waiting details for employees marked as No Show
                     class="filter-control"
                 >
             </div>
-
-
             <div class="filter-group">
                 <label>
                     Trip Type
                 </label>
-
                 <select
                     name="trip_type"
                     class="filter-control"
@@ -716,7 +593,6 @@ Driver waiting details for employees marked as No Show
                     <option value="">
                         All Trips
                     </option>
-
                     <option
                         value="PICKUP"
                         {% if trip_type_filter == "PICKUP" %}
@@ -725,7 +601,6 @@ Driver waiting details for employees marked as No Show
                     >
                         Pickup
                     </option>
-
                     <option
                         value="DROP"
                         {% if trip_type_filter == "DROP" %}
@@ -734,63 +609,43 @@ Driver waiting details for employees marked as No Show
                     >
                         Drop
                     </option>
-
                 </select>
             </div>
-
-
             <button
                 type="submit"
                 class="filter-btn"
             >
                 Apply Filter
             </button>
-
-
             <a
                 href="{% url 'admin_web:no_show_report' %}"
                 class="reset-btn"
             >
                 Reset
             </a>
-
         </form>
-
     </div>
-
-
     <!-- =========================================================
          TABLE
          ========================================================= -->
-
     <div class="ns-table-card">
-
         <div class="table-card-header">
-
             <div>
                 <h3>
                     🚫 No-show Details
                 </h3>
-
                 <p>
                     Free waiting + employee late waiting until
                     the driver pressed No Show.
                 </p>
             </div>
-
             <div class="record-count">
                 {{ total_no_shows }} record{{ total_no_shows|pluralize }}
             </div>
-
         </div>
-
-
         {% if rows %}
-
         <div class="ns-table-scroll">
-
             <table class="ns-table">
-
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -808,13 +663,9 @@ Driver waiting details for employees marked as No Show
                         <th>Result</th>
                     </tr>
                 </thead>
-
                 <tbody>
-
                     {% for row in rows %}
-
                     <tr>
-
                         <td>
                             {% if row.date %}
                                 {{ row.date|date:"d M Y" }}
@@ -822,210 +673,137 @@ Driver waiting details for employees marked as No Show
                                 --
                             {% endif %}
                         </td>
-
-
                         <td>
                             <span class="employee-name">
                                 {{ row.employee }}
                             </span>
                         </td>
-
-
                         <td>
                             {{ row.route_name }}
                         </td>
-
-
                         <td>
                             {{ row.driver }}
                         </td>
-
-
                         <td>
                             {{ row.vehicle }}
                         </td>
-
-
                         <td>
                             <strong>
                                 {{ row.trip_type }}
                             </strong>
                         </td>
-
-
                         <td>
                             {% if row.waiting_started_at %}
-                                {{ row.waiting_started_at|date:"h:i:s A" }}
+                                {% timezone "Asia/Kolkata" %}{{ row.waiting_started_at|date:"h:i:s A" }}{% endtimezone %}
                             {% else %}
                                 --
                             {% endif %}
                         </td>
-
-
                         <!-- FREE WAIT -->
-
                         <td>
                             <span class="time-badge free-time">
                                 🟢 {{ row.free_wait_text }}
                             </span>
                         </td>
-
-
                         <!-- LATE WAIT -->
-
                         <td>
-
                             {% if row.late_seconds > 0 %}
-
                                 <span class="time-badge late-time">
                                     🔴 {{ row.late_wait_text }}
                                 </span>
-
                             {% else %}
-
                                 <span class="time-badge late-zero">
                                     00:00
                                 </span>
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- TOTAL WAIT -->
-
                         <td>
                             <span class="time-badge total-time">
                                 ⏱ {{ row.total_wait_text }}
                             </span>
                         </td>
-
-
                         <!-- NO SHOW TIME -->
-
                         <td>
                             {% if row.no_show_at %}
                                 <strong>
-                                    {{ row.no_show_at|date:"h:i:s A" }}
+                                    {% timezone "Asia/Kolkata" %}{{ row.no_show_at|date:"h:i:s A" }}{% endtimezone %}
                                 </strong>
                             {% else %}
                                 --
                             {% endif %}
                         </td>
-
-
                         <!-- WAITING STATUS -->
-
                         <td>
-
                             {% if row.waiting_status == "LATE" %}
-
                                 <span class="status-badge status-late">
                                     🔴 Employee Late
                                 </span>
-
                             {% else %}
-
                                 <span class="status-badge status-free">
                                     🟢 Within Free Time
                                 </span>
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- RESULT -->
-
                         <td>
                             <span class="no-show-badge">
                                 🚫 NO SHOW
                             </span>
                         </td>
-
                     </tr>
-
                     {% endfor %}
-
                 </tbody>
-
             </table>
-
         </div>
-
-
         <!-- =====================================================
              EXPLANATION
              ===================================================== -->
-
         <div class="waiting-flow">
-
             <div class="waiting-flow-title">
                 How waiting time is calculated
             </div>
-
             <div class="flow-items">
-
                 <span class="flow-item flow-arrived">
                     🚕 Driver Arrived
                 </span>
-
                 <span class="flow-arrow">
                     →
                 </span>
-
                 <span class="flow-item flow-free">
                     🟢 First 10 Minutes Free
                 </span>
-
                 <span class="flow-arrow">
                     →
                 </span>
-
                 <span class="flow-item flow-late">
                     🔴 Employee Late Time
                 </span>
-
                 <span class="flow-arrow">
                     →
                 </span>
-
                 <span class="flow-item flow-noshow">
                     🚫 Driver Presses No Show
                 </span>
-
             </div>
-
         </div>
-
-
         {% else %}
-
         <!-- =====================================================
              EMPTY STATE
              ===================================================== -->
-
         <div class="empty-state">
-
             <div class="empty-icon">
                 🚫
             </div>
-
             <h3>
                 No No-show Records
             </h3>
-
             <p>
                 No employees were marked as No Show for the
                 selected filters.
             </p>
-
         </div>
-
         {% endif %}
-
     </div>
-
 </div>
-
 {% endblock %}

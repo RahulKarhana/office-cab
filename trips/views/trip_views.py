@@ -984,12 +984,13 @@ class TripViewSet(ModelViewSet):
         sent_count = 0
 
         for trip in trips:
+            pickup_time_ist = timezone.localtime(trip.pickup_time)
             if trip.trip_type == Trip.TRIP_TYPE_PICKUP:
-                employee_message = f"Your pickup trip is scheduled on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} from {trip.pickup_location} to {trip.drop_location}."
-                driver_message = f"You have a pickup trip on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} for {trip.employee.display_name} from {trip.pickup_location} to {trip.drop_location}."
+                employee_message = f"Your pickup trip is scheduled on {pickup_time_ist.strftime('%d-%m-%Y %H:%M')} from {trip.pickup_location} to {trip.drop_location}."
+                driver_message = f"You have a pickup trip on {pickup_time_ist.strftime('%d-%m-%Y %H:%M')} for {trip.employee.display_name} from {trip.pickup_location} to {trip.drop_location}."
             else:
-                employee_message = f"Your drop trip is scheduled on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} from {trip.pickup_location} to {trip.drop_location}."
-                driver_message = f"You have a drop trip on {trip.pickup_time.strftime('%d-%m-%Y %H:%M')} for {trip.employee.display_name} from {trip.pickup_location} to {trip.drop_location}."
+                employee_message = f"Your drop trip is scheduled on {pickup_time_ist.strftime('%d-%m-%Y %H:%M')} from {trip.pickup_location} to {trip.drop_location}."
+                driver_message = f"You have a drop trip on {pickup_time_ist.strftime('%d-%m-%Y %H:%M')} for {trip.employee.display_name} from {trip.pickup_location} to {trip.drop_location}."
 
             NotificationService.send_notification(trip.employee, employee_message)
             NotificationService.send_notification(trip.driver, driver_message)

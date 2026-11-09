@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-
+from datetime import datetime, time, timedelta
 
 class Vehicle(models.Model):
     driver = models.OneToOneField(
@@ -99,9 +99,26 @@ class Trip(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if self.pickup_time:
-            self.trip_date = self.pickup_time.date()
+        if self.route_run_id:
+            # Route-linked trips use the logical office shift date.
+            if self.route_run_id:
+                self.trip_date = self.route_run.run_date
+
+        elif self.pickup_time and not self.trip_date:
+            # Standalone trips retain their actual calendar date.
+            self.trip_date = (
+                timezone.localtime(self.pickup_time).date()
+                if timezone.is_aware(self.pickup_time)
+                else self.pickup_time.date()
+            )
+
+        update_fields = kwargs.get("update_fields")
+
+        if update_fields is not None and self.route_run_id:
+            kwargs["update_fields"] = set(update_fields) | {"trip_date"}
+
         super().save(*args, **kwargs)
+
 
     def start(self):
         if self.status != self.STATUS_ASSIGNED:
@@ -370,6 +387,10 @@ class RouteStop(models.Model):
     pickup_longitude = models.FloatField(null=True, blank=True)
 
     stop_order = models.PositiveIntegerField()
+    drop_order = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         ordering = ["stop_order"]
@@ -403,6 +424,11 @@ class RouteRun(models.Model):
     )
 
     run_date = models.DateField()
+    # False: legacy DROP order (reverse PICKUP).
+    # True: custom DROP order saved by admin.
+    use_custom_drop_order = models.BooleanField(
+        default=False,
+    )
 
     started_at = models.DateTimeField(
         null=True,

@@ -1,4 +1,5 @@
 {% extends 'admin_web/base.html' %}
+{% load tz %}
 
 {% block title %}CabMate Admin Dashboard{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
@@ -6,6 +7,7 @@
 {% block page_subheading %}{% endblock %}
 
 {% block content %}
+{% timezone "Asia/Kolkata" %}
 
 <style>
     :root {
@@ -1112,4 +1114,5 @@
     }
 </script>
 
+{% endtimezone %}
 {% endblock %}

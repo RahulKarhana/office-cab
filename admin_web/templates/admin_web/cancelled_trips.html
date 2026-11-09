@@ -1,18 +1,15 @@
 {% extends "admin_web/base.html" %}
-
+{% load tz %}
 {% block title %}Cancelled Trips{% endblock %}
-
 {% block content %}
-
+{% timezone "Asia/Kolkata" %}
 <style>
     .cancel-page {
         padding: 4px 0 30px;
     }
-
     /* =========================================================
        HEADER
     ========================================================= */
-
     .cancel-header {
         display: flex;
         align-items: center;
@@ -21,21 +18,18 @@
         margin-bottom: 20px;
         flex-wrap: wrap;
     }
-
     .cancel-header-left h1 {
         margin: 0;
         font-size: 28px;
         font-weight: 900;
         color: #24211f;
     }
-
     .cancel-header-left p {
         margin: 6px 0 0;
         color: #746b64;
         font-size: 14px;
         font-weight: 600;
     }
-
     .back-btn {
         display: inline-flex;
         align-items: center;
@@ -50,23 +44,19 @@
         font-weight: 900;
         box-shadow: 0 5px 15px rgba(95,70,54,.05);
     }
-
     .back-btn:hover {
         background: #fbf8f2;
         color: #24211f;
     }
-
     /* =========================================================
        SUMMARY
     ========================================================= */
-
     .cancel-summary {
         display: grid;
         grid-template-columns: repeat(5, minmax(150px, 1fr));
         gap: 12px;
         margin-bottom: 18px;
     }
-
     .summary-card {
         background: #fffdf9;
         border: 1px solid #ded6cc;
@@ -74,14 +64,12 @@
         padding: 15px;
         box-shadow: 0 8px 22px rgba(95,70,54,.05);
     }
-
     .summary-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
     }
-
     .summary-icon {
         width: 36px;
         height: 36px;
@@ -92,32 +80,26 @@
         font-size: 17px;
         font-weight: 900;
     }
-
     .icon-red {
         background: #f8ece9;
         color: #a6584f;
     }
-
     .icon-orange {
         background: #f5eadf;
         color: #9b7457;
     }
-
     .icon-blue {
         background: #eee4db;
         color: #9b7457;
     }
-
     .icon-purple {
         background: #eee4db;
         color: #7e5c43;
     }
-
     .icon-green {
         background: #edf3ed;
         color: #4f6d58;
     }
-
     .summary-value {
         margin-top: 12px;
         font-size: 24px;
@@ -125,7 +107,6 @@
         color: #24211f;
         font-weight: 950;
     }
-
     .summary-label {
         margin-top: 6px;
         color: #746b64;
@@ -134,11 +115,9 @@
         text-transform: uppercase;
         letter-spacing: .4px;
     }
-
     /* =========================================================
        FILTERS
     ========================================================= */
-
     .filter-card {
         background: #fffdf9;
         border: 1px solid #ded6cc;
@@ -147,21 +126,18 @@
         box-shadow: 0 8px 22px rgba(95,70,54,.05);
         margin-bottom: 18px;
     }
-
     .filter-title {
         font-size: 14px;
         font-weight: 950;
         color: #24211f;
         margin-bottom: 12px;
     }
-
     .filter-grid {
         display: grid;
         grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
         gap: 10px;
         align-items: end;
     }
-
     .filter-field label {
         display: block;
         margin-bottom: 6px;
@@ -169,7 +145,6 @@
         font-size: 11px;
         font-weight: 900;
     }
-
     .filter-field input,
     .filter-field select {
         width: 100%;
@@ -184,19 +159,16 @@
         font-size: 13px;
         font-weight: 700;
     }
-
     .filter-field input:focus,
     .filter-field select:focus {
         border-color: #9b7457;
         background: #fffdf9;
         box-shadow: 0 0 0 3px rgba(155,116,87,.10);
     }
-
     .filter-actions {
         display: flex;
         gap: 7px;
     }
-
     .filter-btn {
         height: 42px;
         border: none;
@@ -207,12 +179,10 @@
         font-weight: 900;
         white-space: nowrap;
     }
-
     .apply-btn {
         background: linear-gradient(135deg,#7e5c43,#9b7457);
         color: #fffdf9;
     }
-
     .reset-btn {
         display: inline-flex;
         align-items: center;
@@ -221,11 +191,9 @@
         color: #5b524c;
         text-decoration: none;
     }
-
     /* =========================================================
        TABLE
     ========================================================= */
-
     .table-card {
         background: #fffdf9;
         border: 1px solid #ded6cc;
@@ -233,7 +201,6 @@
         overflow: hidden;
         box-shadow: 0 10px 26px rgba(95,70,54,.06);
     }
-
     .table-head {
         padding: 16px 18px;
         border-bottom: 1px solid #ded6cc;
@@ -242,14 +209,12 @@
         align-items: center;
         gap: 12px;
     }
-
     .table-head h2 {
         margin: 0;
         color: #24211f;
         font-size: 17px;
         font-weight: 950;
     }
-
     .result-count {
         padding: 6px 10px;
         background: #f3eee6;
@@ -258,17 +223,14 @@
         font-size: 11px;
         font-weight: 900;
     }
-
     .table-scroll {
         overflow-x: auto;
     }
-
     .cancel-table {
         width: 100%;
         min-width: 1200px;
         border-collapse: collapse;
     }
-
     .cancel-table th {
         background: #fbf8f2;
         color: #746b64;
@@ -281,7 +243,6 @@
         letter-spacing: .35px;
         white-space: nowrap;
     }
-
     .cancel-table td {
         padding: 13px 12px;
         border-bottom: 1px solid #f3eee6;
@@ -290,24 +251,20 @@
         font-weight: 700;
         vertical-align: middle;
     }
-
     .cancel-table tbody tr:hover {
         background: #fbf8f2;
     }
-
     .employee-name {
         color: #24211f;
         font-weight: 950;
         font-size: 13px;
     }
-
     .small-subtext {
         color: #9a8d83;
         font-size: 10px;
         margin-top: 3px;
         font-weight: 700;
     }
-
     .trip-badge {
         display: inline-flex;
         align-items: center;
@@ -316,17 +273,14 @@
         font-size: 10px;
         font-weight: 950;
     }
-
     .trip-pickup {
         background: #eee4db;
         color: #7e5c43;
     }
-
     .trip-drop {
         background: #eee4db;
         color: #6d28d9;
     }
-
     .role-badge {
         display: inline-flex;
         align-items: center;
@@ -335,29 +289,24 @@
         font-size: 10px;
         font-weight: 950;
     }
-
     .role-employee {
         background: #fbf3e7;
         color: #8b612e;
     }
-
     .role-admin {
         background: #f2e9e1;
         color: #7e5c43;
     }
-
     .role-driver {
         background: #f3eee6;
         color: #5b524c;
     }
-
     .reason-text {
         max-width: 220px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-
     .declaration-yes {
         display: inline-flex;
         align-items: center;
@@ -369,13 +318,11 @@
         font-size: 10px;
         font-weight: 950;
     }
-
     .declaration-no {
         color: #9a8d83;
         font-size: 11px;
         font-weight: 800;
     }
-
     .view-btn {
         border: 1px solid #d8c4b4;
         background: #f2e9e1;
@@ -387,20 +334,16 @@
         font-weight: 950;
         white-space: nowrap;
     }
-
     .view-btn:hover {
         background: #eee4db;
     }
-
     /* =========================================================
        EMPTY STATE
     ========================================================= */
-
     .empty-state {
         padding: 55px 20px;
         text-align: center;
     }
-
     .empty-icon {
         width: 58px;
         height: 58px;
@@ -413,24 +356,20 @@
         color: #9a8d83;
         font-size: 26px;
     }
-
     .empty-state h3 {
         margin: 0;
         color: #24211f;
         font-size: 17px;
         font-weight: 950;
     }
-
     .empty-state p {
         color: #746b64;
         margin: 7px 0 0;
         font-size: 13px;
     }
-
     /* =========================================================
        DECLARATION MODAL
     ========================================================= */
-
     .declaration-modal {
         display: none;
         position: fixed;
@@ -441,11 +380,9 @@
         justify-content: center;
         padding: 20px;
     }
-
     .declaration-modal.show {
         display: flex;
     }
-
     .modal-box {
         width: 100%;
         max-width: 610px;
@@ -455,7 +392,6 @@
         border-radius: 22px;
         box-shadow: 0 25px 70px rgba(95,70,54,.24);
     }
-
     .modal-header {
         display: flex;
         justify-content: space-between;
@@ -463,13 +399,11 @@
         padding: 18px 20px;
         border-bottom: 1px solid #ded6cc;
     }
-
     .modal-header-left {
         display: flex;
         align-items: center;
         gap: 11px;
     }
-
     .modal-header-icon {
         width: 40px;
         height: 40px;
@@ -481,21 +415,18 @@
         justify-content: center;
         font-size: 19px;
     }
-
     .modal-header h3 {
         margin: 0;
         font-size: 17px;
         color: #24211f;
         font-weight: 950;
     }
-
     .modal-header p {
         margin: 3px 0 0;
         color: #746b64;
         font-size: 11px;
         font-weight: 700;
     }
-
     .modal-close {
         width: 34px;
         height: 34px;
@@ -507,25 +438,21 @@
         font-size: 18px;
         font-weight: 900;
     }
-
     .modal-body {
         padding: 20px;
     }
-
     .declaration-info-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
         margin-bottom: 16px;
     }
-
     .declaration-info {
         background: #fbf8f2;
         border: 1px solid #ded6cc;
         border-radius: 12px;
         padding: 11px;
     }
-
     .declaration-info span {
         display: block;
         color: #9a8d83;
@@ -534,17 +461,14 @@
         text-transform: uppercase;
         margin-bottom: 4px;
     }
-
     .declaration-info strong {
         color: #24211f;
         font-size: 12px;
         font-weight: 900;
     }
-
     .modal-section {
         margin-top: 14px;
     }
-
     .modal-section-title {
         color: #5b524c;
         font-size: 11px;
@@ -552,7 +476,6 @@
         margin-bottom: 7px;
         text-transform: uppercase;
     }
-
     .reason-box {
         padding: 13px;
         background: #fbf3e7;
@@ -564,7 +487,6 @@
         line-height: 1.6;
         white-space: pre-wrap;
     }
-
     .declaration-box {
         padding: 14px;
         background: #f5f8f4;
@@ -576,7 +498,6 @@
         line-height: 1.65;
         white-space: pre-wrap;
     }
-
     .accepted-box {
         margin-top: 14px;
         padding: 11px 13px;
@@ -589,13 +510,11 @@
         align-items: center;
         gap: 7px;
     }
-
     .modal-footer {
         padding: 15px 20px 19px;
         display: flex;
         justify-content: flex-end;
     }
-
     .modal-done-btn {
         border: none;
         border-radius: 11px;
@@ -606,58 +525,44 @@
         font-size: 12px;
         font-weight: 900;
     }
-
     /* =========================================================
        RESPONSIVE
     ========================================================= */
-
     @media (max-width: 1200px) {
         .cancel-summary {
             grid-template-columns: repeat(3, 1fr);
         }
-
         .filter-grid {
             grid-template-columns: repeat(3, 1fr);
         }
     }
-
     @media (max-width: 750px) {
         .cancel-summary {
             grid-template-columns: repeat(2, 1fr);
         }
-
         .filter-grid {
             grid-template-columns: 1fr;
         }
-
         .filter-actions {
             width: 100%;
         }
-
         .filter-btn,
         .reset-btn {
             flex: 1;
         }
-
         .declaration-info-grid {
             grid-template-columns: 1fr;
         }
-
         .cancel-header-left h1 {
             font-size: 23px;
         }
     }
 </style>
-
-
 <div class="cancel-page">
-
     <!-- =======================================================
          PAGE HEADER
     ======================================================== -->
-
     <div class="cancel-header">
-
         <div class="cancel-header-left">
             <h1>Cancelled Trips</h1>
             <p>
@@ -665,117 +570,84 @@
                 cancellation reasons and self declarations.
             </p>
         </div>
-
         <a
             href="{% url 'admin_web:trip_history' %}"
             class="back-btn"
         >
             ← Back to Trip History
         </a>
-
     </div>
-
-
     <!-- =======================================================
          SUMMARY CARDS
     ======================================================== -->
-
     <div class="cancel-summary">
-
         <div class="summary-card">
             <div class="summary-top">
                 <div class="summary-icon icon-red">✕</div>
             </div>
-
             <div class="summary-value">
                 {{ total_cancelled }}
             </div>
-
             <div class="summary-label">
                 Total Cancelled
             </div>
         </div>
-
-
         <div class="summary-card">
             <div class="summary-top">
                 <div class="summary-icon icon-orange">◷</div>
             </div>
-
             <div class="summary-value">
                 {{ today_cancelled }}
             </div>
-
             <div class="summary-label">
                 Today
             </div>
         </div>
-
-
         <div class="summary-card">
             <div class="summary-top">
                 <div class="summary-icon icon-blue">👤</div>
             </div>
-
             <div class="summary-value">
                 {{ employee_cancelled }}
             </div>
-
             <div class="summary-label">
                 Employee Cancelled
             </div>
         </div>
-
-
         <div class="summary-card">
             <div class="summary-top">
                 <div class="summary-icon icon-purple">A</div>
             </div>
-
             <div class="summary-value">
                 {{ admin_cancelled }}
             </div>
-
             <div class="summary-label">
                 Admin Cancelled
             </div>
         </div>
-
-
         <div class="summary-card">
             <div class="summary-top">
                 <div class="summary-icon icon-green">✓</div>
             </div>
-
             <div class="summary-value">
                 {{ declarations_submitted }}
             </div>
-
             <div class="summary-label">
                 Declarations
             </div>
         </div>
-
     </div>
-
-
     <!-- =======================================================
          FILTERS
     ======================================================== -->
-
     <div class="filter-card">
-
         <div class="filter-title">
             Search & Filters
         </div>
-
         <form method="get">
-
             <div class="filter-grid">
-
                 <div class="filter-field">
                     <label>SEARCH</label>
-
                     <input
                         type="text"
                         name="q"
@@ -783,171 +655,126 @@
                         placeholder="Employee, driver, vehicle, route or reason..."
                     >
                 </div>
-
-
                 <div class="filter-field">
                     <label>TRIP DATE</label>
-
                     <input
                         type="date"
                         name="date"
                         value="{{ date_filter }}"
                     >
                 </div>
-
-
                 <div class="filter-field">
                     <label>TRIP TYPE</label>
-
                     <select name="trip_type">
-
                         <option value="">
                             All Trips
                         </option>
-
                         <option
                             value="PICKUP"
-                            {% if trip_type_filter == "PICKUP" %}
+                            {% if trip_type_filter =*=* "PICKUP" %}
                             selected
                             {% endif %}
                         >
                             Pickup
                         </option>
-
                         <option
                             value="DROP"
-                            {% if trip_type_filter == "DROP" %}
+                            {% if trip_type_filter =*=* "DROP" %}
                             selected
                             {% endif %}
                         >
                             Drop
                         </option>
-
                     </select>
                 </div>
-
-
                 <div class="filter-field">
                     <label>CANCELLED BY</label>
-
                     <select name="cancelled_by">
-
                         <option value="">
                             Everyone
                         </option>
-
                         <option
                             value="EMPLOYEE"
-                            {% if cancelled_by_filter == "EMPLOYEE" %}
+                            {% if cancelled_by_filter =*=* "EMPLOYEE" %}
                             selected
                             {% endif %}
                         >
                             Employee
                         </option>
-
                         <option
                             value="ADMIN"
-                            {% if cancelled_by_filter == "ADMIN" %}
+                            {% if cancelled_by_filter =*=* "ADMIN" %}
                             selected
                             {% endif %}
                         >
                             Admin
                         </option>
-
                         <option
                             value="DRIVER"
-                            {% if cancelled_by_filter == "DRIVER" %}
+                            {% if cancelled_by_filter =*=* "DRIVER" %}
                             selected
                             {% endif %}
                         >
                             Driver
                         </option>
-
                     </select>
                 </div>
-
-
                 <div class="filter-field">
                     <label>DECLARATION</label>
-
                     <select name="declaration">
-
                         <option value="">
                             All
                         </option>
-
                         <option
                             value="SUBMITTED"
-                            {% if declaration_filter == "SUBMITTED" %}
+                            {% if declaration_filter =*=* "SUBMITTED" %}
                             selected
                             {% endif %}
                         >
                             Submitted
                         </option>
-
                         <option
                             value="NOT_SUBMITTED"
-                            {% if declaration_filter == "NOT_SUBMITTED" %}
+                            {% if declaration_filter =*=* "NOT_SUBMITTED" %}
                             selected
                             {% endif %}
                         >
                             Not Submitted
                         </option>
-
                     </select>
                 </div>
-
-
                 <div class="filter-actions">
-
                     <button
                         type="submit"
                         class="filter-btn apply-btn"
                     >
                         Apply
                     </button>
-
                     <a
                         href="{% url 'admin_web:cancelled_trips' %}"
                         class="filter-btn reset-btn"
                     >
                         Reset
                     </a>
-
                 </div>
-
             </div>
-
         </form>
-
     </div>
-
-
     <!-- =======================================================
          CANCELLATION TABLE
     ======================================================== -->
-
     <div class="table-card">
-
         <div class="table-head">
-
             <h2>
                 Cancellation Records
             </h2>
-
             <div class="result-count">
                 {{ rows|length }} records
             </div>
-
         </div>
-
-
         {% if rows %}
-
         <div class="table-scroll">
-
             <table class="cancel-table">
-
                 <thead>
                     <tr>
                         <th>Employee</th>
@@ -962,182 +789,110 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-
-
                 <tbody>
-
                     {% for row in rows %}
-
                     <tr>
-
                         <!-- EMPLOYEE -->
-
                         <td>
                             <div class="employee-name">
                                 {{ row.employee_name }}
                             </div>
-
                             <div class="small-subtext">
                                 Trip #{{ row.trip_id }}
                             </div>
                         </td>
-
-
                         <!-- TRIP TYPE -->
-
                         <td>
-
                             {% if row.trip_type == "PICKUP" %}
-
                             <span class="trip-badge trip-pickup">
                                 PICKUP
                             </span>
-
                             {% else %}
-
                             <span class="trip-badge trip-drop">
                                 DROP
                             </span>
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- ROUTE -->
-
                         <td>
                             <div class="employee-name">
                                 {{ row.route_name }}
                             </div>
-
                             <div class="small-subtext">
                                 {{ row.pickup_location }}
                             </div>
                         </td>
-
-
                         <!-- DATE -->
-
                         <td>
                             {{ row.trip_date|date:"d M Y" }}
                         </td>
-
-
                         <!-- DRIVER / VEHICLE -->
-
                         <td>
-
                             <div>
                                 {{ row.driver_name }}
                             </div>
-
                             <div class="small-subtext">
                                 {{ row.vehicle_number }}
                             </div>
-
                         </td>
-
-
                         <!-- CANCELLED BY -->
-
                         <td>
-
                             <div>
                                 {{ row.cancelled_by }}
                             </div>
-
                             <div style="margin-top:5px;">
-
                                 {% if row.cancelled_by_role == "EMPLOYEE" %}
-
                                 <span class="role-badge role-employee">
                                     EMPLOYEE
                                 </span>
-
                                 {% elif row.cancelled_by_role == "ADMIN" %}
-
                                 <span class="role-badge role-admin">
                                     ADMIN
                                 </span>
-
                                 {% else %}
-
                                 <span class="role-badge role-driver">
                                     {{ row.cancelled_by_role }}
                                 </span>
-
                                 {% endif %}
-
                             </div>
-
                         </td>
-
-
                         <!-- CANCELLED AT -->
-
                         <td>
-
                             {% if row.cancelled_at %}
-
                             <div>
                                 {{ row.cancelled_at|date:"d M Y" }}
                             </div>
-
                             <div class="small-subtext">
                                 {{ row.cancelled_at|date:"h:i A" }}
                             </div>
-
                             {% else %}
-
                             --
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- REASON -->
-
                         <td>
-
                             <div
                                 class="reason-text"
                                 title="{{ row.reason }}"
                             >
                                 {{ row.reason }}
                             </div>
-
                         </td>
-
-
                         <!-- DECLARATION -->
-
                         <td>
-
                             {% if row.declaration_accepted %}
-
                             <span class="declaration-yes">
                                 ✓ Submitted
                             </span>
-
                             {% else %}
-
                             <span class="declaration-no">
                                 Not Submitted
                             </span>
-
                             {% endif %}
-
                         </td>
-
-
                         <!-- ACTION -->
-
                         <td>
-
                             {% if row.declaration_accepted %}
-
                             <button
                                 type="button"
                                 class="view-btn"
@@ -1147,26 +902,16 @@
                             >
                                 View Form
                             </button>
-
                             {% else %}
-
                             <span class="declaration-no">
                                 --
                             </span>
-
                             {% endif %}
-
                         </td>
-
                     </tr>
-
-
                     <!-- Hidden declaration data -->
-
                     <tr style="display:none;">
-
                         <td colspan="10">
-
                             <div
                                 id="declaration-data-{{ row.id }}"
                                 data-employee="{{ row.employee_name|escape }}"
@@ -1179,77 +924,51 @@
                                 data-reason="{{ row.reason|escape }}"
                                 data-declaration="{{ row.declaration_text|escape }}"
                             ></div>
-
                         </td>
-
                     </tr>
-
                     {% endfor %}
-
                 </tbody>
-
             </table>
-
         </div>
-
         {% else %}
-
         <div class="empty-state">
-
             <div class="empty-icon">
                 ✓
             </div>
-
             <h3>
                 No Cancelled Trips Found
             </h3>
-
             <p>
                 There are no cancellation records matching
                 your current filters.
             </p>
-
         </div>
-
         {% endif %}
-
     </div>
-
 </div>
-
-
 <!-- ===========================================================
      SELF DECLARATION MODAL
-=========================================================== -->
-
+\=========================================================== -->
 <div
     id="declarationModal"
     class="declaration-modal"
     onclick="modalBackgroundClose(event)"
 >
-
     <div class="modal-box">
-
         <div class="modal-header">
-
             <div class="modal-header-left">
-
                 <div class="modal-header-icon">
                     ✓
                 </div>
-
                 <div>
                     <h3>
                         Employee Self Declaration
                     </h3>
-
                     <p>
                         Submitted during trip cancellation
                     </p>
                 </div>
-
             </div>
-
             <button
                 type="button"
                 class="modal-close"
@@ -1257,88 +976,61 @@
             >
                 ×
             </button>
-
         </div>
-
-
         <div class="modal-body">
-
             <div class="declaration-info-grid">
-
                 <div class="declaration-info">
                     <span>Employee</span>
                     <strong id="modalEmployee">--</strong>
                 </div>
-
                 <div class="declaration-info">
                     <span>Trip Type</span>
                     <strong id="modalTrip">--</strong>
                 </div>
-
                 <div class="declaration-info">
                     <span>Trip Date</span>
                     <strong id="modalDate">--</strong>
                 </div>
-
                 <div class="declaration-info">
                     <span>Route</span>
                     <strong id="modalRoute">--</strong>
                 </div>
-
                 <div class="declaration-info">
                     <span>Cancelled By</span>
                     <strong id="modalCancelledBy">--</strong>
                 </div>
-
                 <div class="declaration-info">
                     <span>Cancelled At</span>
                     <strong id="modalCancelledAt">--</strong>
                 </div>
-
             </div>
-
-
             <div class="modal-section">
-
                 <div class="modal-section-title">
                     Cancellation Reason
                 </div>
-
                 <div
                     id="modalReason"
                     class="reason-box"
                 >
                     --
                 </div>
-
             </div>
-
-
             <div class="modal-section">
-
                 <div class="modal-section-title">
                     Self Declaration
                 </div>
-
                 <div
                     id="modalDeclaration"
                     class="declaration-box"
                 >
                     --
                 </div>
-
             </div>
-
-
             <div class="accepted-box">
                 ✓ Employee accepted and submitted this declaration.
             </div>
-
         </div>
-
-
         <div class="modal-footer">
-
             <button
                 type="button"
                 class="modal-done-btn"
@@ -1346,50 +1038,33 @@
             >
                 Close
             </button>
-
         </div>
-
     </div>
-
 </div>
-
-
 <script>
-
     function openDeclaration(id) {
-
         const data = document.getElementById(
             "declaration-data-" + id
         );
-
         if (!data) {
             return;
         }
-
         document.getElementById(
             "modalEmployee"
         ).textContent =
             data.dataset.employee || "--";
-
-
         document.getElementById(
             "modalTrip"
         ).textContent =
             data.dataset.trip || "--";
-
-
         document.getElementById(
             "modalDate"
         ).textContent =
             data.dataset.date || "--";
-
-
         document.getElementById(
             "modalRoute"
         ).textContent =
             data.dataset.route || "--";
-
-
         document.getElementById(
             "modalCancelledBy"
         ).textContent =
@@ -1402,48 +1077,31 @@
                     ? " (" + data.dataset.role + ")"
                     : ""
             );
-
-
         document.getElementById(
             "modalCancelledAt"
         ).textContent =
             data.dataset.cancelledAt || "--";
-
-
         document.getElementById(
             "modalReason"
         ).textContent =
             data.dataset.reason || "No reason provided";
-
-
         document.getElementById(
             "modalDeclaration"
         ).textContent =
             data.dataset.declaration ||
             "No declaration text available";
-
-
         document.getElementById(
             "declarationModal"
         ).classList.add("show");
-
-
         document.body.style.overflow = "hidden";
     }
-
-
     function closeDeclaration() {
-
         document.getElementById(
             "declarationModal"
         ).classList.remove("show");
-
         document.body.style.overflow = "";
     }
-
-
     function modalBackgroundClose(event) {
-
         if (
             event.target.id ===
             "declarationModal"
@@ -1451,19 +1109,14 @@
             closeDeclaration();
         }
     }
-
-
     document.addEventListener(
         "keydown",
         function(event) {
-
             if (event.key === "Escape") {
                 closeDeclaration();
             }
-
         }
     );
-
 </script>
-
+{% endtimezone %}
 {% endblock %}

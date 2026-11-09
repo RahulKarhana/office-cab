@@ -1,41 +1,35 @@
-
+{% load tz %}
+{% timezone "Asia/Kolkata" %}
 <!-- Iridori / CabMate themed trip card -->
 <div class="trip-card {{ card_type }} collapsed" id="card{{ run.id }}">
     <div class="premium-card-bg"></div>
-
     <div class="card-top">
         <div>
             <div class="route-title">
                 <span class="route-index">{{ forloop.counter }}</span>
                 {{ run.route_name }}
             </div>
-
             <div class="badge-row">
                 <span class="status {{ run.status }}">{{ run.status }}</span>
                 <span class="type-pill {{ run.trip_type }}">{{ run.trip_type }}</span>
             </div>
-
             <div class="smart-badges">
                 {% if run.is_live %}
                     <div class="smart-badge live">🟢 Live</div>
                 {% endif %}
-
                 {% if run.trip_type == "PICKUP" %}
                     <div class="smart-badge pickup-chip">🚖 Pickup Running</div>
                 {% else %}
                     <div class="smart-badge drop-chip">🌙 Drop Running</div>
                 {% endif %}
-
                 {% if run.is_delayed %}
                     <div class="smart-badge delayed">⏰ Delayed</div>
                 {% endif %}
-
                 {% if run.is_overspeed %}
                     <div class="smart-badge overspeed">🚨 Overspeed</div>
                 {% endif %}
             </div>
         </div>
-
         <button
             type="button"
             class="card-expand-arrow"
@@ -45,7 +39,6 @@
             ▾
         </button>
     </div>
-
     <div class="route-health {{ run.health_status|lower }}">
         {% if run.health_status == "EXCELLENT" %}
             🟢 Route Healthy
@@ -55,42 +48,35 @@
             🔴 Critical Route
         {% endif %}
     </div>
-
     <div class="route-progress-wrap">
         <div class="route-progress-top">
             <span>Route Progress</span>
             <strong>{{ run.completed_employees|default:0 }}/{{ run.total_employees }}</strong>
         </div>
-
         <div class="route-progress-bar">
             <div
                 class="route-progress-fill {{ card_type }}"
                 style="width: {{ run.completion_percent|default:0 }}%;"
             ></div>
         </div>
-
         <div class="route-progress-meta">
             <span>👥 {{ run.total_employees }} Employees</span>
             <span>✅ {{ run.completion_percent|default:0 }}%</span>
         </div>
     </div>
-
     <div class="smart-badges">
         <span class="smart-badge eta">⏱ ETA: {{ run.eta_text|default:"--" }}</span>
         <span class="smart-badge current">📍 Current: {{ run.current_stop_name|default:"Not started" }}</span>
     </div>
-
     <div class="details">
         <div>🚗 <b>Driver:</b> {{ run.driver_name }}</div>
         <div>🚖 <b>Vehicle:</b> {{ run.vehicle_number }}</div>
         <div>📅 <b>Date:</b> {{ run.run_date }}</div>
         <div>⏰ <b>Time:</b> {% if run.pickup_time %}{{ run.pickup_time|time:"h:i A" }}{% else %}--{% endif %}</div>
     </div>
-
     <button type="button" class="employee-toggle" onclick="toggleEmployees('{{ run.id }}')">
         👥 View Employee Timeline
     </button>
-
     <div class="employee-box" id="employees{{ run.id }}">
         {% for emp in run.employees %}
         <div class="
@@ -107,17 +93,14 @@
             {% endif %}
         ">
             <div class="timeline-dot {% if emp.is_picked %}done{% elif emp.is_no_show %}no-show{% else %}pending{% endif %}"></div>
-
             <div class="employee-main">
                 <div class="employee-head">
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <strong>{{ forloop.counter }}. {{ emp.employee_name }}</strong>
-
                         {% if emp.is_current %}
                             <span class="live-current-badge">LIVE</span>
                         {% endif %}
                     </div>
-
                     {% if emp.is_no_show %}
                         <span class="emp-status no-show">No-show</span>
                     {% elif emp.is_picked %}
@@ -126,12 +109,10 @@
                         <span class="emp-status pending">Pending</span>
                     {% endif %}
                 </div>
-
                 <div class="emp-location">
                     📍 From: {{ emp.pickup_location }}<br>
                     🏁 To: {{ emp.drop_location|default:"Office" }}
                 </div>
-
                 {% if emp.trip_id %}
                 <form method="post" action="{% url 'admin_web:cancel_trip' emp.trip_id %}">
                     {% csrf_token %}
@@ -146,7 +127,6 @@
         <div class="employee-row">No employees found</div>
         {% endfor %}
     </div>
-
     <div class="actions">
         <form method="post" action="{% url 'admin_web:cancel_route_run_trips' run.id %}">
             {% csrf_token %}
@@ -160,13 +140,12 @@
                 Cancel All
             </button>
         </form>
-
         <button type="button" class="card-btn more" onclick="toggleCard('{{ run.id }}',this)">
             More
         </button>
     </div>
 </div>
-
+{% endtimezone %}
 <style>
 :root{
     --cm-brown:#9b7457;
@@ -186,7 +165,6 @@
     --cm-amber:#b88746;
     --cm-amber-soft:#fbf3e7;
 }
-
 .trip-card{
     position:relative;
     overflow:hidden;
@@ -197,7 +175,6 @@
     box-shadow:0 16px 38px rgba(95,70,54,.08);
     color:var(--cm-text);
 }
-
 .premium-card-bg{
     position:absolute;
     width:180px;
@@ -208,7 +185,6 @@
     background:rgba(155,116,87,.08);
     pointer-events:none;
 }
-
 .card-top{
     position:relative;
     z-index:2;
@@ -217,7 +193,6 @@
     gap:16px;
     align-items:flex-start;
 }
-
 .route-title{
     display:flex;
     align-items:center;
@@ -226,7 +201,6 @@
     font-weight:950;
     color:var(--cm-text);
 }
-
 .route-index{
     min-width:34px;
     height:34px;
@@ -240,7 +214,6 @@
     font-weight:950;
     box-shadow:0 8px 18px rgba(126,92,67,.18);
 }
-
 .badge-row,
 .smart-badges{
     display:flex;
@@ -248,7 +221,6 @@
     flex-wrap:wrap;
     margin-top:12px;
 }
-
 .status,
 .type-pill,
 .smart-badge,
@@ -261,12 +233,10 @@
     font-size:11px;
     font-weight:900;
 }
-
 .status,
 .type-pill{
     padding:7px 10px;
 }
-
 .status.ASSIGNED{
     background:#eee4db;
     color:var(--cm-brown-deep);
@@ -283,7 +253,6 @@
     background:var(--cm-red-soft);
     color:var(--cm-red-dark);
 }
-
 .type-pill.PICKUP{
     background:#f2e9e1;
     color:var(--cm-brown-dark);
@@ -292,12 +261,10 @@
     background:#ebe4df;
     color:#67544a;
 }
-
 .smart-badge{
     padding:7px 10px;
     border:1px solid transparent;
 }
-
 .smart-badge.live{
     background:var(--cm-green-soft);
     color:var(--cm-green);
@@ -325,7 +292,6 @@
     color:var(--cm-red-dark);
     border-color:#e9c7c1;
 }
-
 .card-expand-arrow{
     position:relative;
     z-index:2;
@@ -340,7 +306,6 @@
     font-weight:950;
     box-shadow:0 8px 18px rgba(95,70,54,.06);
 }
-
 .route-health{
     margin-top:14px;
     padding:8px 11px;
@@ -361,7 +326,6 @@
     color:var(--cm-red-dark);
     border-color:#e9c7c1;
 }
-
 .route-progress-wrap{
     margin-top:16px;
     background:var(--cm-cream);
@@ -369,7 +333,6 @@
     border-radius:18px;
     padding:14px;
 }
-
 .route-progress-top,
 .route-progress-meta{
     display:flex;
@@ -377,7 +340,6 @@
     align-items:center;
     gap:10px;
 }
-
 .route-progress-top{
     font-size:12px;
     color:var(--cm-muted);
@@ -386,7 +348,6 @@
 .route-progress-top strong{
     color:var(--cm-brown-deep);
 }
-
 .route-progress-bar{
     height:10px;
     border-radius:999px;
@@ -394,26 +355,22 @@
     overflow:hidden;
     margin:10px 0;
 }
-
 .route-progress-fill{
     height:100%;
     border-radius:999px;
     background:linear-gradient(90deg,var(--cm-brown-dark),var(--cm-brown));
 }
-
 .route-progress-meta{
     font-size:11px;
     color:var(--cm-muted);
     font-weight:800;
 }
-
 .details{
     margin-top:16px;
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
     gap:10px;
 }
-
 .details > div{
     background:#fbf8f2;
     border:1px solid var(--cm-border);
@@ -426,7 +383,6 @@
 .details b{
     color:var(--cm-brown-deep);
 }
-
 .employee-toggle{
     width:100%;
     margin-top:16px;
@@ -438,11 +394,9 @@
     font-weight:950;
     cursor:pointer;
 }
-
 .employee-box{
     margin-top:14px;
 }
-
 .employee-row{
     position:relative;
     display:flex;
@@ -453,7 +407,6 @@
     background:#fff;
     margin-bottom:10px;
 }
-
 .employee-completed{
     background:#f5f8f4;
     border-color:#d8e4da;
@@ -469,7 +422,6 @@
 .employee-pending{
     background:#fbf8f2;
 }
-
 .timeline-dot{
     width:13px;
     height:13px;
@@ -485,11 +437,9 @@
 .timeline-dot.no-show{
     background:var(--cm-red);
 }
-
 .employee-main{
     flex:1;
 }
-
 .employee-head{
     display:flex;
     justify-content:space-between;
@@ -497,11 +447,9 @@
     align-items:center;
     flex-wrap:wrap;
 }
-
 .employee-head strong{
     color:var(--cm-text);
 }
-
 .emp-location{
     margin-top:8px;
     color:var(--cm-muted);
@@ -509,13 +457,11 @@
     font-weight:700;
     line-height:1.55;
 }
-
 .live-current-badge{
     padding:5px 8px;
     background:var(--cm-brown);
     color:#fff;
 }
-
 .emp-status{
     padding:6px 9px;
 }
@@ -531,7 +477,6 @@
     background:var(--cm-red-soft);
     color:var(--cm-red-dark);
 }
-
 .single-cancel{
     margin-top:10px;
     border:1px solid #e2c3bd;
@@ -543,7 +488,6 @@
     font-weight:900;
     cursor:pointer;
 }
-
 .actions{
     margin-top:16px;
     display:flex;
@@ -551,13 +495,11 @@
     gap:10px;
     flex-wrap:wrap;
 }
-
 .actions form{
     display:flex;
     gap:8px;
     flex-wrap:wrap;
 }
-
 .card-btn{
     display:inline-flex;
     align-items:center;
@@ -570,38 +512,31 @@
     font-weight:950;
     cursor:pointer;
 }
-
 .live-map-btn{
     background:linear-gradient(135deg,var(--cm-brown-dark),var(--cm-brown));
     color:#fff;
 }
-
 .card-btn.cancel{
     background:var(--cm-red-soft);
     color:var(--cm-red-dark);
     border:1px solid #e8c6c0;
 }
-
 .card-btn.more{
     background:#eee4db;
     color:var(--cm-brown-deep);
     border:1px solid #decec0;
 }
-
 @media(max-width:700px){
     .details{
         grid-template-columns:1fr;
     }
-
     .actions,
     .employee-head{
         align-items:stretch;
     }
-
     .actions form{
         width:100%;
     }
-
     .card-btn{
         flex:1;
     }

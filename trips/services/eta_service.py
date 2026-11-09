@@ -86,10 +86,17 @@ class ETAService:
     def build_live_status(route_run, employee_user=None):
         stops = list(RouteService.get_ordered_stops(route_run))
         total_stops = len(stops)
-        completed_stops = len([s for s in stops if s.is_picked or s.is_no_show])
-        remaining_stops = len([s for s in stops if not s.is_picked and not s.is_no_show])
+        # DROP progression only includes employees who boarded the cab.
+        # Unboarded/No Show stops must not become the current destination.
+        is_drop = route_run.trip_type == Trip.TRIP_TYPE_DROP
+        eligible_stops = [
+            s for s in stops
+            if not is_drop or (s.is_boarded and not s.is_no_show)
+        ]
+        completed_stops = sum(1 for s in stops if s.is_picked or s.is_no_show)
+        remaining_stops = sum(1 for s in eligible_stops if not s.is_picked)
 
-        current_stop = next((s for s in stops if not s.is_picked and not s.is_no_show), None)
+        current_stop = RouteService.get_current_stop(route_run)
         my_stop = next((s for s in stops if employee_user and s.employee_id == employee_user.id), None)
         next_stop = RouteService.get_next_stop_after_current(route_run, current_stop) if current_stop else None
 
@@ -107,8 +114,9 @@ class ETAService:
         for index, stop in enumerate(stops):
             stop_status = "UPCOMING"
             if stop.is_no_show:
-            
                 stop_status = "NO_SHOW"
+            elif is_drop and not stop.is_boarded:
+                stop_status = "NOT_BOARDED"
             elif stop.is_picked:
                 stop_status = "COMPLETED"
             elif current_stop and stop.id == current_stop.id:
@@ -129,6 +137,8 @@ class ETAService:
                 and stop.pickup_longitude is not None
                 and not stop.is_picked
                 and not stop.is_no_show
+                and (not is_drop or stop.is_boarded)
+                and current_index >= 0
                 and index >= current_index
             )
 
@@ -151,7 +161,7 @@ class ETAService:
                 getattr(stop, "arrival_time", None)
             )
 
-            chat_enabled = driver_has_arrived
+            chat_enabled = driver_has_arrived and not is_drop
 
             arrival_time = getattr(
                 stop,
@@ -159,8 +169,13 @@ class ETAService:
                 None,
             )
 
-            timer_data = RouteService.get_waiting_timer_data(
-                stop
+            timer_data = (
+                RouteService.get_waiting_timer_data(stop)
+                if not is_drop else {
+                    "phase": "NOT_APPLICABLE",
+                    "free_seconds_remaining": 0,
+                    "late_seconds": 0,
+                }
             )
 
             waiting_phase = timer_data.get(
@@ -182,7 +197,7 @@ class ETAService:
 
             chat = None
 
-            if driver_has_arrived:
+            if chat_enabled:
                 chat = PickupChat.objects.filter(
                     route_run=route_run,
                     stop=stop,
@@ -215,10 +230,9 @@ class ETAService:
                 "chat_enabled": chat_enabled,
 
                 "arrival_time": arrival_time,
-                "waiting_started_at": getattr(
-                    stop,
-                    "waiting_started_at",
-                    None,
+                "waiting_started_at": (
+                    getattr(stop, "waiting_started_at", None)
+                    if not is_drop else None
                 ),
 
                 "waiting_phase": waiting_phase,
@@ -226,6 +240,7 @@ class ETAService:
                 "late_seconds": late_seconds,
 
                 "is_picked": stop.is_picked,
+                "is_boarded": stop.is_boarded,
                 "is_no_show": stop.is_no_show,
 
                 "status": stop_status,
@@ -243,10 +258,12 @@ class ETAService:
                 ),
 
                 "eta_display_text": (
-                    "Pickup Done"
+                    ("Drop Done" if is_drop else "Pickup Done")
                     if stop.is_picked
                     else "No Show"
                     if stop.is_no_show
+                    else "Not Boarded"
+                    if is_drop and not stop.is_boarded
                     else ETAService.format_eta_text(
                         eta_minutes
                     )
@@ -265,6 +282,7 @@ class ETAService:
             s for s in stops
             if not s.is_picked
             and not s.is_no_show
+            and (not is_drop or s.is_boarded)
             and s.pickup_latitude is not None
             and s.pickup_longitude is not None
         ]
@@ -290,12 +308,37 @@ class ETAService:
             status_text = "You have been dropped successfully." if route_run.trip_type == Trip.TRIP_TYPE_DROP else "You have already been picked up. Cab is continuing on route."
         elif current_stop and my_stop and current_stop.id == my_stop.id:
             status_text = f"Cab is currently coming for your {route_word}."
+        elif my_stop and my_stop.is_no_show:
+            status_text = "You were marked No Show for this route."
+        elif is_drop and my_stop and not my_stop.is_boarded:
+            status_text = "You have not boarded this drop cab."
         elif next_stop and my_stop and next_stop.id == my_stop.id:
-            status_text = f"Current {route_word} is {current_stop.employee.display_name}. You are next."
+            status_text = f"You are next for {route_word}."
+        elif my_stop and current_stop:
+            status_text = f"Your {route_word} will come later in the route."
         elif my_stop:
-            status_text = f"Current {route_word} is {current_stop.employee.display_name}. Your {route_word} will come later in route."
+            status_text = "No further stops are pending."
         else:
             status_text = f"Live {route_word} route is active."
+
+        # Employees only need their own stop details and aggregate progress.
+        # Do not expose other passengers' names, addresses, coordinates,
+        # chat IDs, or the route-wide polyline to employee clients.
+        if employee_user is not None:
+            live_stops = [my_stop_data] if my_stop_data else []
+            current_stop_data = (
+                {"stop_order": current_stop_data["stop_order"],
+                 "display_order": current_stop_data["display_order"],
+                 "status": current_stop_data["status"]}
+                if current_stop_data else None
+            )
+            next_stop_data = (
+                {"stop_order": next_stop_data["stop_order"],
+                 "display_order": next_stop_data["display_order"],
+                 "status": next_stop_data["status"]}
+                if next_stop_data else None
+            )
+            route_polyline = None
 
         return {
             "route_run_id": route_run.id,
@@ -314,8 +357,8 @@ class ETAService:
             "current_stop": current_stop_data,
             "next_stop": next_stop_data,
             "my_stop": my_stop_data,
-            "office_eta_minutes": directions.get("eta_minutes") if directions else None,
-            "office_eta_text": directions.get("eta_text") if directions else None,
+            "office_eta_minutes": directions.get("eta_minutes") if directions and not is_drop else None,
+            "office_eta_text": directions.get("eta_text") if directions and not is_drop else None,
             "polyline": route_polyline,
             "stops": live_stops,
         }

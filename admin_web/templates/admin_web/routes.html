@@ -1525,6 +1525,23 @@
     }
 }
 
+
+/* Independent DROP order editor (Admin Website) */
+.route-drop-panel {margin-top:20px;padding:18px;border:1px solid #d9c6b5;border-radius:18px;background:#fbf8f2}
+.route-drop-panel h4 {margin:0 0 6px;color:#5f4636;font-size:19px}
+.route-drop-help {font-size:13px;color:#746b64;line-height:1.5;margin:0 0 12px}
+.route-drop-row {display:flex;align-items:center;gap:10px;padding:11px 12px;margin:8px 0;border:1px solid #ded6cc;border-radius:12px;background:#fffdf9}
+.route-drop-row[draggable="true"] {cursor:grab}
+.route-drop-row.route-drop-dragging {opacity:.45}
+.route-drop-num {display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:#eee4db;font-weight:900;color:#5f4636}
+.route-drop-name {flex:1;font-size:14px;font-weight:750;color:#514943;overflow-wrap:anywhere}
+.route-drop-move {border:1px solid #ded6cc;border-radius:9px;background:white;color:#5f4636;min-width:34px;height:34px;cursor:pointer}
+.route-drop-buttons {display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.route-drop-buttons button {min-height:42px;padding:0 15px;border-radius:12px;font-weight:800;cursor:pointer}
+.route-drop-save {background:#5f4636;color:white;border:1px solid #5f4636}
+.route-drop-reset {background:#fffdf9;color:#5f4636;border:1px solid #ded6cc}
+.route-drop-buttons button:disabled {opacity:.5;cursor:not-allowed}
+.route-drop-status {font-size:13px;font-weight:700;margin-top:10px;color:#746b64}
 </style>
 
 <script id="routeFormData" type="application/json">
@@ -1885,6 +1902,19 @@
 
             <div class="route-stop-list" id="editStopList"></div>
             <div class="route-empty-box" id="editEmptyState">No employees added yet. Tap “Add Employee” to assign route priority.</div>
+
+
+            <!-- Independent custom DROP order: saved separately from route details -->
+            <section class="route-drop-panel" id="editDropPanel" aria-label="Custom DROP Order">
+                <h4>🚖 Custom DROP Order</h4>
+                <p class="route-drop-help">Drag employees or use the arrow buttons to set the DROP sequence. This will not change the PICKUP order. Applies to future generated DROP trips only.</p>
+                <div id="editDropList" aria-live="polite"></div>
+                <div class="route-drop-buttons">
+                    <button type="button" class="route-drop-save" id="editDropSave" onclick="saveWebsiteDropOrder()">Save DROP Order</button>
+                    <button type="button" class="route-drop-reset" id="editDropReset" onclick="resetWebsiteDropOrder()">Reset to Reverse PICKUP</button>
+                </div>
+                <p class="route-drop-status" id="editDropStatus" role="status"></p>
+            </section>
 
             <div class="route-modal-actions">
                 <button type="button" class="route-cancel-btn" onclick="closeEditRouteModal()">Cancel</button>
@@ -2467,7 +2497,110 @@ function populateEditModal(buttonEl) {
     }));
 
     syncVehicle("edit", editState);
+    websiteDropInit(routeId);
 }
+
+
+// Website DROP-order controls; deliberately separate from the main edit form.
+let websiteDropRouteId = null;
+let websiteDropIds = [];
+let websiteDropOriginalMembers = [];
+let websiteDropBusy = false;
+
+function websiteDropMembers() {
+    return editState.stops.map(s => Number(s.employee_id)).filter(id => Number.isInteger(id) && id > 0);
+}
+function websiteDropMembersChanged() {
+    const current = websiteDropMembers().slice().sort((a,b) => a-b);
+    const original = websiteDropOriginalMembers.slice().sort((a,b) => a-b);
+    return current.length !== original.length || current.some((id,i) => id !== original[i]);
+}
+function websiteDropStatus(message, isError=false) {
+    const el = document.getElementById('editDropStatus');
+    if (el) { el.textContent = message; el.style.color = isError ? '#a6584f' : '#746b64'; }
+}
+function websiteDropRender() {
+    const list = document.getElementById('editDropList');
+    if (!list) return;
+    list.replaceChildren();
+    websiteDropIds.forEach((id,index) => {
+        const row = document.createElement('div');
+        row.className = 'route-drop-row';
+        row.draggable = !websiteDropBusy;
+        row.dataset.id = String(id);
+        const number = document.createElement('span'); number.className='route-drop-num'; number.textContent=String(index+1);
+        const name = document.createElement('span'); name.className='route-drop-name';
+        const emp = findEmployeeById(id);
+        const routeStop = editState.stops.find(s => Number(s.employee_id) === id);
+        name.textContent = emp?.username || routeStop?.employee_name || `Employee #${id}`;
+        const grip = document.createElement('span'); grip.textContent='⠿'; grip.setAttribute('aria-hidden','true');
+        row.append(grip,number,name);
+        for (const [label,delta] of [['↑',-1],['↓',1]]) {
+            const btn=document.createElement('button'); btn.type='button'; btn.className='route-drop-move'; btn.textContent=label;
+            btn.title=delta<0?'Move earlier':'Move later'; btn.disabled=websiteDropBusy || index+delta<0 || index+delta>=websiteDropIds.length;
+            btn.addEventListener('click',()=>websiteDropMove(index,index+delta)); row.append(btn);
+        }
+        row.addEventListener('dragstart', e => { if (websiteDropBusy) {e.preventDefault();return;} e.dataTransfer.setData('text/plain',String(index)); row.classList.add('route-drop-dragging'); });
+        row.addEventListener('dragend',()=>row.classList.remove('route-drop-dragging'));
+        row.addEventListener('dragover',e=>e.preventDefault());
+        row.addEventListener('drop',e=>{e.preventDefault();const from=Number(e.dataTransfer.getData('text/plain'));if(Number.isInteger(from))websiteDropMove(from,index);});
+        list.append(row);
+    });
+    for (const id of ['editDropSave','editDropReset']) {
+        const btn=document.getElementById(id); if(btn) btn.disabled=websiteDropBusy || websiteDropIds.length===0;
+    }
+}
+function websiteDropMove(from,to) {
+    if(websiteDropBusy || from===to || from<0 || to<0 || from>=websiteDropIds.length || to>=websiteDropIds.length)return;
+    const [id]=websiteDropIds.splice(from,1);websiteDropIds.splice(to,0,id);websiteDropRender();
+    websiteDropStatus('DROP order changed. Click Save DROP Order to store it.');
+}
+async function websiteDropFetchJson(url, options={}) {
+    const response=await fetch(url,{credentials:'same-origin',...options});
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(payload.detail || payload.error || payload.message || `Server returned HTTP ${response.status}`);
+    return payload;
+}
+async function websiteDropInit(routeId) {
+    websiteDropRouteId=Number(routeId);
+    websiteDropOriginalMembers=websiteDropMembers();
+    websiteDropIds=[...websiteDropOriginalMembers].reverse();
+    websiteDropRender();websiteDropStatus('Loading saved DROP order...');
+    try {
+        const data=await websiteDropFetchJson(`/api/trips/routes/${websiteDropRouteId}/`);
+        if(websiteDropRouteId!==Number(routeId))return;
+        const stops=Array.isArray(data.stops)?data.stops:(Array.isArray(data.route_stops)?data.route_stops:[]);
+        const saved=stops.filter(s=>s.drop_order!==null && s.drop_order!==undefined)
+            .sort((a,b)=>Number(a.drop_order)-Number(b.drop_order))
+            .map(s=>Number(s.employee_id ?? s.employee?.id ?? s.employee))
+            .filter(id=>websiteDropOriginalMembers.includes(id));
+        if(saved.length===websiteDropOriginalMembers.length && new Set(saved).size===saved.length) {
+            websiteDropIds=saved;
+            websiteDropStatus('Saved custom DROP order loaded.');
+        } else {
+            websiteDropStatus('Showing default reverse-PICKUP order.');
+        }
+        websiteDropRender();
+    } catch(e) {
+        websiteDropStatus('Could not load saved DROP order. Save/Reset is available, but please verify the route API before making changes: '+e.message,true);
+    }
+}
+async function websiteDropSubmit(action, employeeIds) {
+    if(!websiteDropRouteId || websiteDropBusy)return;
+    if(websiteDropMembersChanged()) {alert('Employee assignments changed. First click Update Route, reopen Edit Route, then save the DROP order.');return;}
+    if(!websiteDropIds.length) {alert('Add employees to the route first.');return;}
+    websiteDropBusy=true;websiteDropRender();websiteDropStatus('Saving DROP order...');
+    try {
+        const options={method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken'),'Content-Type':'application/json'}};
+        if(employeeIds)options.body=JSON.stringify({employee_ids:employeeIds});
+        await websiteDropFetchJson(`/api/trips/routes/${websiteDropRouteId}/${action}/`,options);
+        if(action==='reset-drop-order')websiteDropIds=[...websiteDropOriginalMembers].reverse();
+        websiteDropStatus(action==='reset-drop-order'?'DROP order reset successfully.':'Custom DROP order saved successfully.');
+    } catch(e) {websiteDropStatus('Could not save DROP order: '+e.message,true);}
+    finally {websiteDropBusy=false;websiteDropRender();}
+}
+function saveWebsiteDropOrder() {return websiteDropSubmit('save-drop-order',[...websiteDropIds]);}
+function resetWebsiteDropOrder() {return websiteDropSubmit('reset-drop-order',null);}
 
 function openEditRouteModal(event, buttonEl) {
     if (event) event.stopPropagation();

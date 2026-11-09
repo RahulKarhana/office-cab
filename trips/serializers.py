@@ -1,5 +1,6 @@
 from math import radians, cos, sin, asin, sqrt
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import serializers
 from .models import EmergencyAlert
 from trips.models import DeviceToken
@@ -80,7 +81,6 @@ class RouteRunStopSerializer(serializers.ModelSerializer):
             "pickup_latitude",
             "pickup_longitude",
             "stop_order",
-
             # PICKUP STATUS
             "is_picked",
             "picked_at",
@@ -113,6 +113,7 @@ class RouteRunSerializer(serializers.ModelSerializer):
             "vehicle_number",
             "trip_type",
             "run_date",
+            "use_custom_drop_order",
             "started_at",
             "completed_at",
             "current_stop_order",
@@ -180,7 +181,7 @@ class TripSerializer(serializers.ModelSerializer):
         pickup_time = attrs.get("pickup_time", getattr(self.instance, "pickup_time", None))
 
         if employee and trip_type and pickup_time:
-            trip_date = pickup_time.date()
+            trip_date = timezone.localtime(pickup_time).date() if timezone.is_aware(pickup_time) else pickup_time.date()
 
             qs = Trip.objects.filter(
                 employee=employee,
@@ -348,9 +349,8 @@ class DriverLocationSerializer(serializers.ModelSerializer):
         if not trip or not trip.route_run:
             return None
 
-        return trip.route_run.stops.filter(
-            is_picked=False
-        ).order_by("stop_order").first()
+        from trips.services.route_service import RouteService
+        return RouteService.get_current_stop(trip.route_run)
 
     def _get_distance_km_value(self, obj):
         current_stop = self._get_current_stop(obj)
@@ -508,6 +508,7 @@ class RouteStopSerializer(serializers.ModelSerializer):
             "pickup_latitude",
             "pickup_longitude",
             "stop_order",
+            "drop_order",
         ]
 
 
@@ -721,6 +722,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
 
         return route
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         stops_data = validated_data.pop("stops", None)
         driver = validated_data.get("driver", instance.driver)
@@ -732,58 +734,82 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
                 {"driver": "Selected driver does not have a vehicle."}
             )
 
-        instance.name = validated_data.get("name", instance.name).strip()
-        instance.driver = driver
-        instance.vehicle = vehicle
-
+        # Validate before changing the database.
         if stops_data is not None:
             if len(stops_data) > vehicle.seat_count:
-                raise serializers.ValidationError(
-                    {
-                        "stops": (
-                            f"Vehicle seat capacity is {vehicle.seat_count}. "
-                            f"You tried to assign {len(stops_data)} employees."
-                        )
-                    }
-                )
+                raise serializers.ValidationError({
+                    "stops": (
+                        f"Vehicle seat capacity is {vehicle.seat_count}. "
+                        f"You tried to assign {len(stops_data)} employees."
+                    )
+                })
 
             employee_ids = [stop["employee"].id for stop in stops_data]
             if len(employee_ids) != len(set(employee_ids)):
-                raise serializers.ValidationError(
-                    {"stops": "Duplicate employees are not allowed in the same route."}
-                )
+                raise serializers.ValidationError({
+                    "stops": "Duplicate employees are not allowed in the same route."
+                })
 
-            qs = RouteStop.objects.filter(
+            assigned_elsewhere = RouteStop.objects.filter(
                 route__is_active=True,
                 employee_id__in=employee_ids,
-            ).exclude(
-                route=instance
-            )
-            already_assigned_ids = set(qs.values_list("employee_id", flat=True))
-
-            if already_assigned_ids:
-                already_assigned_users = [
-                    str(stop["employee"].display_name)
-                    for stop in stops_data
-                    if stop["employee"].id in already_assigned_ids
+            ).exclude(route=instance)
+            if assigned_elsewhere.exists():
+                names = [
+                    stop["employee"].display_name for stop in stops_data
+                    if assigned_elsewhere.filter(employee=stop["employee"]).exists()
                 ]
-                raise serializers.ValidationError(
-                    {
-                        "stops": (
-                            "These employees are already assigned in another saved route: "
-                            + ", ".join(already_assigned_users)
-                        )
-                    }
-                )
+                raise serializers.ValidationError({
+                    "stops": "These employees are already assigned in another saved route: "
+                    + ", ".join(names)
+                })
 
-            instance.stops.all().delete()
-
-            for stop in stops_data:
-                RouteStop.objects.create(route=instance, **stop)
-
+        instance.name = validated_data.get("name", instance.name).strip()
+        instance.driver = driver
+        instance.vehicle = vehicle
         instance.save()
+
+        if stops_data is not None:
+            # Retain the same RouteStop rows for employees who remain on the
+            # route. This preserves their independent custom DROP positions.
+            existing = {
+                stop.employee_id: stop
+                for stop in instance.stops.select_for_update()
+            }
+            requested_ids = {stop["employee"].id for stop in stops_data}
+            membership_changed = set(existing) != requested_ids
+
+            for index, data in enumerate(stops_data, start=1):
+                employee = data["employee"]
+                current = existing.get(employee.id)
+                if current is None:
+                    current = RouteStop(route=instance, employee=employee)
+
+                current.pickup_location = data.get(
+                    "pickup_location", getattr(current, "pickup_location", "")
+                )
+                current.pickup_latitude = data.get(
+                    "pickup_latitude", current.pickup_latitude
+                )
+                current.pickup_longitude = data.get(
+                    "pickup_longitude", current.pickup_longitude
+                )
+                current.stop_order = data.get("stop_order", index)
+                current.save()
+
+            removed_ids = set(existing) - requested_ids
+            if removed_ids:
+                instance.stops.filter(employee_id__in=removed_ids).delete()
+
+            if membership_changed:
+                # A saved custom sequence no longer covers exactly the same
+                # employees. Reset to legacy reverse-PICKUP ordering until
+                # admin saves a new complete DROP sequence.
+                instance.stops.update(drop_order=None)
+
         return instance
-    
+
+
 class RouteRunLiveStopSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     stop_order = serializers.IntegerField()

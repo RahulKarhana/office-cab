@@ -4251,7 +4251,7 @@ def alerts_data_api(request):
             "title": alert.title or "Emergency SOS",
             "message": alert.message or "",
             "status": alert.status or "ACTIVE",
-            "created_at": alert.created_at.strftime("%d %b %Y, %I:%M %p") if alert.created_at else "",
+            "created_at": timezone.localtime(alert.created_at).strftime("%d %b %Y, %I:%M %p") if alert.created_at else "",
             "trip_id": trip.id if trip else None,
             "trip_type": getattr(trip, "trip_type", "") if trip else "",
             "trip_status": getattr(trip, "status", "") if trip else "",
@@ -4591,9 +4591,10 @@ def live_cab_cards_api(request):
                         estimated_completion_minutes
                     )
                 )
-            ).strftime(
-                "%I:%M %p"
             )
+            estimated_completion_time = timezone.localtime(
+                estimated_completion_time
+            ).strftime("%I:%M %p")
 
         else:
 

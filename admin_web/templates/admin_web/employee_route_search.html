@@ -1,19 +1,14 @@
 {% extends 'admin_web/base.html' %}
-
 {% block title %}Smart Route Search{% endblock %}
 {% block nav_employees %}active{% endblock %}
 {% block page_heading %}Smart Route Search{% endblock %}
 {% block page_subheading %}AI-like route matching for employee pickup location{% endblock %}
-
 {% block content %}
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
 <style>
 .smart-search-page{
     padding: 24px;
 }
-
 .smart-hero{
     position: relative;
     overflow: hidden;
@@ -23,7 +18,6 @@
     background: linear-gradient(135deg,#5f4636,#7e5c43,#9b7457);
     color: white;
 }
-
 .smart-hero::before{
     content:"";
     position:absolute;
@@ -34,19 +28,16 @@
     top:-220px;
     right:-120px;
 }
-
 .smart-hero h1{
     font-size:42px;
     font-weight:800;
     margin:0 0 10px;
 }
-
 .smart-hero p{
     color:#f0e8e1;
     font-size:16px;
     margin: 0;
 }
-
 .radar-wrap{
     margin-top:40px;
     display:flex;
@@ -55,18 +46,15 @@
     position:relative;
     height:420px;
 }
-
 .radar-circle{
     position:absolute;
     border-radius:50%;
     border:2px solid rgba(216,196,180,.30);
     animation:pulse 3s infinite;
 }
-
 .circle-1{ width:140px; height:140px; }
 .circle-2{ width:260px; height:260px; }
 .circle-3{ width:390px; height:390px; }
-
 .employee-core{
     width:110px;
     height:110px;
@@ -83,8 +71,6 @@
     overflow:hidden;
     font-size: 42px;
 }
-
-
 .dummy-profile-icon{
     width:58px;
     height:58px;
@@ -93,16 +79,13 @@
     stroke-width:2;
     stroke-linecap:round;
 }
-
 /* Same decorative default profile avatar used across CabMate.
    Employee photo upload is not required. */
-
 @keyframes pulse{
     0%{ transform:scale(.92); opacity:.6; }
     50%{ transform:scale(1); opacity:1; }
     100%{ transform:scale(.92); opacity:.6; }
 }
-
 .employee-card{
     background:white;
     border-radius:24px;
@@ -110,44 +93,37 @@
     margin-top:30px;
     box-shadow:0 15px 40px rgba(95,70,54,.08);
 }
-
 .employee-card h3{
     margin:0 0 10px;
     font-size:26px;
 }
-
 .employee-meta{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
     gap:18px;
     margin-top:20px;
 }
-
 .meta-box{
     padding:18px;
     border-radius:18px;
     background:#fbf8f2;
 }
-
 .meta-box p{
     color:#746b64;
     margin:0 0 6px;
     font-weight: 700;
 }
-
 .meta-box h4{
     margin:0;
     font-size:18px;
     color:#24211f;
 }
-
 .routes-grid{
     margin-top:35px;
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
     gap:24px;
 }
-
 .route-card{
     position:relative;
     overflow:hidden;
@@ -158,11 +134,9 @@
     transition:.25s;
     border: 1px solid #ded6cc;
 }
-
 .route-card:hover{
     transform:translateY(-6px);
 }
-
 .route-card::before{
     content:"";
     position:absolute;
@@ -171,19 +145,15 @@
     width:100%;
     height:7px;
 }
-
 .route-card.best::before{
     background:linear-gradient(90deg,#6f8b74,#4f6d58);
 }
-
 .route-card.medium::before{
     background:linear-gradient(90deg,#b98a67,#9b7457);
 }
-
 .route-card.far::before{
     background:linear-gradient(90deg,#b88746,#8b612e);
 }
-
 .route-top{
     display:flex;
     justify-content:space-between;
@@ -191,19 +161,16 @@
     margin-bottom:18px;
     gap: 14px;
 }
-
 .route-name{
     font-size:24px;
     font-weight:800;
     color:#24211f;
 }
-
 .route-sub{
     margin-top:6px;
     color:#746b64;
     font-weight: 700;
 }
-
 .match-badge{
     padding:8px 14px;
     border-radius:999px;
@@ -211,35 +178,29 @@
     font-size:13px;
     white-space: nowrap;
 }
-
 .match-best{
     background:#edf3ed;
     color:#4f6d58;
 }
-
 .match-medium{
     background:#eee4db;
     color:#7e5c43;
 }
-
 .match-far{
     background:#fbf3e7;
     color:#8b612e;
 }
-
 .route-details{
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:14px;
     margin-top:20px;
 }
-
 .detail-box{
     background:#fbf8f2;
     border-radius:16px;
     padding:14px;
 }
-
 .detail-box span{
     display:block;
     font-size:13px;
@@ -247,28 +208,23 @@
     margin-bottom:4px;
     font-weight: 700;
 }
-
 .detail-box strong{
     color:#24211f;
     font-size:16px;
 }
-
 .route-actions{
     margin-top:24px;
     display:flex;
     gap:12px;
     align-items: stretch;
 }
-
 .route-actions form{
     flex:1;
     display:flex;
 }
-
 .route-actions form .route-btn{
     width:100%;
 }
-
 .route-btn{
     flex:1;
     border:none;
@@ -280,17 +236,14 @@
     text-align:center;
     text-decoration:none;
 }
-
 .assign-btn{
     background:linear-gradient(135deg,#9b7457,#7e5c43);
     color:white;
 }
-
 .preview-btn{
     background:#f3eee6;
     color:#24211f;
 }
-
 .route-stops-box{
     margin-top:18px;
     padding:16px;
@@ -298,13 +251,11 @@
     background:#fbf8f2;
     border:1px solid #ded6cc;
 }
-
 .route-stops-box h4{
     margin:0 0 12px;
     font-size:16px;
     color:#24211f;
 }
-
 .stop-row{
     display:flex;
     gap:12px;
@@ -312,11 +263,9 @@
     padding:10px 0;
     border-bottom:1px solid #ded6cc;
 }
-
 .stop-row:last-child{
     border-bottom:none;
 }
-
 .stop-row span{
     width:28px;
     height:28px;
@@ -330,25 +279,21 @@
     font-weight:800;
     flex-shrink: 0;
 }
-
 .stop-row strong{
     display:block;
     color:#24211f;
     font-size:14px;
 }
-
 .stop-row small{
     display:block;
     color:#746b64;
     margin-top:3px;
     font-weight:600;
 }
-
 .no-stops{
     color:#746b64;
     font-weight:700;
 }
-
 .route-map-box{
     margin-top:18px;
     height:280px;
@@ -357,7 +302,6 @@
     border:1px solid #ded6cc;
     display:none;
 }
-
 .no-route-card{
     background:white;
     border-radius:24px;
@@ -367,7 +311,6 @@
     font-weight:800;
     box-shadow:0 15px 40px rgba(95,70,54,.08);
 }
-
 .back-link{
     display:inline-flex;
     margin-bottom:18px;
@@ -379,60 +322,47 @@
     font-weight:800;
     box-shadow:0 10px 25px rgba(95,70,54,.08);
 }
-
 @media(max-width:700px){
     .smart-search-page{
         padding: 14px;
     }
-
     .smart-hero{
         padding: 28px;
     }
-
     .smart-hero h1{
         font-size:30px;
     }
-
     .radar-wrap{
         height:300px;
     }
-
     .circle-1{ width:110px; height:110px; }
     .circle-2{ width:200px; height:200px; }
     .circle-3{ width:290px; height:290px; }
-
     .routes-grid{
         grid-template-columns:1fr;
     }
-
     .route-details{
         grid-template-columns:1fr;
     }
-
     .route-actions{
         flex-direction:column;
     }
 }
 </style>
-
 <div class="smart-search-page">
-
     <a href="{% url 'admin_web:employees' %}" class="back-link">
         ← Back to Employees
     </a>
-
     <div class="smart-hero">
         <h1>AI Smart Route Search</h1>
         <p>
             Intelligent route suggestions based on nearby route stops,
             seat availability, pickup distance and saved cab routes.
         </p>
-
         <div class="radar-wrap">
             <div class="radar-circle circle-3"></div>
             <div class="radar-circle circle-2"></div>
             <div class="radar-circle circle-1"></div>
-
             <div class="employee-core" title="Employee profile avatar">
                 <svg class="dummy-profile-icon" viewBox="0 0 64 64" aria-hidden="true">
                     <circle cx="32" cy="22" r="12"></circle>
@@ -441,36 +371,30 @@
             </div>
         </div>
     </div>
-
     <div class="employee-card">
         <h3>{{ employee.display_name }}</h3>
-
         <div class="employee-meta">
             <div class="meta-box">
                 <p>Pickup Location</p>
                 <h4>{{ employee.pickup_location|default:"Not Saved" }}</h4>
             </div>
-
             <div class="meta-box">
                 <p>Latitude</p>
                 <h4>{{ employee.pickup_latitude|default:"--" }}</h4>
             </div>
-
             <div class="meta-box">
                 <p>Longitude</p>
                 <h4>{{ employee.pickup_longitude|default:"--" }}</h4>
             </div>
-
             <div class="meta-box">
                 <p>Suggested Routes</p>
                 <h4>{{ route_suggestions|length }}</h4>
             </div>
         </div>
     </div>
-
     <div class="routes-grid">
         {% for item in route_suggestions %}
-            <div class="route-card 
+            <div class="route-card
                 {% if item.nearest_distance <= 2 %}
                     best
                 {% elif item.nearest_distance <= 5 %}
@@ -484,13 +408,11 @@
                         <div class="route-name">
                             {{ item.route.name }}
                         </div>
-
                         <div class="route-sub">
                             Driver: {{ item.driver.display_name|default:"--" }}
                         </div>
                     </div>
-
-                    <div class="match-badge 
+                    <div class="match-badge
                         {% if item.nearest_distance <= 2 %}
                             match-best
                         {% elif item.nearest_distance <= 5 %}
@@ -508,7 +430,6 @@
                         {% endif %}
                     </div>
                 </div>
-
                 <div class="route-details">
                     <div class="detail-box">
                         <span>Nearest Distance</span>
@@ -520,22 +441,18 @@
                             {% endif %}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Seats Left</span>
                         <strong>{{ item.seats_left }}</strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Vehicle</span>
                         <strong>{{ item.vehicle.vehicle_number|default:"--" }}</strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Total Stops</span>
                         <strong>{{ item.used_seats }}</strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Nearest Stop</span>
                         <strong>
@@ -546,7 +463,6 @@
                             {% endif %}
                         </strong>
                     </div>
-
                     <div class="detail-box">
                         <span>Seat Status</span>
                         <strong>
@@ -558,7 +474,6 @@
                         </strong>
                     </div>
                 </div>
-
                 <div class="route-actions">
                     {% if item.seats_left > 0 %}
                         <form
@@ -577,7 +492,6 @@
                             Route Full
                         </button>
                     {% endif %}
-
                     <button
                         class="route-btn preview-btn"
                         type="button"
@@ -586,10 +500,8 @@
                         View Route Map
                     </button>
                 </div>
-
                 <div id="route-stops-{{ item.route.id }}" class="route-stops-box" style="display:none;">
                     <h4>Route Stops</h4>
-
                     {% for stop in item.route.stops.all %}
                         <div class="stop-row">
                             <span>{{ stop.stop_order }}</span>
@@ -602,7 +514,6 @@
                         <p class="no-stops">No stops added in this route.</p>
                     {% endfor %}
                 </div>
-
                 <div id="route-map-{{ item.route.id }}" class="route-map-box"></div>
             </div>
         {% empty %}
@@ -611,18 +522,14 @@
             </div>
         {% endfor %}
     </div>
-
 </div>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
 <script>
 const employeePoint = {
     lat: {{ employee.pickup_latitude|default:"null" }},
     lng: {{ employee.pickup_longitude|default:"null" }},
     name: "{{ employee.display_name|escapejs }}"
 };
-
 const routeData = {
     {% for item in route_suggestions %}
     "{{ item.route.id }}": {
@@ -643,19 +550,14 @@ const routeData = {
     },
     {% endfor %}
 };
-
 const openedMaps = {};
-
 function toggleRoutePreview(routeId) {
     const mapBox = document.getElementById("route-map-" + routeId);
     const stopsBox = document.getElementById("route-stops-" + routeId);
-
     if (!mapBox) return;
-
     if (mapBox.style.display === "none" || mapBox.style.display === "") {
         mapBox.style.display = "block";
         if (stopsBox) stopsBox.style.display = "block";
-
         setTimeout(function () {
             if (!openedMaps[routeId]) {
                 initRouteMap(routeId);
@@ -668,40 +570,31 @@ function toggleRoutePreview(routeId) {
         if (stopsBox) stopsBox.style.display = "none";
     }
 }
-
 function initRouteMap(routeId) {
     const mapBoxId = "route-map-" + routeId;
     const data = routeData[routeId];
-
     const map = L.map(mapBoxId);
     openedMaps[routeId] = map;
-
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "© OpenStreetMap"
     }).addTo(map);
-
     const routePoints = [];
-
     data.stops.forEach(function (stop) {
         const point = [stop.lat, stop.lng];
         routePoints.push(point);
-
         L.marker(point).addTo(map).bindPopup(
             "<b>Stop " + stop.order + ": " + stop.name + "</b><br>" + stop.location
         );
     });
-
     if (routePoints.length > 1) {
         L.polyline(routePoints, {
             weight: 5,
             opacity: 0.85
         }).addTo(map);
     }
-
     if (employeePoint.lat && employeePoint.lng) {
         const employeeMarker = [employeePoint.lat, employeePoint.lng];
-
         L.circleMarker(employeeMarker, {
             radius: 9,
             weight: 3,
@@ -709,10 +602,8 @@ function initRouteMap(routeId) {
         }).addTo(map).bindPopup(
             "<b>New Employee: " + employeePoint.name + "</b><br>Pickup location"
         );
-
         routePoints.push(employeeMarker);
     }
-
     if (routePoints.length > 0) {
         map.fitBounds(routePoints, { padding: [30, 30] });
     } else if (employeePoint.lat && employeePoint.lng) {
@@ -722,5 +613,4 @@ function initRouteMap(routeId) {
     }
 }
 </script>
-
 {% endblock %}

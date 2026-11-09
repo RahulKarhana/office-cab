@@ -103,13 +103,17 @@ def trigger_drop_schedule(request):
                     ),
 
                     "started_at": (
-                        str(route_run.started_at)
+                        timezone.localtime(
+                            route_run.started_at
+                        ).isoformat()
                         if route_run.started_at
                         else None
                     ),
 
                     "completed_at": (
-                        str(route_run.completed_at)
+                        timezone.localtime(
+                            route_run.completed_at
+                        ).isoformat()
                         if route_run.completed_at
                         else None
                     ),

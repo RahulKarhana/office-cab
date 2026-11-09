@@ -579,6 +579,8 @@
     let map;
     let driverMarkers = {};
     let driverInfoWindows = {};
+    const markerAnimations = new WeakMap();
+    const driverHeadings = {};
     let firstLoad = true;
 
     let liveCabCache = {};
@@ -623,7 +625,8 @@
             {
                 hour: "2-digit",
                 minute: "2-digit",
-                second: "2-digit"
+                second: "2-digit",
+                timeZone: "Asia/Kolkata"
             }
         );
     }
@@ -643,74 +646,83 @@
     }
 
 
-    function animateMarker(
-        marker,
-        newPosition
-    ) {
-        const start =
-            marker.getPosition();
-
-        if (!start) {
-            marker.setPosition(
-                newPosition
-            );
-            return;
-        }
-
-        const startLat =
-            start.lat();
-
-        const startLng =
-            start.lng();
-
-        const deltaLat =
-            (
-                newPosition.lat -
-                startLat
-            ) / 30;
-
-        const deltaLng =
-            (
-                newPosition.lng -
-                startLng
-            ) / 30;
-
-        let i = 0;
-
-        const animation =
-            setInterval(
-                () => {
-                    i++;
-
-                    marker.setPosition({
-                        lat:
-                            startLat +
-                            (
-                                deltaLat *
-                                i
-                            ),
-                        lng:
-                            startLng +
-                            (
-                                deltaLng *
-                                i
-                            ),
-                    });
-
-                    if (i >= 30) {
-                        clearInterval(
-                            animation
-                        );
-
-                        marker.setPosition(
-                            newPosition
-                        );
-                    }
-                },
-                35
-            );
+    // Custom car icon. The front of the vehicle points upward at heading 0.
+    // This SVG is generated locally: no external marker image is needed.
+    function cabMarkerIcon(online, heading = 0) {
+        const body = online ? "#16856b" : "#858b94";
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="76" viewBox="0 0 64 76">
+            <ellipse cx="32" cy="41" rx="22" ry="27" fill="#101828" opacity=".18"/>
+            <g transform="rotate(${Number(heading) || 0} 32 36)">
+                <rect x="16" y="9" width="32" height="54" rx="12" fill="${body}" stroke="#ffffff" stroke-width="3"/>
+                <path d="M22 23 Q32 17 42 23 L42 35 L22 35Z" fill="#cceaf6"/>
+                <path d="M22 43 L42 43 L40 53 L24 53Z" fill="#b4d4e1"/>
+                <rect x="12" y="24" width="5" height="13" rx="2" fill="#273142"/>
+                <rect x="47" y="24" width="5" height="13" rx="2" fill="#273142"/>
+                <rect x="20" y="11" width="7" height="5" rx="2" fill="#fff2a5"/>
+                <rect x="37" y="11" width="7" height="5" rx="2" fill="#fff2a5"/>
+                <path d="M32 3 L26 10 L38 10Z" fill="#fff"/>
+            </g>
+        </svg>`;
+        return {
+            url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
+            scaledSize: new google.maps.Size(48, 57),
+            anchor: new google.maps.Point(24, 28)
+        };
     }
 
+    function headingBetween(from, to) {
+        const rad = Math.PI / 180;
+        const lat1 = from.lat() * rad;
+        const lat2 = to.lat * rad;
+        const deltaLng = (to.lng - from.lng()) * rad;
+        const y = Math.sin(deltaLng) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) -
+            Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    function animateMarker(marker, newPosition) {
+        const oldAnimation = markerAnimations.get(marker);
+        if (oldAnimation) clearInterval(oldAnimation);
+        const start = marker.getPosition();
+        if (!start) {
+            marker.setPosition(newPosition);
+            return;
+        }
+        const startLat = start.lat();
+        const startLng = start.lng();
+        const steps = 30;
+        let step = 0;
+        const animation = setInterval(() => {
+            step++;
+            const t = Math.min(step / steps, 1);
+            marker.setPosition({
+                lat: startLat + (newPosition.lat - startLat) * t,
+                lng: startLng + (newPosition.lng - startLng) * t
+            });
+            if (step >= steps) {
+                clearInterval(animation);
+                markerAnimations.delete(marker);
+                marker.setPosition(newPosition);
+            }
+        }, 35);
+        markerAnimations.set(marker, animation);
+    }
+
+
+    // Only ISO timestamps with an explicit UTC offset are safe to convert.
+    // Already formatted server strings remain unchanged to avoid double shifting.
+    function formatIstTimestamp(value) {
+        if (!value) return "--";
+        const raw = String(value).trim();
+        if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw) || !/(Z|[+-]\d{2}:?\d{2})$/i.test(raw)) return raw;
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
+        return new Intl.DateTimeFormat("en-IN", {
+            timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+        }).format(date) + " IST";
+    }
 
     function parseDateSafe(
         dateString
@@ -762,33 +774,13 @@
     // =========================================================
 
     function localTodayYmd() {
-        const now =
-            new Date();
-
-        const year =
-            now.getFullYear();
-
-        const month =
-            String(
-                now.getMonth() + 1
-            ).padStart(
-                2,
-                "0"
-            );
-
-        const day =
-            String(
-                now.getDate()
-            ).padStart(
-                2,
-                "0"
-            );
-
-        return (
-            `${year}-${month}-${day}`
-        );
+        // Calendar date in India, independent of the admin's browser timezone.
+        const parts = new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
+        }).formatToParts(new Date());
+        const part = type => parts.find(item => item.type === type)?.value;
+        return `${part("year")}-${part("month")}-${part("day")}`;
     }
-
 
     function onlyTodayCabs(
         results
@@ -1739,6 +1731,28 @@
                         loc.updated_at
                     );
 
+                // Update direction only when the GPS coordinates actually change.
+                // Ignore small GPS jitter (roughly 5 metres).
+                const previousMarker = driverMarkers[driverId];
+                let heading = driverHeadings[driverId] ?? 0;
+                if (previousMarker) {
+                    const previousPosition = previousMarker.getPosition();
+                    const metresMoved = google.maps.geometry
+                        ? google.maps.geometry.spherical.computeDistanceBetween(
+                            previousPosition,
+                            new google.maps.LatLng(newPosition.lat, newPosition.lng)
+                        )
+                        : Math.hypot(
+                            (newPosition.lat - previousPosition.lat()) * 111000,
+                            (newPosition.lng - previousPosition.lng()) * 111000 *
+                                Math.cos(newPosition.lat * Math.PI / 180)
+                        );
+                    if (metresMoved > 5) {
+                        heading = headingBetween(previousPosition, newPosition);
+                        driverHeadings[driverId] = heading;
+                    }
+                }
+
                 const cab =
                     getCabByDriverId(
                         driverId
@@ -1841,7 +1855,7 @@
 
                         <p style="margin:0;">
                             <strong>Updated:</strong>
-                            ${loc.updated_at || "--"}
+                            ${formatIstTimestamp(loc.updated_at)}
                         </p>
                     </div>
                 `;
@@ -1876,12 +1890,7 @@
                                 "Driver",
                             animation:
                                 google.maps.Animation.DROP,
-                            icon: {
-                                url:
-                                    online
-                                        ? "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                                        : "https://maps.google.com/mapfiles/ms/icons/grey-dot.png"
-                            }
+                            icon: cabMarkerIcon(online, heading)
                         });
 
                     const infoWindow =
@@ -1909,14 +1918,7 @@
                     ] = infoWindow;
                 }
 
-                driverMarkers[
-                    driverId
-                ].setIcon({
-                    url:
-                        online
-                            ? "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                            : "https://maps.google.com/mapfiles/ms/icons/grey-dot.png"
-                });
+                driverMarkers[driverId].setIcon(cabMarkerIcon(online, heading));
             }
         );
 
@@ -1942,6 +1944,10 @@
                         null
                     );
 
+                    const animation = markerAnimations.get(driverMarkers[driverId]);
+                    if (animation) clearInterval(animation);
+                    markerAnimations.delete(driverMarkers[driverId]);
+                    delete driverHeadings[driverId];
                     delete driverMarkers[
                         driverId
                     ];
@@ -2041,7 +2047,7 @@
                                 </td>
 
                                 <td>
-                                    ${loc.updated_at || "--"}
+                                    ${formatIstTimestamp(loc.updated_at)}
                                 </td>
 
                                 <td>
