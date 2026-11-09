@@ -691,9 +691,28 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
 
         return stops_data
 
+    @staticmethod
+    def _validate_order_sequences(stops_data):
+        """Require complete 1..N pickup and (when supplied) drop sequences."""
+        count = len(stops_data)
+        if not count:
+            return
+        pickup = [item.get("stop_order", i) for i, item in enumerate(stops_data, 1)]
+        if sorted(pickup) != list(range(1, count + 1)):
+            raise serializers.ValidationError({"stops": "PICKUP stop_order must contain each position from 1 to N exactly once."})
+        drops = [item.get("drop_order") for item in stops_data]
+        if any(value is not None for value in drops):
+            if any(value is None for value in drops) or sorted(drops) != list(range(1, count + 1)):
+                raise serializers.ValidationError({"stops": "Custom DROP drop_order must contain each position from 1 to N exactly once, or all be null for automatic reverse."})
+
+    @transaction.atomic
     def create(self, validated_data):
         stops_data = validated_data.pop("stops", [])
         driver = validated_data["driver"]
+        self._validate_order_sequences(stops_data)
+        for index, stop in enumerate(stops_data, 1):
+            stop.setdefault("stop_order", index)
+            stop.setdefault("drop_order", None)
 
         try:
             vehicle = driver.vehicle
@@ -736,6 +755,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
 
         # Validate before changing the database.
         if stops_data is not None:
+            self._validate_order_sequences(stops_data)
             if len(stops_data) > vehicle.seat_count:
                 raise serializers.ValidationError({
                     "stops": (
@@ -778,6 +798,7 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
             }
             requested_ids = {stop["employee"].id for stop in stops_data}
             membership_changed = set(existing) != requested_ids
+            supplied_drop = any("drop_order" in stop for stop in stops_data)
 
             for index, data in enumerate(stops_data, start=1):
                 employee = data["employee"]
@@ -795,13 +816,15 @@ class RouteTemplateSerializer(serializers.ModelSerializer):
                     "pickup_longitude", current.pickup_longitude
                 )
                 current.stop_order = data.get("stop_order", index)
+                if supplied_drop:
+                    current.drop_order = data.get("drop_order")
                 current.save()
 
             removed_ids = set(existing) - requested_ids
             if removed_ids:
                 instance.stops.filter(employee_id__in=removed_ids).delete()
 
-            if membership_changed:
+            if membership_changed and not supplied_drop:
                 # A saved custom sequence no longer covers exactly the same
                 # employees. Reset to legacy reverse-PICKUP ordering until
                 # admin saves a new complete DROP sequence.
