@@ -3740,6 +3740,28 @@ def edit_route(request, route_id):
     return redirect("/admin-web/routes/")
 
 
+# Shared operational visibility rule. Route-linked trip_date is the office shift date.
+# A DROP from yesterday remains live only if actually started recently and
+# its route run has not completed; stale past assignments remain history.
+def cab_operational_filter(now=None):
+    now = now or timezone.now()
+    today = timezone.localdate(now)
+    return (
+        Q(trip_date__gte=today)
+        | Q(
+            trip_date=today - timedelta(days=1),
+            trip_type=Trip.TRIP_TYPE_DROP,
+            status=Trip.STATUS_STARTED,
+            start_time__gte=now - timedelta(hours=12),
+            route_run__completed_at__isnull=True,
+        )
+    )
+
+
+def cab_history_filter(now=None):
+    return ~cab_operational_filter(now)
+
+
 @login_required
 @admin_required
 @require_GET
@@ -3799,12 +3821,12 @@ def delete_route(request, route_id):
             Trip.STATUS_ASSIGNED,
             Trip.STATUS_STARTED,
         ],
-    ).exists()
+    ).filter(cab_operational_filter()).exists()
 
     if has_active_trips:
         messages.error(
             request,
-            "Please cancel assigned/started trips before archiving this route.",
+            "Please resolve current, upcoming, or genuinely running overnight trips before archiving this route.",
         )
         return redirect("/admin-web/routes/")
 
@@ -9077,7 +9099,7 @@ def assigned_trips_page(request):
             Trip.STATUS_ASSIGNED,
             Trip.STATUS_STARTED,
         ],
-        run_date__gte=yesterday,
+        trips__in=Trip.objects.filter(cab_operational_filter()),
     ).distinct()
 
     # -------------------------
@@ -9129,7 +9151,7 @@ def assigned_trips_page(request):
                     Trip.STATUS_ASSIGNED,
                     Trip.STATUS_STARTED,
                 ]
-            ).select_related("employee")
+            ).filter(cab_operational_filter()).select_related("employee")
         )
 
         if not active_trips:
@@ -9545,10 +9567,10 @@ def trip_history_page(request):
         "stops__employee",
         "trips__employee",
     ).filter(
-        trips__status__in=[
-            Trip.STATUS_COMPLETED,
-            Trip.STATUS_CANCELLED,
-        ]
+        trips__in=Trip.objects.filter(
+            Q(status__in=[Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED])
+            | (Q(status__in=[Trip.STATUS_ASSIGNED, Trip.STATUS_STARTED]) & cab_history_filter())
+        )
     ).distinct()
 
     parsed_date = parse_date(date_filter) if date_filter else None
@@ -9572,14 +9594,20 @@ def trip_history_page(request):
     grouped = OrderedDict()
     total_completed = 0
     total_cancelled = 0
+    total_incomplete = 0
+    total_not_started = 0
 
     for run in runs:
         history_trips = run.trips.filter(
-            status__in=[Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED]
+            status__in=[Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED, Trip.STATUS_ASSIGNED, Trip.STATUS_STARTED]
+        ).filter(
+            Q(status__in=[Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED])
+            | cab_history_filter()
         ).select_related("employee")
 
-        if status_filter in [Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED]:
-            history_trips = history_trips.filter(status=status_filter)
+        requested_status = {"INCOMPLETE": Trip.STATUS_STARTED, "NOT_STARTED": Trip.STATUS_ASSIGNED}.get(status_filter, status_filter)
+        if requested_status in [Trip.STATUS_COMPLETED, Trip.STATUS_CANCELLED, Trip.STATUS_ASSIGNED, Trip.STATUS_STARTED]:
+            history_trips = history_trips.filter(status=requested_status)
 
         history_trips = list(history_trips)
 
@@ -9593,6 +9621,8 @@ def trip_history_page(request):
 
         total_completed += completed_count
         total_cancelled += cancelled_count
+        total_incomplete += sum(t.status == Trip.STATUS_STARTED for t in history_trips)
+        total_not_started += sum(t.status == Trip.STATUS_ASSIGNED for t in history_trips)
 
         employees = []
         for stop in run.stops.all():
@@ -9605,19 +9635,18 @@ def trip_history_page(request):
                 "employee_name": stop.employee.display_name if stop.employee else "--",
                 "pickup_location": stop.pickup_location or "--",
                 "drop_location": trip.drop_location or "Office",
-                "status": trip.status,
+                "status": "INCOMPLETE" if trip.status == Trip.STATUS_STARTED else ("NOT_STARTED" if trip.status == Trip.STATUS_ASSIGNED else trip.status),
                 "start_time": trip.start_time,
                 "end_time": trip.end_time,
             })
 
         first_trip = history_trips[0]
 
-        if completed_count and cancelled_count:
-            run_status = "MIXED"
-        elif completed_count:
-            run_status = Trip.STATUS_COMPLETED
-        else:
-            run_status = Trip.STATUS_CANCELLED
+        display_statuses = {
+            "INCOMPLETE" if trip.status == Trip.STATUS_STARTED else ("NOT_STARTED" if trip.status == Trip.STATUS_ASSIGNED else trip.status)
+            for trip in history_trips
+        }
+        run_status = next(iter(display_statuses)) if len(display_statuses) == 1 else "MIXED"
 
         card = {
             "id": run.id,
@@ -9656,7 +9685,9 @@ def trip_history_page(request):
         "trip_type_filter": trip_type_filter,
         "total_completed": total_completed,
         "total_cancelled": total_cancelled,
-        "total_history": total_completed + total_cancelled,
+        "total_history": total_completed + total_cancelled + total_incomplete + total_not_started,
+        "total_incomplete": total_incomplete,
+        "total_not_started": total_not_started,
     }
 
     return render(request, "admin_web/trip_history.html", context)

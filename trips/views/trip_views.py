@@ -1,7 +1,7 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Case, When, Value, IntegerField
+from django.db.models import Case, When, Value, IntegerField, Q
 from django.utils import timezone
 from django.http import JsonResponse
 from accounts.models import User
@@ -34,6 +34,28 @@ from trips.services.eta_service import ETAService
 from trips.services.chat_service import ChatService
 
 User = get_user_model()
+
+
+# Shared operational visibility rule. Route-linked trip_date is the office shift date.
+# A DROP from yesterday remains live only if actually started recently and
+# its route run has not completed; stale past assignments remain history.
+def cab_operational_filter(now=None):
+    now = now or timezone.now()
+    today = timezone.localdate(now)
+    return (
+        Q(trip_date__gte=today)
+        | Q(
+            trip_date=today - timedelta(days=1),
+            trip_type=Trip.TRIP_TYPE_DROP,
+            status=Trip.STATUS_STARTED,
+            start_time__gte=now - timedelta(hours=12),
+            route_run__completed_at__isnull=True,
+        )
+    )
+
+
+def cab_history_filter(now=None):
+    return ~cab_operational_filter(now)
 
 
 class TripViewSet(ModelViewSet):
@@ -141,11 +163,11 @@ class TripViewSet(ModelViewSet):
         )
 
         if user.role == "EMPLOYEE":
-            trip = base_qs.filter(employee=user, status__in=self._active_statuses()).order_by("-created_at").first()
+            trip = base_qs.filter(employee=user, status__in=self._active_statuses()).filter(cab_operational_filter()).order_by("-created_at").first()
         elif user.role == "DRIVER":
-            trip = base_qs.filter(driver=user, status__in=self._active_statuses()).order_by("-created_at").first()
+            trip = base_qs.filter(driver=user, status__in=self._active_statuses()).filter(cab_operational_filter()).order_by("-created_at").first()
         elif user.role == "ADMIN":
-            trip = base_qs.filter(status__in=self._active_statuses()).order_by("-created_at").first()
+            trip = base_qs.filter(status__in=self._active_statuses()).filter(cab_operational_filter()).order_by("-created_at").first()
         else:
             trip = None
 
@@ -827,7 +849,7 @@ class TripViewSet(ModelViewSet):
             "route_run__stops__employee"
         ).filter(
             status__in=self._active_statuses()
-        ).order_by("-pickup_time", "route_run_id", "employee__username")
+        ).filter(cab_operational_filter()).order_by("-pickup_time", "route_run_id", "employee__username")
 
         grouped = {}
 
@@ -942,7 +964,7 @@ class TripViewSet(ModelViewSet):
         qs = (
             Trip.objects.select_related("employee", "driver", "vehicle", "route_run", "route_run__route_template")
             .prefetch_related("route_run__stops__employee")
-            .filter(employee=user, status__in=self._active_statuses(), pickup_time__date__gte=today)
+            .filter(employee=user, status__in=self._active_statuses()).filter(cab_operational_filter())
             .annotate(
                 status_priority=Case(
                     When(status=Trip.STATUS_STARTED, then=Value(0)),
@@ -2079,15 +2101,27 @@ class TripViewSet(ModelViewSet):
         base_qs = Trip.objects.select_related("employee", "driver", "vehicle", "route_run", "route_run__route_template").prefetch_related("route_run__stops__employee")
 
         if user.role == "EMPLOYEE":
-            qs = base_qs.filter(employee=user, status__in=self._closed_statuses()).order_by("-created_at")
+            qs = base_qs.filter(employee=user).order_by("-created_at")
         elif user.role == "DRIVER":
-            qs = base_qs.filter(driver=user, status__in=self._closed_statuses()).order_by("-created_at")
+            qs = base_qs.filter(driver=user).order_by("-created_at")
         elif user.role == "ADMIN":
-            qs = base_qs.filter(status__in=self._closed_statuses()).order_by("-created_at")
+            qs = base_qs.filter().order_by("-created_at")
         else:
             qs = Trip.objects.none()
 
-        return Response(self.get_serializer(qs, many=True).data, status=status.HTTP_200_OK)
+        qs = qs.filter(
+            Q(status__in=self._closed_statuses())
+            | (Q(status__in=self._active_statuses()) & cab_history_filter())
+        )
+        data = self.get_serializer(qs, many=True).data
+        for item, trip in zip(data, qs):
+            if trip.status == Trip.STATUS_STARTED:
+                item["display_status"] = "INCOMPLETE"
+            elif trip.status == Trip.STATUS_ASSIGNED:
+                item["display_status"] = "NOT_STARTED"
+            else:
+                item["display_status"] = trip.status
+        return Response(data, status=status.HTTP_200_OK)
 
 def test_fcm(request):
     try:
