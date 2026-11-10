@@ -22,7 +22,11 @@ urlpatterns = [
         views.approve_location_request,
         name="approve_location_request",
     ),
-
+    path(
+        "routes/archive-diagnostic/",
+        views.route_archive_diagnostic,
+        name="route_archive_diagnostic",
+    ),
     path(
         "requests/location/<int:request_id>/reject/",
         views.reject_location_request,

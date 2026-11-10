@@ -3742,6 +3742,48 @@ def edit_route(request, route_id):
 
 @login_required
 @admin_required
+@require_GET
+def route_archive_diagnostic(request):
+    """Read-only, admin-only diagnostic for trips blocking route archival.
+
+    Remove this temporary endpoint after investigating the issue.
+    """
+    search_name = request.GET.get("name", "").strip()
+    if not search_name or len(search_name) > 100:
+        return JsonResponse({"detail": "Provide a route name (1-100 characters)."}, status=400)
+
+    routes = RouteTemplate.objects.filter(
+        name__icontains=search_name, is_active=True
+    ).order_by("id")[:20]
+    results = []
+    for route in routes:
+        blocked = Trip.objects.filter(
+            route_run__route_template=route,
+            status__in=[Trip.STATUS_ASSIGNED, Trip.STATUS_STARTED],
+        ).order_by("trip_date", "id")
+        results.append({
+            "route_id": route.pk,
+            "route_name": route.name,
+            "blocking_trip_count": blocked.count(),
+            "blocking_trips": [
+                {
+                    "trip_id": trip.pk,
+                    "trip_date": str(trip.trip_date),
+                    "trip_type": trip.trip_type,
+                    "status": trip.status,
+                    "route_run_id": trip.route_run_id,
+                }
+                for trip in blocked[:100]
+            ],
+            "results_limited_to": 100,
+        })
+    response = JsonResponse({"routes": results})
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@login_required
+@admin_required
 @require_POST
 def delete_route(request, route_id):
     route = get_object_or_404(
