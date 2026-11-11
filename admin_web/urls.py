@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from django.urls import path, re_path
 
 app_name = "admin_web"
 
@@ -84,8 +85,9 @@ urlpatterns = [
         name="route_drop_order_data",
     ),
 
-    path(
-        "routes/<int:route_id>/<str:action>/",
+    # Custom DROP Order - restricted actions only
+    re_path(
+        r"^routes/(?P<route_id>\d+)/(?P<action>save-drop-order|reset-drop-order)/$",
         views.route_drop_order_action,
         name="route_drop_order_action",
     ),
