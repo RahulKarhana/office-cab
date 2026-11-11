@@ -77,6 +77,19 @@ urlpatterns = [
     path("logout/", views.admin_logout_page, name="admin_logout"),
     path("routes/", views.routes_page, name="routes"),
 
+    # Custom DROP Order
+    path(
+        "routes/<int:route_id>/drop-order/",
+        views.route_drop_order_data,
+        name="route_drop_order_data",
+    ),
+
+    path(
+        "routes/<int:route_id>/<str:action>/",
+        views.route_drop_order_action,
+        name="route_drop_order_action",
+    ),
+
     # ============================================================
     # ADVANCED AI ROUTE SEARCH - ONE ROUTE AT A TIME
     # ============================================================
