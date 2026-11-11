@@ -36,22 +36,33 @@ from trips.services.chat_service import ChatService
 User = get_user_model()
 
 
-# Shared operational visibility rule. Route-linked trip_date is the office shift date.
-# A DROP from yesterday remains live only if actually started recently and
-# its route run has not completed; stale past assignments remain history.
+# The trip_date is the OFFICE SHIFT date, not necessarily the calendar date
+# on which an overnight DROP departs. Keep yesterday's DROP visible when
+# departure is imminent/recent or the cab genuinely started recently.
+# Old unstarted assignments must still move to history.
 def cab_operational_filter(now=None):
     now = now or timezone.now()
     today = timezone.localdate(now)
-    return (
-        Q(trip_date__gte=today)
+    yesterday = today - timedelta(days=1)
+    overnight_drop = Q(
+        trip_date=yesterday,
+        trip_type=Trip.TRIP_TYPE_DROP,
+        route_run__completed_at__isnull=True,
+    ) & (
+        Q(
+            status=Trip.STATUS_ASSIGNED,
+            pickup_time__gte=now - timedelta(hours=4),
+        )
         | Q(
-            trip_date=today - timedelta(days=1),
-            trip_type=Trip.TRIP_TYPE_DROP,
             status=Trip.STATUS_STARTED,
             start_time__gte=now - timedelta(hours=12),
-            route_run__completed_at__isnull=True,
+        )
+        | Q(
+            status=Trip.STATUS_STARTED,
+            route_run__started_at__gte=now - timedelta(hours=12),
         )
     )
+    return Q(trip_date__gte=today) | overnight_drop
 
 
 def cab_history_filter(now=None):
@@ -213,10 +224,8 @@ class TripViewSet(ModelViewSet):
             .prefetch_related(
                 "route_run__stops__employee",
             )
-            .filter(
-                employee=user,
-                trip_date=today,
-            )
+            .filter(employee=user)
+            .filter(cab_operational_filter())
             .exclude(
                 status=Trip.STATUS_CANCELLED,
             )
@@ -226,6 +235,7 @@ class TripViewSet(ModelViewSet):
             base_qs
             .filter(
                 trip_type=Trip.TRIP_TYPE_PICKUP,
+                trip_date=today,
             )
             .order_by("-created_at")
             .first()
@@ -236,7 +246,7 @@ class TripViewSet(ModelViewSet):
             .filter(
                 trip_type=Trip.TRIP_TYPE_DROP,
             )
-            .order_by("-created_at")
+            .order_by("trip_date", "-created_at")
             .first()
         )
 
