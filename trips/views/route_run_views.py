@@ -1,3 +1,6 @@
+from datetime import datetime, time, timedelta
+
+from django.db.models import Min, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -51,45 +54,167 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
 
         return RouteRun.objects.none()
 
+    # Operational visibility is based on office shift date plus the actual
+    # scheduled departure (Trip.pickup_time). No migration is required.
+    # Unstarted overnight DROP routes have a four-hour post-departure grace
+    # period. Started routes remain visible for up to 24 hours; older ones
+    # require admin intervention instead of staying active indefinitely.
+    OVERNIGHT_START_GRACE = timedelta(hours=4)
+    SHIFT_DAY_START = time(hour=6, minute=0)
+    ROUTE_START_EARLY = timedelta(hours=2)
+    ROUTE_START_LATE = timedelta(hours=4)
+
+    def _driver_runs(self, user):
+        return self.get_queryset().filter(driver=user).annotate(
+            scheduled_at=Min(
+                "trips__pickup_time",
+                filter=~Q(trips__status=Trip.STATUS_CANCELLED),
+            )
+        )
+
+    @staticmethod
+    def _date_at_midnight(day):
+        naive = datetime.combine(day, time.min)
+        return timezone.make_aware(naive, timezone.get_current_timezone())
+
+    def _route_is_cancelled(self, route):
+        # RouteRun has no cancellation field. A run is treated as cancelled
+        # only when it has linked trips and ALL of them are cancelled.
+        linked = route.trips.all()
+        return bool(linked) and all(
+            trip.status == Trip.STATUS_CANCELLED for trip in linked
+        )
+
+    def _operational_day(self, now):
+        local_now = timezone.localtime(now)
+        day = local_now.date()
+        if local_now.time() < self.SHIFT_DAY_START:
+            day -= timedelta(days=1)
+        return day
+
+    def _scheduled_start_error(self, route, now):
+        """Return an error for an unstarted route outside its start window."""
+        scheduled = Trip.objects.filter(
+            route_run=route,
+        ).exclude(status=Trip.STATUS_CANCELLED).aggregate(
+            first=Min("pickup_time")
+        )["first"]
+        if scheduled is None:
+            return "Route has no scheduled departure. Contact Admin."
+        if timezone.is_naive(scheduled):
+            scheduled = timezone.make_aware(scheduled, timezone.get_current_timezone())
+        if not scheduled - self.ROUTE_START_EARLY <= now <= scheduled + self.ROUTE_START_LATE:
+            return "Route cannot start outside its scheduled departure window. Contact Admin for rescheduling."
+        return None
+
+    def _valid_previous_shift_drop(self, route, now, today):
+        if route.trip_type != Trip.TRIP_TYPE_DROP:
+            return False
+        if route.run_date != today - timedelta(days=1):
+            return False
+        if route.completed_at is not None or self._route_is_cancelled(route):
+            return False
+
+        scheduled = route.scheduled_at
+        if scheduled is None:
+            # Cannot prove that this is an overnight DROP.
+            return False
+        if timezone.is_naive(scheduled):
+            scheduled = timezone.make_aware(scheduled, timezone.get_current_timezone())
+        if timezone.localtime(scheduled).date() != today:
+            return False
+
+        if route.started_at is not None:
+            started = route.started_at
+            if timezone.is_naive(started):
+                started = timezone.make_aware(started, timezone.get_current_timezone())
+            return started <= now
+
+        return scheduled - timedelta(hours=2) <= now <= scheduled + self.OVERNIGHT_START_GRACE
+
     @action(detail=False, methods=["get"], url_path="today_active")
     def today_active(self, request):
-        user = request.user
-
-        if user.role != "DRIVER":
+        if getattr(request.user, "role", "") != "DRIVER":
             return Response(
                 {"error": "Only driver can view active route run."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        today = timezone.localdate()
+        now = timezone.now()
+        shift_day = self._operational_day(now)
+        previous_day = shift_day - timedelta(days=1)
+        runs = list(self._driver_runs(request.user).filter(
+            Q(run_date__in=[previous_day, shift_day]) |
+            Q(started_at__isnull=False, completed_at__isnull=True)
+        ).prefetch_related("trips"))
 
-        pickup_run = RouteRun.objects.filter(
-            driver=user,
-            run_date=today,
-            trip_type="PICKUP",
-        ).prefetch_related(
-            "stops__employee"
-        ).select_related(
-            "route_template",
-            "driver",
-            "vehicle",
-        ).order_by("-created_at").first()
-
-        drop_run = RouteRun.objects.filter(
-            driver=user,
-            run_date=today,
-            trip_type="DROP",
-        ).prefetch_related(
-            "stops__employee"
-        ).select_related(
-            "route_template",
-            "driver",
-            "vehicle",
-        ).order_by("-created_at").first()
+        eligible_today = [
+            run for run in runs
+            if run.run_date == shift_day
+            and run.completed_at is None
+            and not self._route_is_cancelled(run)
+        ]
+        overnight = [
+            run for run in runs
+            if self._valid_previous_shift_drop(run, now, shift_day + timedelta(days=1))
+            or (run.trip_type == Trip.TRIP_TYPE_DROP
+                and run.run_date < shift_day
+                and run.started_at is not None
+                and run.completed_at is None
+                and not self._route_is_cancelled(run))
+        ]
+        # Deterministic selection: started older DROP first, then nearest
+        # unstarted overnight DROP, then this shift's DROP.
+        overnight.sort(key=lambda r: (
+            0 if r.started_at else 1,
+            r.started_at or r.scheduled_at or self._date_at_midnight(r.run_date),
+            r.pk,
+        ))
+        eligible_today.sort(key=lambda r: (r.scheduled_at or self._date_at_midnight(r.run_date), r.pk))
+        active_pickups = sorted(
+            (r for r in runs if r.trip_type == Trip.TRIP_TYPE_PICKUP
+             and r.started_at is not None and r.completed_at is None
+             and not self._route_is_cancelled(r)),
+            key=lambda r: (r.started_at, r.pk),
+        )
+        pickup = next(iter(active_pickups), None) or next(
+            (r for r in eligible_today if r.trip_type == Trip.TRIP_TYPE_PICKUP), None
+        )
+        drop = next(iter(overnight), None) or next(
+            (r for r in eligible_today if r.trip_type == Trip.TRIP_TYPE_DROP), None
+        )
 
         return Response({
-            "pickup": self.get_serializer(pickup_run).data if pickup_run else None,
-            "drop": self.get_serializer(drop_run).data if drop_run else None,
+            "pickup": self.get_serializer(pickup).data if pickup else None,
+            "drop": self.get_serializer(drop).data if drop else None,
+            "operational_date": shift_day.isoformat(),
+            "overnight_drop": bool(drop and drop.run_date < shift_day),
+        })
+
+    @action(detail=False, methods=["get"], url_path="upcoming_assignments")
+    def upcoming_assignments(self, request):
+        if getattr(request.user, "role", "") != "DRIVER":
+            return Response(
+                {"error": "Only driver can view upcoming assignments."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        today = self._operational_day(timezone.now())
+        last_day = today + timedelta(days=6)
+        runs = list(self._driver_runs(request.user).filter(
+            run_date__range=(today, last_day),
+            completed_at__isnull=True,
+        ).prefetch_related("trips"))
+        runs = [run for run in runs if not self._route_is_cancelled(run)]
+        runs.sort(key=lambda run: (
+            run.run_date,
+            run.scheduled_at or self._date_at_midnight(run.run_date),
+            run.pk,
+        ))
+        return Response({
+            "from_date": today.isoformat(),
+            "through_date": last_day.isoformat(),
+            "routes": self.get_serializer(runs, many=True).data,
         })
 
     def _get_route_employee_ids(self, route_run):
@@ -547,6 +672,14 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
                 {"error": "Route run already completed."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        if self._route_is_cancelled(route_run):
+            return Response({"error": "Route has been cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if route_run.started_at is None:
+            schedule_error = self._scheduled_start_error(route_run, timezone.now())
+            if schedule_error:
+                return Response({"error": schedule_error}, status=status.HTTP_400_BAD_REQUEST)
 
         # DROP: every assigned employee must be Boarded or No Show
         # before the route can start. At least one employee must board.
