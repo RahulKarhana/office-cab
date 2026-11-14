@@ -711,6 +711,9 @@ class EmergencyAlert(models.Model):
         blank=True,
     )
 
+    employee_acknowledged_at = models.DateTimeField(null=True, blank=True)
+    admin_acknowledged_at = models.DateTimeField(null=True, blank=True)
+
     def resolve(self):
         if self.status != self.STATUS_RESOLVED:
             self.status = self.STATUS_RESOLVED

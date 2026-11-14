@@ -552,6 +552,17 @@ class EmergencyAlertSerializer(serializers.ModelSerializer):
         read_only=True,
     )
 
+    is_read = serializers.SerializerMethodField()
+
+    def get_is_read(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user and getattr(user, "role", "") == "ADMIN":
+            return obj.admin_acknowledged_at is not None
+        if user and getattr(user, "role", "") == "EMPLOYEE":
+            return obj.employee_acknowledged_at is not None
+        return False
+
     class Meta:
         model = EmergencyAlert
         fields = [
@@ -570,6 +581,7 @@ class EmergencyAlertSerializer(serializers.ModelSerializer):
             "pickup_location",
             "drop_location",
             "status",
+            "is_read",
             "created_at",
             "resolved_at",
         ]
