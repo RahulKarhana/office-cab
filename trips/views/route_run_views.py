@@ -1,5 +1,6 @@
 from datetime import datetime, time, timedelta
-
+from django.db import transaction
+from trips.models import SafeArrivalConfirmation
 from django.db.models import Min, Q
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -877,11 +878,43 @@ class RouteRunViewSet(viewsets.ReadOnlyModelViewSet):
         # PICKUP → Pickup Completed notification
         # DROP   → Drop Completed notification
         # ---------------------------------------------------------
-        next_stop = RouteService.handle_stop_done(
-            route_run,
-            current_stop,
-        )
+        with transaction.atomic():
+            next_stop = RouteService.handle_stop_done(
+                route_run,
+                current_stop,
+            )
 
+            if (
+                route_run.trip_type == Trip.TRIP_TYPE_DROP
+                and current_stop.is_boarded
+                and not current_stop.is_no_show
+                and current_stop.is_picked
+            ):
+                drop_trip = (
+                    Trip.objects.filter(
+                        route_run=route_run,
+                        employee=current_stop.employee,
+                        trip_type=Trip.TRIP_TYPE_DROP,
+                        trip_date=route_run.run_date,
+                        status=Trip.STATUS_STARTED,
+                    )
+                    .order_by("-id")
+                    .first()
+                )
+
+                if drop_trip:
+                    SafeArrivalConfirmation.objects.get_or_create(
+                        trip=drop_trip,
+                        defaults={
+                            "stop": current_stop,
+                            "employee": current_stop.employee,
+                        },
+                    )
+                else:
+                    print(
+                        "SAFE ARRIVAL WARNING: "
+                        f"No started DROP trip for stop {current_stop.id}"
+                    )
         # ---------------------------------------------------------
         # 7. Check remaining stops
         # ---------------------------------------------------------

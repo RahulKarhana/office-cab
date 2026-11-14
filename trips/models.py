@@ -730,6 +730,65 @@ class EmergencyAlert(models.Model):
             f"{self.status}"
         )
 
+class SafeArrivalConfirmation(models.Model):
+    STATUS_PENDING = "PENDING"
+    STATUS_CONFIRMED = "CONFIRMED"
+    STATUS_SOS = "SOS"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_CONFIRMED, "Confirmed Safe"),
+        (STATUS_SOS, "SOS Triggered"),
+    ]
+
+    trip = models.OneToOneField(
+        "Trip",
+        on_delete=models.PROTECT,
+        related_name="safe_arrival",
+    )
+
+    stop = models.OneToOneField(
+        "RouteRunStop",
+        on_delete=models.PROTECT,
+        related_name="safe_arrival",
+    )
+
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="safe_arrivals",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+
+    no_count = models.PositiveSmallIntegerField(default=0)
+
+    confirmed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    sos_alert = models.ForeignKey(
+        "EmergencyAlert",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="safe_arrival_confirmations",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return (
+            f"Safe Arrival - Trip {self.trip_id} - "
+            f"{self.employee_id} - {self.status}"
+        )
 class DriverLocationHistory(models.Model):
     driver = models.ForeignKey(
         settings.AUTH_USER_MODEL,

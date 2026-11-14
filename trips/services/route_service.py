@@ -832,43 +832,26 @@ class RouteService:
         driver_name = RouteService._driver_name(route_run)
         vehicle_number = RouteService._vehicle_number(route_run)
 
-        # PICKUP:
-        # Keep existing final Trip Completed / Review notification.
-        #
-        # DROP:
-        # Do not send this again because each employee already receives
-        # Drop Completed + Review when their individual drop is completed.
-                # ------------------------------------------------------------
-        # FINAL TRIP COMPLETION
-        # Review becomes available ONLY after the complete route ends.
-        # Works for both PICKUP and DROP.
-        # ------------------------------------------------------------
-
-        for trip in trips:
-
-            if route_run.trip_type == Trip.TRIP_TYPE_PICKUP:
-                message = (
-                    "Today's pickup trip has been completed successfully.\n"
-                    "Please submit your trip review."
+        # PICKUP: send the existing review notification at route completion.
+        # DROP: wait for Safe Arrival YES before requesting a review.
+        # The Safe Arrival API will handle DROP review notifications.
+        if route_run.trip_type == Trip.TRIP_TYPE_PICKUP:
+            for trip in trips:
+                NotificationService.send_notification(
+                    trip.employee,
+                    (
+                        "Today's pickup trip has been completed successfully.\n"
+                        "Please submit your trip review."
+                    ),
+                    title="Trip Completed ✅",
+                    push_data={
+                        "type": "TRIP_COMPLETED",
+                        "trip_id": str(trip.id),
+                        "route_run_id": str(route_run.id),
+                        "trip_type": route_run.trip_type,
+                        "screen": "review",
+                    },
                 )
-            else:
-                message = (
-                    "Today's drop trip has been completed successfully.\n"
-                    "Please submit your trip review."
-                )
-
-            NotificationService.send_notification(
-                trip.employee,
-                message,
-                title="Trip Completed ✅",
-                push_data={
-                    "type": "TRIP_COMPLETED",
-                    "trip_id": str(trip.id),
-                    "route_run_id": str(route_run.id),
-                    "trip_type": route_run.trip_type,
-                    "screen": "review",
-                },
-            )
 
         late_minutes = RouteService.calculate_late_minutes(
             route_run,
