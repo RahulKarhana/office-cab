@@ -4884,7 +4884,10 @@ def export_trip_report_by_driver_excel(request):
             "stops__employee",
             "stops__pickup_chats__messages__sender",
         )
-        .filter(run_date__range=(start_date, end_date))
+        .filter(
+            run_date__range=(start_date, end_date),
+            started_at__isnull=False,
+        )
         .order_by("-run_date", "driver__full_name", "driver__username", "started_at", "id")
     )
 
@@ -5158,7 +5161,10 @@ def trip_report_by_driver_page(request):
             "stops__pickup_chats__messages__sender",
             "trips__employee",
         )
-        .filter(run_date__range=(start_date, end_date))
+        .filter(
+            run_date__range=(start_date, end_date),
+            started_at__isnull=False,
+        )
         .order_by("-run_date", "driver__full_name", "driver__username", "started_at", "id")
     )
 
